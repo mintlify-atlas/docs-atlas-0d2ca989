@@ -1,0 +1,249 @@
+{
+  "projectType": "framework",
+  "projectName": "Godot Engine",
+  "projectDescription": "Multi-platform 2D and 3D game engine with a unified editor interface and comprehensive development tools.",
+  "theme": "maple",
+  "primaryColor": "#448cbc",
+  "lightColor": "#b9d4e7",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/nodes-and-scenes",
+              "concepts/signals",
+              "concepts/scene-tree",
+              "concepts/resource-system"
+            ]
+          },
+          {
+            "group": "2D Development",
+            "pages": [
+              "2d/overview",
+              "2d/sprites-and-textures",
+              "2d/physics",
+              "2d/tilemaps",
+              "2d/canvas-layers"
+            ]
+          },
+          {
+            "group": "3D Development",
+            "pages": [
+              "3d/overview",
+              "3d/meshes-and-materials",
+              "3d/lighting",
+              "3d/physics",
+              "3d/camera"
+            ]
+          },
+          {
+            "group": "Scripting",
+            "pages": [
+              "scripting/gdscript",
+              "scripting/csharp",
+              "scripting/visual-scripting",
+              "scripting/gdextension"
+            ]
+          },
+          {
+            "group": "Animation",
+            "pages": [
+              "animation/overview",
+              "animation/animationplayer",
+              "animation/animationtree",
+              "animation/skeletal-animation"
+            ]
+          },
+          {
+            "group": "UI System",
+            "pages": [
+              "ui/control-nodes",
+              "ui/containers",
+              "ui/themes",
+              "ui/input-handling"
+            ]
+          },
+          {
+            "group": "Audio",
+            "pages": [
+              "audio/overview",
+              "audio/audio-streams",
+              "audio/audio-effects",
+              "audio/interactive-music"
+            ]
+          },
+          {
+            "group": "Networking",
+            "pages": [
+              "networking/overview",
+              "networking/high-level-multiplayer",
+              "networking/low-level-networking",
+              "networking/http-requests"
+            ]
+          },
+          {
+            "group": "Physics",
+            "pages": [
+              "physics/physics-introduction",
+              "physics/collision-shapes",
+              "physics/raycasting",
+              "physics/joints"
+            ]
+          },
+          {
+            "group": "Rendering",
+            "pages": [
+              "rendering/overview",
+              "rendering/shaders",
+              "rendering/environment",
+              "rendering/particles"
+            ]
+          },
+          {
+            "group": "Platform Deployment",
+            "pages": [
+              "deployment/exporting",
+              "deployment/android",
+              "deployment/ios",
+              "deployment/web",
+              "deployment/desktop"
+            ]
+          },
+          {
+            "group": "Editor",
+            "pages": [
+              "editor/interface",
+              "editor/plugins",
+              "editor/custom-nodes",
+              "editor/import-system"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core Classes",
+            "pages": [
+              "api/object",
+              "api/node",
+              "api/resource",
+              "api/refcounted"
+            ]
+          },
+          {
+            "group": "Scene Management",
+            "pages": [
+              "api/scenetree",
+              "api/node2d",
+              "api/node3d",
+              "api/viewport"
+            ]
+          },
+          {
+            "group": "Input",
+            "pages": [
+              "api/input",
+              "api/inputevent",
+              "api/inputmap"
+            ]
+          },
+          {
+            "group": "Rendering",
+            "pages": [
+              "api/renderingserver",
+              "api/mesh",
+              "api/material",
+              "api/shader"
+            ]
+          },
+          {
+            "group": "Physics",
+            "pages": [
+              "api/rigidbody2d",
+              "api/rigidbody3d",
+              "api/characterbody2d",
+              "api/characterbody3d"
+            ]
+          },
+          {
+            "group": "Audio",
+            "pages": [
+              "api/audioserver",
+              "api/audiostreamplayer",
+              "api/audioeffect"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Cross-platform 2D and 3D game engine",
+    "Visual editor with scene system",
+    "GDScript scripting language with C# support",
+    "Built-in physics engines for 2D and 3D",
+    "Advanced animation system with AnimationTree",
+    "Comprehensive UI toolkit with Control nodes",
+    "Multi-platform export (Desktop, Mobile, Web, Console)",
+    "Plugin and extension system (GDExtension)",
+    "Visual shader editor",
+    "Networking and multiplayer support",
+    "Audio engine with effects and spatial audio",
+    "Particle systems for 2D and 3D",
+    "Navigation and pathfinding (NavMesh)",
+    "Tile-based map editor",
+    "Asset import pipeline",
+    "Live editing and remote debugging"
+  ],
+  "publicApiSurface": [
+    "Node - Base class for all scene objects",
+    "Node2D - Base node for 2D objects",
+    "Node3D - Base node for 3D objects",
+    "Object - Base class for all classes",
+    "Resource - Base class for serializable data",
+    "SceneTree - Manages the scene hierarchy",
+    "Input - Input singleton for handling input events",
+    "RenderingServer - Low-level rendering API",
+    "PhysicsServer2D - 2D physics server",
+    "PhysicsServer3D - 3D physics server",
+    "AudioServer - Audio playback and mixing",
+    "DisplayServer - Display and window management",
+    "NavigationServer2D - 2D pathfinding",
+    "NavigationServer3D - 3D pathfinding",
+    "EditorPlugin - Base class for editor plugins",
+    "GDScript - Built-in scripting language",
+    "GDExtension - Native extension system",
+    "AnimationPlayer - Animation playback",
+    "AnimationTree - Advanced animation blending",
+    "Control - Base class for UI elements",
+    "Viewport - Render target and camera container",
+    "Camera2D - 2D camera",
+    "Camera3D - 3D camera",
+    "RigidBody2D/3D - Physics-based rigid bodies",
+    "CharacterBody2D/3D - Character controllers",
+    "Area2D/3D - Detection and overlap areas",
+    "CollisionShape2D/3D - Collision shapes",
+    "Sprite2D - 2D sprite rendering",
+    "MeshInstance3D - 3D mesh rendering",
+    "Light2D/Light3D - Lighting",
+    "TileMap - Tile-based 2D maps",
+    "PackedScene - Serialized scene resource",
+    "Engine - Engine configuration singleton",
+    "ProjectSettings - Project configuration",
+    "OS - Operating system interface"
+  ]
+}
