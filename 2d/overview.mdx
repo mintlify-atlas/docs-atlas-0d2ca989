@@ -221,6 +221,56 @@ func shake(amount: float):
     shake_amount = amount
 ```
 
+## 2D Lighting
+
+Godot provides 2D lighting nodes for creating dynamic lighting effects in 2D games.
+
+### Light Types
+
+**PointLight2D** - Emits light in all directions from a point:
+
+```gdscript
+extends PointLight2D
+
+func _ready():
+    energy = 1.0  # Light intensity
+    texture_scale = 2.0  # Size of light
+    color = Color.ORANGE  # Light color
+    shadow_enabled = true
+```
+
+**DirectionalLight2D** - Directional light source (like sunlight):
+
+```gdscript
+extends DirectionalLight2D
+
+func _ready():
+    energy = 1.0
+    height = 0.5  # Pseudo-3D height effect
+```
+
+### Light Modes
+
+Lights can use different blend modes:
+
+- **Add** - Adds light (default)
+- **Sub** - Subtracts light (creates shadows)
+- **Mix** - Mixes with existing lighting
+
+### Shadows
+
+Enable shadows with the `shadow_enabled` property. Configure shadow properties:
+
+```gdscript
+shadow_enabled = true
+shadow_filter = Light2D.SHADOW_FILTER_PCF5  # Smooth shadows
+shadow_filter_smooth = 2.0
+```
+
+<Tip>
+Use `LightOccluder2D` nodes with appropriate shapes to create shadows from sprites and world geometry.
+</Tip>
+
 ## Transform Hierarchy
 
 Transforms are hierarchical. A child node's transform is relative to its parent:
