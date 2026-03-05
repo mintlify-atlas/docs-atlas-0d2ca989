@@ -1,0 +1,67 @@
+---
+title: "Material"
+---
+
+# Material
+
+**Inherits:** Resource < RefCounted < Object
+
+## Description
+
+Virtual base class for applying visual properties to an object, such as color and roughness. All materials inherit from it.
+
+## Properties
+
+<ResponseField name="render_priority" type="int">
+  Sets the render priority for objects in 3D scenes. Higher priority objects will be sorted in front.
+</ResponseField>
+
+<ResponseField name="next_pass" type="Material">
+  Sets the Material to be used for the next pass.
+</ResponseField>
+
+## Methods
+
+### inspect_native_shader_code
+
+```gdscript
+void inspect_native_shader_code()
+```
+
+Opens a popup that visualizes the generated shader code. Only available in editor.
+
+### create_placeholder
+
+```gdscript
+Resource create_placeholder()
+```
+
+Creates a placeholder version of this resource.
+
+## Constants
+
+- **RENDER_PRIORITY_MAX** = `127` - Maximum value for render_priority
+- **RENDER_PRIORITY_MIN** = `-128` - Minimum value for render_priority
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+var material = StandardMaterial3D.new()
+material.albedo_color = Color.RED
+material.render_priority = 1
+
+# Apply to a mesh
+var mesh_instance = MeshInstance3D.new()
+mesh_instance.material_override = material
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+var material = new StandardMaterial3D();
+material.AlbedoColor = Colors.Red;
+material.RenderPriority = 1;
+```
+  </Tab>
+</Tabs>

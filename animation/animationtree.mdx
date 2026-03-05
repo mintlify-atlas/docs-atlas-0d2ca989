@@ -1,0 +1,530 @@
+---
+title: AnimationTree
+description: Advanced animation blending, state machines, and blend spaces with AnimationTree
+---
+
+The `AnimationTree` node provides advanced animation capabilities beyond what `AnimationPlayer` offers. It enables complex animation blending, state machines, blend spaces, and layered animation control.
+
+<Note>
+AnimationTree works alongside an AnimationPlayer. The AnimationPlayer stores the animations, while AnimationTree controls how they blend and transition.
+</Note>
+
+## Getting Started
+
+### Basic Setup
+
+<Steps>
+  <Step title="Add AnimationPlayer">
+    Create an `AnimationPlayer` node and add your animations to it.
+  </Step>
+  <Step title="Add AnimationTree">
+    Add an `AnimationTree` node as a sibling to the AnimationPlayer.
+  </Step>
+  <Step title="Link to AnimationPlayer">
+    Set the `anim_player` property to point to your AnimationPlayer node.
+  </Step>
+  <Step title="Create Tree Root">
+    Create a root animation node (usually `AnimationNodeStateMachine` or `AnimationNodeBlendTree`).
+  </Step>
+  <Step title="Activate">
+    Set the `active` property to `true`.
+  </Step>
+</Steps>
+
+<CodeGroup>
+```gdscript GDScript
+func _ready():
+    # Link to AnimationPlayer
+    $AnimationTree.anim_player = $AnimationPlayer.get_path()
+    
+    # Activate the tree
+    $AnimationTree.active = true
+```
+
+```csharp C#
+public override void _Ready()
+{
+    var animTree = GetNode<AnimationTree>("AnimationTree");
+    animTree.AnimPlayer = GetNode<AnimationPlayer>("AnimationPlayer").GetPath();
+    animTree.Active = true;
+}
+```
+</CodeGroup>
+
+## Animation Nodes
+
+AnimationTree uses a graph of `AnimationNode` objects to control animation blending. Each node type serves a specific purpose.
+
+### AnimationNodeAnimation
+
+Plays a single animation from the AnimationPlayer:
+
+```gdscript
+var anim_node = AnimationNodeAnimation.new()
+anim_node.animation = "walk"
+```
+
+### AnimationNodeBlendTree
+
+A container for creating custom animation blend graphs:
+
+- Combine multiple animations with different blend modes
+- Create complex animation layering
+- Add custom blend nodes
+
+### AnimationNodeStateMachine
+
+Creates a state machine for animation transitions:
+
+- Define animation states
+- Set up transitions between states
+- Control flow with conditions
+
+## State Machines
+
+State machines are the most common way to organize character animations.
+
+### Creating a State Machine
+
+<CodeGroup>
+```gdscript GDScript
+# Get the state machine playback
+var state_machine = $AnimationTree.get("parameters/playback")
+
+# Travel to a state
+state_machine.travel("walk")
+
+# Start from a specific state
+state_machine.start("idle")
+
+# Stop the state machine
+state_machine.stop()
+
+# Get current state
+var current = state_machine.get_current_node()
+print("Current state: ", current)
+```
+
+```csharp C#
+var animTree = GetNode<AnimationTree>("AnimationTree");
+var stateMachine = (AnimationNodeStateMachinePlayback)animTree.Get("parameters/playback");
+
+// Travel to a state
+stateMachine.Travel("walk");
+
+// Start from a specific state
+stateMachine.Start("idle");
+
+// Get current state
+var current = stateMachine.GetCurrentNode();
+GD.Print($"Current state: {current}");
+```
+</CodeGroup>
+
+### Adding States and Transitions
+
+In the editor or through code:
+
+<CodeGroup>
+```gdscript GDScript
+var state_machine = AnimationNodeStateMachine.new()
+
+# Add animation states
+var idle = AnimationNodeAnimation.new()
+idle.animation = "idle"
+state_machine.add_node("idle", idle)
+
+var walk = AnimationNodeAnimation.new()
+walk.animation = "walk"
+state_machine.add_node("walk", walk)
+
+# Create transition
+var transition = AnimationNodeStateMachineTransition.new()
+transition.advance_mode = AnimationNodeStateMachineTransition.ADVANCE_MODE_AUTO
+transition.xfade_time = 0.2
+
+# Add transition from idle to walk
+state_machine.add_transition("idle", "walk", transition)
+```
+
+```csharp C#
+var stateMachine = new AnimationNodeStateMachine();
+
+// Add states
+var idle = new AnimationNodeAnimation();
+idle.Animation = "idle";
+stateMachine.AddNode("idle", idle);
+
+var walk = new AnimationNodeAnimation();
+walk.Animation = "walk";
+stateMachine.AddNode("walk", walk);
+
+// Create and add transition
+var transition = new AnimationNodeStateMachineTransition();
+transition.XfadeTime = 0.2f;
+stateMachine.AddTransition("idle", "walk", transition);
+```
+</CodeGroup>
+
+### Transition Properties
+
+`AnimationNodeStateMachineTransition` controls how states blend:
+
+- **xfade_time**: Crossfade duration in seconds
+- **advance_mode**: AUTO (automatic) or ENABLED (manual)
+- **advance_condition**: Expression or parameter name to trigger transition
+- **advance_expression**: Custom expression for complex conditions
+- **priority**: Higher priority transitions are checked first
+
+### Advance Conditions
+
+<CodeGroup>
+```gdscript GDScript
+# Set a parameter for transition conditions
+$AnimationTree.set("parameters/conditions/is_moving", true)
+
+# The transition with advance_condition = "is_moving" will trigger
+```
+
+```csharp C#
+var animTree = GetNode<AnimationTree>("AnimationTree");
+animTree.Set("parameters/conditions/is_moving", true);
+```
+</CodeGroup>
+
+## Blend Spaces
+
+Blend spaces allow you to blend between multiple animations based on 2D or 1D input.
+
+### AnimationNodeBlendSpace2D
+
+Blend animations in 2D space (e.g., directional movement):
+
+<CodeGroup>
+```gdscript GDScript
+# Create blend space
+var blend_space = AnimationNodeBlendSpace2D.new()
+blend_space.min_space = Vector2(-1, -1)
+blend_space.max_space = Vector2(1, 1)
+
+# Add blend points
+var walk_forward = AnimationNodeAnimation.new()
+walk_forward.animation = "walk_forward"
+blend_space.add_blend_point(walk_forward, Vector2(0, 1))
+
+var walk_backward = AnimationNodeAnimation.new()
+walk_backward.animation = "walk_backward"
+blend_space.add_blend_point(walk_backward, Vector2(0, -1))
+
+var walk_left = AnimationNodeAnimation.new()
+walk_left.animation = "walk_left"
+blend_space.add_blend_point(walk_left, Vector2(-1, 0))
+
+var walk_right = AnimationNodeAnimation.new()
+walk_right.animation = "walk_right"
+blend_space.add_blend_point(walk_right, Vector2(1, 0))
+
+# Control blend position
+$AnimationTree.set("parameters/BlendSpace2D/blend_position", Vector2(0.5, 0.8))
+```
+
+```csharp C#
+var blendSpace = new AnimationNodeBlendSpace2D();
+blendSpace.MinSpace = new Vector2(-1, -1);
+blendSpace.MaxSpace = new Vector2(1, 1);
+
+// Add blend points
+var walkForward = new AnimationNodeAnimation { Animation = "walk_forward" };
+blendSpace.AddBlendPoint(walkForward, new Vector2(0, 1));
+
+// Control blend position at runtime
+var animTree = GetNode<AnimationTree>("AnimationTree");
+animTree.Set("parameters/BlendSpace2D/blend_position", new Vector2(0.5f, 0.8f));
+```
+</CodeGroup>
+
+### AnimationNodeBlendSpace1D
+
+Blend animations along a single axis (e.g., walk to run speed):
+
+```gdscript
+var blend_space_1d = AnimationNodeBlendSpace1D.new()
+blend_space_1d.min_space = 0.0
+blend_space_1d.max_space = 10.0
+
+# Add animations at different points
+blend_space_1d.add_blend_point(idle_node, 0.0)
+blend_space_1d.add_blend_point(walk_node, 5.0)
+blend_space_1d.add_blend_point(run_node, 10.0)
+
+# Set blend position (0.0 to 10.0)
+$AnimationTree.set("parameters/Movement/blend_position", 7.5)
+```
+
+## Blend Nodes
+
+### AnimationNodeBlend2
+
+Blends two animations with a single blend amount:
+
+```gdscript
+# Blend between two animations
+$AnimationTree.set("parameters/Blend2/blend_amount", 0.5)  # 50% of each
+```
+
+### AnimationNodeBlend3
+
+Blends three animations:
+
+```gdscript
+# -1.0 = full animation 0, 0.0 = full animation 1, 1.0 = full animation 2
+$AnimationTree.set("parameters/Blend3/blend_amount", 0.0)
+```
+
+### AnimationNodeAdd2 / AnimationNodeAdd3
+
+Additive blending for layering animations:
+
+```gdscript
+# Add animation on top of base animation (useful for upper body animations)
+$AnimationTree.set("parameters/Add2/add_amount", 1.0)
+```
+
+### AnimationNodeOneShot
+
+Plays a one-shot animation over the base animation:
+
+<CodeGroup>
+```gdscript GDScript
+# Trigger a one-shot animation (e.g., attack)
+$AnimationTree.set("parameters/OneShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+
+# Or use shorter form
+$AnimationTree.set("parameters/OneShot/active", true)
+
+# Check if one-shot is playing
+var is_active = $AnimationTree.get("parameters/OneShot/active")
+```
+
+```csharp C#
+var animTree = GetNode<AnimationTree>("AnimationTree");
+
+// Trigger one-shot
+animTree.Set("parameters/OneShot/request", 
+    (int)AnimationNodeOneShot.OneShotRequest.Fire);
+
+// Check if active
+var isActive = (bool)animTree.Get("parameters/OneShot/active");
+```
+</CodeGroup>
+
+### AnimationNodeTransition
+
+Switches between multiple animations:
+
+```gdscript
+# Switch to animation index 2
+$AnimationTree.set("parameters/Transition/current_index", 2)
+
+# Get current index
+var current = $AnimationTree.get("parameters/Transition/current_index")
+```
+
+## Animation Node Parameters
+
+Access and modify animation node parameters:
+
+<CodeGroup>
+```gdscript GDScript
+# Set parameters
+$AnimationTree.set("parameters/Movement/blend_position", Vector2(1, 0))
+$AnimationTree.set("parameters/TimeScale/scale", 1.5)
+$AnimationTree.set("parameters/conditions/attacking", true)
+
+# Get parameters
+var blend_pos = $AnimationTree.get("parameters/Movement/blend_position")
+var current_state = $AnimationTree.get("parameters/playback")
+```
+
+```csharp C#
+var animTree = GetNode<AnimationTree>("AnimationTree");
+
+// Set parameters
+animTree.Set("parameters/Movement/blend_position", new Vector2(1, 0));
+animTree.Set("parameters/TimeScale/scale", 1.5f);
+animTree.Set("parameters/conditions/attacking", true);
+
+// Get parameters
+var blendPos = (Vector2)animTree.Get("parameters/Movement/blend_position");
+```
+</CodeGroup>
+
+## Root Motion
+
+Extract movement from animations for character controllers:
+
+```gdscript
+# Enable root motion on the AnimationTree
+$AnimationTree.root_motion_track = NodePath("Skeleton3D:Root")
+
+# Get root motion in _process or _physics_process
+var root_motion = $AnimationTree.get_root_motion_position()
+velocity += root_motion / delta
+
+# Get rotation
+var root_rotation = $AnimationTree.get_root_motion_rotation()
+```
+
+<Tip>
+Root motion allows animations to directly drive character movement, ensuring perfect synchronization between animation and gameplay.
+</Tip>
+
+## Filters
+
+Control which bones/properties are affected by specific nodes:
+
+```gdscript
+# Enable filtering on a node
+var add_node = AnimationNodeAdd2.new()
+add_node.filter_enabled = true
+
+# Only affect specific bones (e.g., upper body for shooting animation)
+add_node.set_filter_path(NodePath("Skeleton3D:Spine"), true)
+add_node.set_filter_path(NodePath("Skeleton3D:RightArm"), true)
+add_node.set_filter_path(NodePath("Skeleton3D:LeftArm"), true)
+```
+
+## Complete Example: Character Controller
+
+<CodeGroup>
+```gdscript GDScript
+extends CharacterBody3D
+
+const SPEED = 5.0
+
+var state_machine
+
+func _ready():
+    state_machine = $AnimationTree.get("parameters/playback")
+    $AnimationTree.active = true
+    state_machine.start("idle")
+
+func _physics_process(delta):
+    var input_dir = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+    var direction = Vector3(input_dir.x, 0, input_dir.y).normalized()
+    
+    if direction:
+        velocity.x = direction.x * SPEED
+        velocity.z = direction.z * SPEED
+        
+        # Update blend space for directional movement
+        $AnimationTree.set("parameters/Movement/blend_position", input_dir)
+        
+        if Input.is_action_pressed("sprint"):
+            state_machine.travel("run")
+            $AnimationTree.set("parameters/TimeScale/scale", 1.5)
+        else:
+            state_machine.travel("walk")
+            $AnimationTree.set("parameters/TimeScale/scale", 1.0)
+    else:
+        velocity.x = move_toward(velocity.x, 0, SPEED)
+        velocity.z = move_toward(velocity.z, 0, SPEED)
+        state_machine.travel("idle")
+    
+    # One-shot attack animation
+    if Input.is_action_just_pressed("attack"):
+        $AnimationTree.set("parameters/Attack/request", 
+            AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+    
+    move_and_slide()
+```
+
+```csharp C#
+public partial class Character : CharacterBody3D
+{
+    private const float Speed = 5.0f;
+    private AnimationTree _animTree;
+    private AnimationNodeStateMachinePlayback _stateMachine;
+    
+    public override void _Ready()
+    {
+        _animTree = GetNode<AnimationTree>("AnimationTree");
+        _stateMachine = (AnimationNodeStateMachinePlayback)_animTree.Get("parameters/playback");
+        _animTree.Active = true;
+        _stateMachine.Start("idle");
+    }
+    
+    public override void _PhysicsProcess(double delta)
+    {
+        Vector2 inputDir = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
+        Vector3 direction = new Vector3(inputDir.X, 0, inputDir.Y).Normalized();
+        
+        if (direction != Vector3.Zero)
+        {
+            Velocity = new Vector3(direction.X * Speed, Velocity.Y, direction.Z * Speed);
+            
+            _animTree.Set("parameters/Movement/blend_position", inputDir);
+            
+            if (Input.IsActionPressed("sprint"))
+            {
+                _stateMachine.Travel("run");
+                _animTree.Set("parameters/TimeScale/scale", 1.5f);
+            }
+            else
+            {
+                _stateMachine.Travel("walk");
+                _animTree.Set("parameters/TimeScale/scale", 1.0f);
+            }
+        }
+        else
+        {
+            Velocity = new Vector3(
+                Mathf.MoveToward(Velocity.X, 0, Speed),
+                Velocity.Y,
+                Mathf.MoveToward(Velocity.Z, 0, Speed)
+            );
+            _stateMachine.Travel("idle");
+        }
+        
+        if (Input.IsActionJustPressed("attack"))
+        {
+            _animTree.Set("parameters/Attack/request", 
+                (int)AnimationNodeOneShot.OneShotRequest.Fire);
+        }
+        
+        MoveAndSlide();
+    }
+}
+```
+</CodeGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use State Machines for Character Logic">
+    State machines are ideal for character animations with clear states (idle, walk, run, jump, etc.).
+  </Accordion>
+  
+  <Accordion title="Use Blend Spaces for Directional Movement">
+    2D blend spaces work great for 8-directional movement or aiming animations.
+  </Accordion>
+  
+  <Accordion title="Layer Animations with Add Nodes">
+    Use additive blending for upper body animations that play over locomotion.
+  </Accordion>
+  
+  <Accordion title="Use Filters for Partial Body Animation">
+    Enable filters to have different animations affect different body parts.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Skeletal Animation" icon="person" href="/animation/skeletal-animation">
+    Learn about 3D character animation with bones and IK
+  </Card>
+  <Card title="AnimationPlayer" icon="play" href="/animation/animationplayer">
+    Review basic animation playback concepts
+  </Card>
+</CardGroup>

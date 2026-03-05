@@ -1,0 +1,107 @@
+---
+title: "Input"
+---
+
+# Input
+
+**Inherits:** Object
+
+## Description
+
+A singleton for handling inputs. The Input singleton handles key presses, mouse buttons and movement, gamepads, and input actions.
+
+## Properties
+
+<ResponseField name="mouse_mode" type="MouseMode">
+  Controls the mouse mode (visible, hidden, captured, confined).
+</ResponseField>
+
+## Methods
+
+### is_action_pressed
+
+```gdscript
+bool is_action_pressed(action: StringName, exact_match: bool = false)
+```
+
+Returns true if you are pressing the action event.
+
+<ParamField path="action" type="StringName">
+  The action name to check
+</ParamField>
+
+### is_action_just_pressed
+
+```gdscript
+bool is_action_just_pressed(action: StringName, exact_match: bool = false)
+```
+
+Returns true when the user has started pressing the action event in the current frame.
+
+### is_key_pressed
+
+```gdscript
+bool is_key_pressed(keycode: Key)
+```
+
+Returns true if you are pressing the Latin key in the current keyboard layout.
+
+### get_vector
+
+```gdscript
+Vector2 get_vector(negative_x: StringName, positive_x: StringName, negative_y: StringName, positive_y: StringName, deadzone: float = -1.0)
+```
+
+Gets an input vector by specifying four actions for the positive and negative X and Y axes.
+
+### get_axis
+
+```gdscript
+float get_axis(negative_action: StringName, positive_action: StringName)
+```
+
+Get axis input by specifying two actions, one negative and one positive.
+
+### is_mouse_button_pressed
+
+```gdscript
+bool is_mouse_button_pressed(button: MouseButton)
+```
+
+Returns true if you are pressing the mouse button.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+# Check if action is pressed
+if Input.is_action_pressed("ui_right"):
+    position.x += speed * delta
+
+# Get movement vector
+var direction = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+velocity = direction * speed
+
+# Check specific key
+if Input.is_key_pressed(KEY_SPACE):
+    jump()
+
+# Get axis input
+var horizontal = Input.get_axis("move_left", "move_right")
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+// Check if action is pressed
+if (Input.IsActionPressed("ui_right"))
+{
+    position.X += speed * delta;
+}
+
+// Get movement vector
+var direction = Input.GetVector("move_left", "move_right", "move_up", "move_down");
+velocity = direction * speed;
+```
+  </Tab>
+</Tabs>

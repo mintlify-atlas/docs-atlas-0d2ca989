@@ -1,0 +1,545 @@
+---
+title: 'Web export'
+description: 'Export Godot games to HTML5 and WebAssembly for browser-based gameplay'
+keywords: ['web', 'html5', 'webassembly', 'wasm', 'browser', 'javascript']
+---
+
+## Overview
+
+Godot can export games to run in web browsers using HTML5 and WebAssembly. Web exports use the Compatibility renderer and can run on most modern browsers.
+
+## Requirements
+
+### Browser compatibility
+
+Godot web exports require:
+
+- WebAssembly support
+- WebGL 2.0 (or WebGL 1.0 with GLES2)
+- Modern browser (Chrome 57+, Firefox 52+, Safari 11+, Edge 79+)
+
+<Info>
+The Compatibility renderer is automatically used for web exports. Forward+ and Mobile renderers are not supported in browsers.
+</Info>
+
+### Export templates
+
+Ensure web export templates are installed:
+
+1. **Editor > Manage Export Templates**
+2. Download templates for your Godot version
+3. Web templates are included in the standard template package
+
+## Creating web export preset
+
+1. Go to **Project > Export**
+2. Click **Add...** and select **Web**
+3. Configure export settings
+
+### Basic configuration
+
+```gdscript
+# Essential web export settings
+# Configured in the export preset
+
+# Export type
+Export Type: 0  # 0=Regular, 1=Threads, 2=GDNATIVE
+
+# HTML file
+HTML Shell: "Default"  # Or custom HTML template
+
+# Head include
+Head Include: ""  # Custom HTML in <head>
+
+# Variant
+Variant: "release"  # release, debug, or release_debug
+```
+
+## Export formats
+
+### Standard export
+
+Creates HTML, WASM, and JS files:
+
+```bash
+# Export to web
+godot --headless --export-release "Web" "builds/web/index.html"
+
+# Output files:
+# - index.html
+# - index.wasm
+# - index.js
+# - index.pck
+# - index.png (icon)
+```
+
+### Progressive Web App (PWA)
+
+Enable PWA features:
+
+```gdscript
+# In export preset
+Progressive Web App:
+  Enabled: true
+  Offline Page: "offline.html"
+  Icon 144x144: "res://icon_144.png"
+  Icon 180x180: "res://icon_180.png"
+  Icon 512x512: "res://icon_512.png"
+  Background Color: "#000000"
+  Display: "fullscreen"
+  Orientation: "any"
+```
+
+<Tip>
+PWA allows users to install your game like a native app and play offline.
+</Tip>
+
+## Threading support
+
+Enable multi-threading for better performance:
+
+```gdscript
+# In export preset
+Thread Support: true
+```
+
+<Warning>
+Threads require SharedArrayBuffer, which has strict CORS requirements. Your server must send these headers:
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+</Warning>
+
+## Custom HTML template
+
+Create custom HTML shell:
+
+```html
+<!-- custom_shell.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Godot Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+        }
+        #canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas">
+        Your browser doesn't support HTML5 canvas.
+    </canvas>
+    <script src="$GODOT_BASENAME.js"></script>
+    <script>
+        const engine = new Engine({
+            canvas: document.getElementById('canvas'),
+            args: [],
+            onExit: () => console.log('Game exited')
+        });
+        
+        engine.startGame({
+            'mainPack': '$GODOT_BASENAME.pck'
+        });
+    </script>
+</body>
+</html>
+```
+
+Set in export preset:
+
+```gdscript
+HTML Shell: "res://custom_shell.html"
+```
+
+## Server configuration
+
+### Local testing
+
+Use a local web server to test:
+
+```bash
+# Python 3
+python -m http.server 8000
+
+# Python 2
+python -m SimpleHTTPServer 8000
+
+# Node.js (install http-server globally)
+npx http-server -p 8000
+
+# Then open http://localhost:8000
+```
+
+<Info>
+Double-clicking index.html won't work due to CORS restrictions. Always use a web server.
+</Info>
+
+### MIME types
+
+Ensure your server sends correct MIME types:
+
+```nginx
+# Nginx configuration
+location ~ \.(wasm|pck)$ {
+    types {
+        application/wasm wasm;
+        application/octet-stream pck;
+    }
+}
+```
+
+```apache
+# Apache .htaccess
+AddType application/wasm .wasm
+AddType application/octet-stream .pck
+```
+
+### Compression
+
+Enable gzip or brotli compression:
+
+```nginx
+# Nginx
+gzip on;
+gzip_types application/wasm application/octet-stream application/javascript;
+```
+
+<Tip>
+WASM files are typically large (10-30MB). Compression can reduce size by 60-70%.
+</Tip>
+
+## JavaScript interface
+
+Communicate between GDScript and JavaScript:
+
+### Call JavaScript from GDScript
+
+```gdscript
+func call_javascript():
+    if OS.has_feature("web"):
+        JavaScriptBridge.eval("""
+            console.log('Hello from Godot!');
+            alert('This is a JavaScript alert');
+        """)
+
+# Call JavaScript function
+func get_browser_info():
+    var result = JavaScriptBridge.eval("""
+        navigator.userAgent
+    """)
+    print("User agent: ", result)
+
+# Create JavaScript object
+func create_js_object():
+    var callback = JavaScriptBridge.create_callback(self, "_on_js_callback")
+    JavaScriptBridge.eval("""
+        setTimeout(function() {
+            godotCallback();
+        }, 1000);
+    """, {"godotCallback": callback})
+
+func _on_js_callback(args):
+    print("Callback from JavaScript: ", args)
+```
+
+### Call GDScript from JavaScript
+
+```html
+<!-- In HTML -->
+<script>
+    // Wait for engine to load
+    window.addEventListener('load', function() {
+        // Access game instance
+        const game = window.godotGame;
+        
+        // Call GDScript function
+        if (game && game.some_function) {
+            game.some_function("Hello from JavaScript");
+        }
+    });
+</script>
+```
+
+```gdscript
+# In GDScript - expose function to JavaScript
+func _ready():
+    if OS.has_feature("web"):
+        JavaScriptBridge.get_interface("godotGame").set("some_function", 
+            JavaScriptBridge.create_callback(self, "some_function"))
+
+func some_function(message):
+    print("Called from JavaScript: ", message)
+```
+
+## Web-specific features
+
+### Fullscreen
+
+```gdscript
+func toggle_fullscreen():
+    if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN:
+        DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+    else:
+        DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+```
+
+### Download files
+
+```gdscript
+func download_file(filename: String, data: PackedByteArray):
+    if OS.has_feature("web"):
+        JavaScriptBridge.download_buffer(data, filename)
+```
+
+### Clipboard
+
+```gdscript
+func copy_to_clipboard(text: String):
+    DisplayServer.clipboard_set(text)
+
+func paste_from_clipboard() -> String:
+    return DisplayServer.clipboard_get()
+```
+
+### Loading screen
+
+Customize loading progress:
+
+```html
+<div id="loading">
+    <div id="progress-bar">
+        <div id="progress-fill"></div>
+    </div>
+    <p id="status">Loading...</p>
+</div>
+
+<script>
+    const engine = new Engine();
+    
+    engine.preloadFile = function(file, total) {
+        const percent = (file / total) * 100;
+        document.getElementById('progress-fill').style.width = percent + '%';
+        document.getElementById('status').textContent = 
+            `Loading: ${Math.floor(percent)}%`;
+    };
+    
+    engine.startGame().then(() => {
+        document.getElementById('loading').style.display = 'none';
+    });
+</script>
+```
+
+## Performance optimization
+
+<CardGroup cols={2}>
+  <Card title="Reduce export size" icon="compress">
+    - Remove unused assets
+    - Compress textures
+    - Use audio compression (OGG Vorbis)
+    - Enable script minification
+  </Card>
+  
+  <Card title="Enable compression" icon="file-zipper">
+    Configure server to serve gzip or brotli compressed files.
+  </Card>
+  
+  <Card title="Optimize for mobile" icon="mobile">
+    - Lower resolution
+    - Reduce particle count
+    - Simplify shaders
+    - Test on mobile browsers
+  </Card>
+  
+  <Card title="Lazy loading" icon="download">
+    Split assets into PCK files and load on demand.
+  </Card>
+</CardGroup>
+
+### Asset streaming
+
+```gdscript
+# Load additional PCK at runtime
+func load_dlc():
+    var url = "https://example.com/dlc.pck"
+    var http = HTTPRequest.new()
+    add_child(http)
+    http.request_completed.connect(_on_pck_downloaded)
+    http.request(url)
+
+func _on_pck_downloaded(result, response_code, headers, body):
+    if response_code == 200:
+        # Save and load PCK
+        var file = FileAccess.open("user://dlc.pck", FileAccess.WRITE)
+        file.store_buffer(body)
+        file.close()
+        
+        ProjectSettings.load_resource_pack("user://dlc.pck")
+```
+
+## Hosting platforms
+
+### itch.io
+
+1. Export project to web
+2. Create a ZIP of all files
+3. Upload to itch.io
+4. Set "This file will be played in the browser"
+5. Set viewport dimensions
+
+### GitHub Pages
+
+```bash
+# Build and deploy to GitHub Pages
+godot --headless --export-release "Web" "builds/web/index.html"
+cd builds/web
+git init
+git add .
+git commit -m "Deploy game"
+git push -f https://github.com/username/repo.git main:gh-pages
+
+# Access at https://username.github.io/repo/
+```
+
+### Netlify/Vercel
+
+```toml
+# netlify.toml
+[build]
+  publish = "builds/web"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Opener-Policy = "same-origin"
+```
+
+## Browser limitations
+
+<Warning>
+**Known limitations:**
+
+- No multi-threading without proper headers
+- File system access limited to IndexedDB
+- No raw socket support (WebSocket and WebRTC only)
+- Audio autoplay may require user interaction
+- Some browser-specific quirks
+- WASM file size limits on some platforms
+</Warning>
+
+### Audio autoplay
+
+```gdscript
+func _ready():
+    if OS.has_feature("web"):
+        # Wait for user interaction before playing audio
+        await get_tree().create_timer(0.1).timeout
+        # Play audio after user clicks/touches
+```
+
+## Debugging web exports
+
+### Browser console
+
+```javascript
+// In browser console
+// View Godot console output
+console.log()
+
+// Check for errors
+// Open DevTools (F12) > Console
+```
+
+### Remote debugging
+
+```gdscript
+# Enable in export preset
+Export With Debug: true
+
+# Then access remote debugger
+# In Godot Editor: Debug > Deploy Remote Debug
+```
+
+## Common issues
+
+<AccordionGroup>
+  <Accordion title="White screen / doesn't load">
+    - Check browser console for errors
+    - Ensure MIME types are correct
+    - Verify files are served over HTTP/HTTPS
+    - Check for CORS issues
+  </Accordion>
+  
+  <Accordion title="WASM streaming failed">
+    Configure server to send correct MIME type for .wasm files:
+    `application/wasm`
+  </Accordion>
+  
+  <Accordion title="SharedArrayBuffer is not defined">
+    Server must send COOP and COEP headers for threading support.
+  </Accordion>
+  
+  <Accordion title="Audio doesn't play">
+    Most browsers require user interaction before audio playback.
+    Add a "Click to start" button.
+  </Accordion>
+</AccordionGroup>
+
+## Web-specific code
+
+```gdscript
+func _ready():
+    if OS.has_feature("web"):
+        # Web-specific initialization
+        print("Running in browser")
+        
+        # Disable features not available on web
+        disable_raw_networking()
+        
+        # Adjust for browser performance
+        reduce_visual_effects()
+        
+    # Check for mobile browser
+    if OS.has_feature("web") and DisplayServer.is_touchscreen_available():
+        enable_touch_controls()
+```
+
+## Analytics integration
+
+```gdscript
+func track_event(event_name: String, params: Dictionary = {}):
+    if OS.has_feature("web"):
+        var params_json = JSON.stringify(params)
+        JavaScriptBridge.eval("""
+            if (typeof gtag !== 'undefined') {
+                gtag('event', '%s', %s);
+            }
+        """ % [event_name, params_json])
+```
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Android" icon="android" href="/deployment/android">
+    Export for Android devices
+  </Card>
+  
+  <Card title="iOS" icon="apple" href="/deployment/ios">
+    Export for iOS devices
+  </Card>
+  
+  <Card title="Desktop" icon="desktop" href="/deployment/desktop">
+    Export for desktop platforms
+  </Card>
+</CardGroup>

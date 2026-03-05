@@ -1,0 +1,110 @@
+---
+title: "Node3D"
+---
+
+# Node3D
+
+**Inherits:** Node < Object
+
+## Description
+
+Base object in 3D space. All other 3D nodes inherit from this class. The Node3D node is the base representation of a node in 3D space.
+
+## Properties
+
+<ResponseField name="position" type="Vector3" default="Vector3(0, 0, 0)">
+  Position (translation) of this node in parent space.
+</ResponseField>
+
+<ResponseField name="rotation" type="Vector3" default="Vector3(0, 0, 0)">
+  Rotation of this node as Euler angles, in radians.
+</ResponseField>
+
+<ResponseField name="scale" type="Vector3" default="Vector3(1, 1, 1)">
+  Scale of this node in local space.
+</ResponseField>
+
+<ResponseField name="transform" type="Transform3D">
+  The local transformation of this node, in parent space.
+</ResponseField>
+
+<ResponseField name="global_transform" type="Transform3D">
+  The transformation of this node, in global space.
+</ResponseField>
+
+<ResponseField name="visible" type="bool" default="true">
+  If true, this node can be visible.
+</ResponseField>
+
+## Methods
+
+### translate
+
+```gdscript
+void translate(offset: Vector3)
+```
+
+Adds the given translation offset to the node's position, in local space.
+
+### rotate
+
+```gdscript
+void rotate(axis: Vector3, angle: float)
+```
+
+Rotates this node's basis around the axis by the given angle, in radians.
+
+### look_at
+
+```gdscript
+void look_at(target: Vector3, up: Vector3 = Vector3(0, 1, 0))
+```
+
+Rotates the node so that the local forward axis (-Z) points toward the target position.
+
+### to_global
+
+```gdscript
+Vector3 to_global(local_point: Vector3)
+```
+
+Returns the local_point converted from this node's local space to global space.
+
+### to_local
+
+```gdscript
+Vector3 to_local(global_point: Vector3)
+```
+
+Returns the global_point converted from global space to this node's local space.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+var node = Node3D.new()
+node.position = Vector3(10, 5, 0)
+node.rotation = Vector3(0, deg_to_rad(45), 0)
+
+# Rotate around Y axis
+node.rotate(Vector3.UP, deg_to_rad(90))
+
+# Look at a target
+node.look_at(Vector3(0, 0, 0))
+
+# Convert coordinates
+var global_pos = node.to_global(Vector3(1, 0, 0))
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+var node = new Node3D();
+node.Position = new Vector3(10, 5, 0);
+node.Rotation = new Vector3(0, Mathf.DegToRad(45), 0);
+
+// Rotate around Y axis
+node.Rotate(Vector3.Up, Mathf.DegToRad(90));
+```
+  </Tab>
+</Tabs>

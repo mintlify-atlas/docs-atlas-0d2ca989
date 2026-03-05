@@ -1,0 +1,240 @@
+---
+title: 'Containers'
+description: 'Automatic layout and arrangement of UI elements using container nodes'
+---
+
+## Overview
+
+Containers are specialized Control nodes that automatically arrange their children. They handle positioning, sizing, and spacing without manual intervention, making it easier to create responsive, adaptive UIs.
+
+<Info>
+All containers inherit from the `Container` base class and only work with children that inherit from `Control`.
+</Info>
+
+## Container Base Class
+
+The `Container` class provides the foundation for all container types:
+
+- Automatically arranges child controls
+- Emits signals when children need to be sorted
+- Provides accessibility region support
+- Mouse filter set to `MOUSE_FILTER_PASS` by default
+
+### Important Signals
+
+- `pre_sort_children` - Emitted before sorting children
+- `sort_children` - Emitted when children need to be sorted
+
+## Box Containers
+
+### VBoxContainer
+
+Arranges children vertically from top to bottom:
+
+```gdscript
+var vbox = VBoxContainer.new()
+add_child(vbox)
+
+# Add multiple buttons vertically
+for i in range(3):
+    var button = Button.new()
+    button.text = "Button " + str(i + 1)
+    vbox.add_child(button)
+```
+
+```csharp
+var vbox = new VBoxContainer();
+AddChild(vbox);
+
+// Add multiple buttons vertically
+for (int i = 0; i < 3; i++)
+{
+    var button = new Button();
+    button.Text = $"Button {i + 1}";
+    vbox.AddChild(button);
+}
+```
+
+### HBoxContainer
+
+Arranges children horizontally from left to right:
+
+```gdscript
+var hbox = HBoxContainer.new()
+add_child(hbox)
+
+var label = Label.new()
+label.text = "Name:"
+hbox.add_child(label)
+
+var line_edit = LineEdit.new()
+line_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+hbox.add_child(line_edit)
+```
+
+```csharp
+var hbox = new HBoxContainer();
+AddChild(hbox);
+
+var label = new Label();
+label.Text = "Name:";
+hbox.AddChild(label);
+
+var lineEdit = new LineEdit();
+lineEdit.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+hbox.AddChild(lineEdit);
+```
+
+<Tip>
+Use `size_flags_horizontal` and `size_flags_vertical` to control how children expand within containers.
+</Tip>
+
+## Grid Container
+
+Arranges children in a grid layout with a specified number of columns:
+
+```gdscript
+var grid = GridContainer.new()
+grid.columns = 3  # 3 columns
+add_child(grid)
+
+# Add 9 buttons in a 3x3 grid
+for i in range(9):
+    var button = Button.new()
+    button.text = str(i + 1)
+    button.custom_minimum_size = Vector2(60, 60)
+    grid.add_child(button)
+```
+
+```csharp
+var grid = new GridContainer();
+grid.Columns = 3;  // 3 columns
+AddChild(grid);
+
+// Add 9 buttons in a 3x3 grid
+for (int i = 0; i < 9; i++)
+{
+    var button = new Button();
+    button.Text = (i + 1).ToString();
+    button.CustomMinimumSize = new Vector2(60, 60);
+    grid.AddChild(button);
+}
+```
+
+**Key Properties:**
+- `columns` - Number of columns in the grid
+
+**Theme Properties:**
+- `h_separation` - Horizontal spacing between children (default: 4)
+- `v_separation` - Vertical spacing between children (default: 4)
+
+## Size Flags
+
+Control how children behave within containers using size flags:
+
+| Flag | Description |
+|------|-------------|
+| `SIZE_SHRINK_BEGIN` | Shrink to minimum size, aligned to start |
+| `SIZE_SHRINK_CENTER` | Shrink to minimum size, centered |
+| `SIZE_SHRINK_END` | Shrink to minimum size, aligned to end |
+| `SIZE_FILL` | Fill available space |
+| `SIZE_EXPAND` | Request extra space |
+| `SIZE_EXPAND_FILL` | Expand and fill (common combination) |
+
+```gdscript
+# Make a button expand to fill available space
+var button = Button.new()
+button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+button.size_flags_vertical = Control.SIZE_EXPAND_FILL
+```
+
+```csharp
+// Make a button expand to fill available space
+var button = new Button();
+button.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+button.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+```
+
+## Other Container Types
+
+### MarginContainer
+
+Adds margins around its single child:
+
+```gdscript
+var margin = MarginContainer.new()
+margin.add_theme_constant_override("margin_left", 20)
+margin.add_theme_constant_override("margin_right", 20)
+margin.add_theme_constant_override("margin_top", 10)
+margin.add_theme_constant_override("margin_bottom", 10)
+```
+
+### CenterContainer
+
+Centers its single child:
+
+```gdscript
+var center = CenterContainer.new()
+var button = Button.new()
+button.text = "Centered Button"
+center.add_child(button)
+```
+
+### PanelContainer
+
+Provides a themed panel background for its children:
+
+```gdscript
+var panel = PanelContainer.new()
+var vbox = VBoxContainer.new()
+panel.add_child(vbox)
+```
+
+### ScrollContainer
+
+Provides scrolling for content larger than its visible area:
+
+```gdscript
+var scroll = ScrollContainer.new()
+scroll.custom_minimum_size = Vector2(300, 200)
+
+var content = VBoxContainer.new()
+scroll.add_child(content)
+
+# Add many items that will be scrollable
+for i in range(20):
+    var label = Label.new()
+    label.text = "Item " + str(i + 1)
+    content.add_child(label)
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use nested containers">
+    Combine different container types to achieve complex layouts. For example, use VBoxContainer for vertical sections and HBoxContainer within each section for horizontal arrangements.
+  </Accordion>
+
+  <Accordion title="Set minimum sizes">
+    Define `custom_minimum_size` on controls to ensure proper layout, especially in containers that expand children.
+  </Accordion>
+
+  <Accordion title="Understand size flags">
+    Master the size flags system to control how elements behave in different screen sizes and orientations.
+  </Accordion>
+
+  <Accordion title="Test different resolutions">
+    Always test your UI at different resolutions to ensure containers adapt properly.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Control Nodes" icon="square" href="/ui/control-nodes">
+    Learn about the Control base class and common UI elements
+  </Card>
+  <Card title="Themes" icon="palette" href="/ui/themes">
+    Customize container appearance and spacing
+  </Card>
+</CardGroup>

@@ -1,0 +1,386 @@
+---
+title: 'Networking Overview'
+description: "Introduction to Godot's networking system and multiplayer architecture"
+---
+
+## Overview
+
+Godot provides a comprehensive networking system for creating multiplayer games. The system is built around `MultiplayerAPI` for high-level multiplayer functionality and various peer implementations for different networking backends.
+
+<Info>
+Godot's multiplayer system uses a client-server architecture by default, where one peer acts as the authoritative server.
+</Info>
+
+## Multiplayer Architecture
+
+### Client-Server Model
+
+Godot uses a client-server architecture where:
+
+- **Server** - Authoritative peer that manages game state (peer ID = 1)
+- **Clients** - Connect to the server and send/receive updates
+- **Peer-to-Peer** - All peers can communicate, but one is designated as server
+
+```gdscript
+# Check if running as server
+if multiplayer.is_server():
+    print("Running as server")
+else:
+    print("Running as client")
+
+# Get your unique peer ID
+var my_id = multiplayer.get_unique_id()
+print("My peer ID: ", my_id)
+```
+
+```csharp
+// Check if running as server
+if (Multiplayer.IsServer())
+{
+    GD.Print("Running as server");
+}
+else
+{
+    GD.Print("Running as client");
+}
+
+// Get your unique peer ID
+int myId = Multiplayer.GetUniqueId();
+GD.Print($"My peer ID: {myId}");
+```
+
+## MultiplayerAPI
+
+The `MultiplayerAPI` class provides high-level networking functionality:
+
+### Key Features
+
+- **RPC (Remote Procedure Calls)** - Call functions on remote peers
+- **Automatic synchronization** - Sync properties across network
+- **Connection management** - Handle peer connections/disconnections
+- **Authority system** - Control which peer owns which nodes
+
+### Basic Setup
+
+```gdscript
+extends Node
+
+func _ready():
+    # Connect multiplayer signals
+    multiplayer.peer_connected.connect(_on_peer_connected)
+    multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+    multiplayer.connected_to_server.connect(_on_connected_to_server)
+    multiplayer.connection_failed.connect(_on_connection_failed)
+
+func _on_peer_connected(id: int):
+    print("Peer ", id, " connected")
+
+func _on_peer_disconnected(id: int):
+    print("Peer ", id, " disconnected")
+
+func _on_connected_to_server():
+    print("Successfully connected to server")
+
+func _on_connection_failed():
+    print("Failed to connect to server")
+```
+
+```csharp
+public override void _Ready()
+{
+    // Connect multiplayer signals
+    Multiplayer.PeerConnected += OnPeerConnected;
+    Multiplayer.PeerDisconnected += OnPeerDisconnected;
+    Multiplayer.ConnectedToServer += OnConnectedToServer;
+    Multiplayer.ConnectionFailed += OnConnectionFailed;
+}
+
+private void OnPeerConnected(long id)
+{
+    GD.Print($"Peer {id} connected");
+}
+
+private void OnPeerDisconnected(long id)
+{
+    GD.Print($"Peer {id} disconnected");
+}
+
+private void OnConnectedToServer()
+{
+    GD.Print("Successfully connected to server");
+}
+
+private void OnConnectionFailed()
+{
+    GD.Print("Failed to connect to server");
+}
+```
+
+## RPC System
+
+Remote Procedure Calls allow you to execute functions on other peers:
+
+### Basic RPC
+
+```gdscript
+extends Node
+
+# Declare RPC function with annotation
+@rpc("any_peer", "call_local")
+func say_hello(message: String):
+    print("Received message: ", message)
+
+func _ready():
+    # Call on all peers
+    say_hello.rpc("Hello from " + str(multiplayer.get_unique_id()))
+    
+    # Call on specific peer
+    say_hello.rpc_id(2, "Hello to peer 2")
+```
+
+```csharp
+public partial class MyNode : Node
+{
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+    private void SayHello(string message)
+    {
+        GD.Print($"Received message: {message}");
+    }
+
+    public override void _Ready()
+    {
+        // Call on all peers
+        Rpc(MethodName.SayHello, $"Hello from {Multiplayer.GetUniqueId()}");
+        
+        // Call on specific peer
+        RpcId(2, MethodName.SayHello, "Hello to peer 2");
+    }
+}
+```
+
+### RPC Modes
+
+| Mode | Description |
+|------|-------------|
+| `any_peer` | Any peer can call this RPC |
+| `authority` | Only the multiplayer authority can call |
+
+### RPC Configuration Options
+
+```gdscript
+# Authority-only RPC (default)
+@rpc("authority")
+func server_function():
+    print("Only server can call this")
+
+# Any peer can call
+@rpc("any_peer")
+func anyone_can_call():
+    print("Anyone can call this")
+
+# Call locally as well as remotely
+@rpc("any_peer", "call_local")
+func call_everywhere():
+    print("Called on sender and receivers")
+
+# Unreliable transfer (faster but may be lost)
+@rpc("any_peer", "unreliable")
+func fast_update():
+    print("Fast but may be lost")
+
+# Unreliable ordered (fast but ordered)
+@rpc("any_peer", "unreliable_ordered")
+func ordered_fast_update():
+    print("Fast, may be lost, but ordered")
+```
+
+<Tip>
+Use `unreliable` or `unreliable_ordered` for frequent updates like position that can tolerate packet loss.
+</Tip>
+
+## Multiplayer Authority
+
+Control which peer has authority over a node:
+
+```gdscript
+extends CharacterBody2D
+
+func _ready():
+    # Set authority to the peer that owns this player
+    set_multiplayer_authority(name.to_int())
+
+func _process(delta):
+    # Only process input if we're the authority
+    if is_multiplayer_authority():
+        handle_input()
+        move_and_slide()
+
+func handle_input():
+    var velocity = Vector2.ZERO
+    if Input.is_action_pressed("move_right"):
+        velocity.x += 1
+    if Input.is_action_pressed("move_left"):
+        velocity.x -= 1
+    velocity = velocity.normalized() * 300
+```
+
+```csharp
+public partial class Player : CharacterBody2D
+{
+    public override void _Ready()
+    {
+        // Set authority to the peer that owns this player
+        SetMultiplayerAuthority(int.Parse(Name));
+    }
+
+    public override void _Process(double delta)
+    {
+        // Only process input if we're the authority
+        if (IsMultiplayerAuthority())
+        {
+            HandleInput();
+            MoveAndSlide();
+        }
+    }
+
+    private void HandleInput()
+    {
+        Vector2 velocity = Vector2.Zero;
+        if (Input.IsActionPressed("move_right"))
+            velocity.X += 1;
+        if (Input.IsActionPressed("move_left"))
+            velocity.X -= 1;
+        Velocity = velocity.Normalized() * 300;
+    }
+}
+```
+
+## MultiplayerPeer
+
+The `MultiplayerPeer` is the low-level networking backend:
+
+```gdscript
+# Create and configure peer
+var peer = ENetMultiplayerPeer.new()
+
+# Start as server
+var error = peer.create_server(8080, 4)  # Port 8080, max 4 clients
+if error != OK:
+    print("Failed to create server")
+    return
+
+multiplayer.multiplayer_peer = peer
+print("Server started on port 8080")
+```
+
+```csharp
+// Create and configure peer
+var peer = new ENetMultiplayerPeer();
+
+// Start as server
+Error error = peer.CreateServer(8080, 4);  // Port 8080, max 4 clients
+if (error != Error.Ok)
+{
+    GD.Print("Failed to create server");
+    return;
+}
+
+Multiplayer.MultiplayerPeer = peer;
+GD.Print("Server started on port 8080");
+```
+
+### Transfer Modes
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `RELIABLE` | Guaranteed delivery, ordered | Critical game events |
+| `UNRELIABLE` | Fast, may be lost | Frequent position updates |
+| `UNRELIABLE_ORDERED` | Fast, may be lost, but ordered | Movement that needs order |
+
+## Network Signals
+
+Key signals for managing multiplayer connections:
+
+```gdscript
+# Client signals
+multiplayer.connected_to_server.connect(_on_connected)
+multiplayer.connection_failed.connect(_on_connection_failed)
+multiplayer.server_disconnected.connect(_on_server_disconnected)
+
+# Server/client signals
+multiplayer.peer_connected.connect(_on_peer_connected)
+multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+
+func _on_connected():
+    print("Connected to server")
+
+func _on_connection_failed():
+    print("Connection failed")
+
+func _on_server_disconnected():
+    print("Server disconnected")
+
+func _on_peer_connected(id: int):
+    print("Peer ", id, " connected")
+
+func _on_peer_disconnected(id: int):
+    print("Peer ", id, " disconnected")
+```
+
+## Getting Connected Peers
+
+```gdscript
+# Get all connected peer IDs
+var peers = multiplayer.get_peers()
+print("Connected peers: ", peers)
+
+# Get total peer count (including self)
+var peer_count = peers.size() + 1
+print("Total peers: ", peer_count)
+
+# Send message to all peers
+for peer_id in peers:
+    send_message.rpc_id(peer_id, "Hello!")
+```
+
+<Warning>
+On Android, enable the INTERNET permission in export settings, or all network communication will be blocked.
+</Warning>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Server is authoritative">
+    Always validate important game state on the server to prevent cheating. Clients should request actions, not dictate state.
+  </Accordion>
+
+  <Accordion title="Use appropriate transfer modes">
+    Use `reliable` for critical events (damage, spawning) and `unreliable` for frequent updates (position, rotation).
+  </Accordion>
+
+  <Accordion title="Minimize RPC calls">
+    Batch data when possible and avoid calling RPCs every frame. Use property synchronization for frequently changing values.
+  </Accordion>
+
+  <Accordion title="Handle disconnections gracefully">
+    Always implement proper cleanup when peers disconnect to avoid orphaned nodes and data.
+  </Accordion>
+
+  <Accordion title="Test with latency">
+    Use network simulation tools to test your game with realistic latency and packet loss.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="High-Level Multiplayer" icon="users" href="/networking/high-level-multiplayer">
+    Learn about spawning and synchronization
+  </Card>
+  <Card title="Low-Level Networking" icon="network-wired" href="/networking/low-level-networking">
+    Understand ENet and WebSocket implementations
+  </Card>
+  <Card title="HTTP Requests" icon="globe" href="/networking/http-requests">
+    Make HTTP/REST API calls
+  </Card>
+</CardGroup>

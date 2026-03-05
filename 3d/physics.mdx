@@ -1,0 +1,733 @@
+---
+title: '3D Physics'
+description: 'Complete guide to 3D physics simulation in Godot Engine'
+---
+
+## Introduction to 3D Physics
+
+Godot's 3D physics system provides realistic simulation of rigid bodies, character controllers, and collision detection. Understanding the different physics body types and how to configure them is essential for creating interactive 3D games.
+
+## Physics Body Types
+
+<CardGroup cols={3}>
+  <Card title="RigidBody3D" icon="meteor">
+    Dynamic physics simulation
+  </Card>
+  <Card title="CharacterBody3D" icon="person-running">
+    Script-controlled movement
+  </Card>
+  <Card title="StaticBody3D" icon="mountain">
+    Immovable environment
+  </Card>
+  <Card title="AnimatableBody3D" icon="rotate">
+    Animated kinematic body
+  </Card>
+  <Card title="Area3D" icon="circle-notch">
+    Detection zones
+  </Card>
+</CardGroup>
+
+## RigidBody3D
+
+Physics bodies controlled by the physics engine. Perfect for objects that need realistic physics simulation.
+
+### Basic Setup
+
+```gdscript
+var rigid_body = RigidBody3D.new()
+add_child(rigid_body)
+
+# Add visual mesh
+var mesh_instance = MeshInstance3D.new()
+mesh_instance.mesh = SphereMesh.new()
+rigid_body.add_child(mesh_instance)
+
+# Add collision shape (required!)
+var collision_shape = CollisionShape3D.new()
+collision_shape.shape = SphereShape3D.new()
+rigid_body.add_child(collision_shape)
+
+# Configure physics properties
+rigid_body.mass = 2.0
+rigid_body.gravity_scale = 1.0
+```
+
+See doc/classes/RigidBody3D.xml:7-9
+
+<Warning>
+Changing `linear_velocity` or `transform` frequently can cause unpredictable behavior. Use forces and impulses instead.
+</Warning>
+
+### Mass and Inertia
+
+```gdscript
+# Set mass
+rigid_body.mass = 5.0
+
+# Custom inertia (auto-calculated by default)
+rigid_body.inertia = Vector3(1.0, 1.0, 1.0)
+
+# Custom center of mass
+rigid_body.center_of_mass_mode = RigidBody3D.CENTER_OF_MASS_MODE_CUSTOM
+rigid_body.center_of_mass = Vector3(0, -0.5, 0)
+```
+
+See doc/classes/RigidBody3D.xml:225-226, 186-189, 147-149, 151-152
+
+### Applying Forces
+
+<Tabs>
+  <Tab title="Forces (Continuous)">
+    Forces are applied every physics frame:
+    ```gdscript
+    func _physics_process(delta):
+        # Apply force at center of mass
+        apply_central_force(Vector3(0, 10, 0))
+        
+        # Apply force at position (creates torque)
+        apply_force(Vector3(10, 0, 0), Vector3(0, 1, 0))
+        
+        # Apply torque (rotation)
+        apply_torque(Vector3(0, 5, 0))
+    ```
+    See doc/classes/RigidBody3D.xml:52-57, 69-76, 88-94
+  </Tab>
+  
+  <Tab title="Impulses (One-Time)">
+    Impulses are instantaneous, time-independent changes:
+    ```gdscript
+    func _on_jump():
+        # Instant velocity change at center
+        apply_central_impulse(Vector3(0, 10, 0))
+        
+        # Instant velocity change at position
+        apply_impulse(Vector3(5, 0, 0), Vector3(1, 0, 0))
+        
+        # Instant rotational change
+        apply_torque_impulse(Vector3(0, 3, 0))
+    ```
+    See doc/classes/RigidBody3D.xml:60-67, 78-86, 96-103
+  </Tab>
+  
+  <Tab title="Constant Forces">
+    Forces that persist until cleared:
+    ```gdscript
+    # Set constant force
+    add_constant_central_force(Vector3(0, 5, 0))
+    add_constant_torque(Vector3(0, 2, 0))
+    
+    # Clear constant forces
+    constant_force = Vector3.ZERO
+    constant_torque = Vector3.ZERO
+    ```
+    See doc/classes/RigidBody3D.xml:28-34, 46-49, 154-156, 158-160
+  </Tab>
+</Tabs>
+
+### Velocity Control
+
+```gdscript
+# Linear velocity (movement)
+rigid_body.linear_velocity = Vector3(5, 0, 0)
+
+# Angular velocity (rotation in radians/second)
+rigid_body.angular_velocity = Vector3(0, PI, 0)
+
+# Set axis velocity (useful for jumping)
+rigid_body.set_axis_velocity(Vector3(0, 10, 0))  # Jump
+```
+
+See doc/classes/RigidBody3D.xml:219-220, 141-142, 125-130
+
+### Damping
+
+Control how quickly motion slows down:
+
+```gdscript
+# Linear damping (movement slowdown)
+rigid_body.linear_damp = 0.5
+rigid_body.linear_damp_mode = RigidBody3D.DAMP_MODE_COMBINE
+
+# Angular damping (rotation slowdown)
+rigid_body.angular_damp = 1.0
+rigid_body.angular_damp_mode = RigidBody3D.DAMP_MODE_COMBINE
+```
+
+See doc/classes/RigidBody3D.xml:212-214, 216-217, 134-136, 138-139
+
+### Freeze and Lock
+
+```gdscript
+# Freeze the body (stop all physics)
+rigid_body.freeze = true
+rigid_body.freeze_mode = RigidBody3D.FREEZE_MODE_STATIC
+
+# Lock rotation but allow movement
+rigid_body.lock_rotation = true
+```
+
+See doc/classes/RigidBody3D.xml:174-177, 179-181, 222-223
+
+### Collision Detection
+
+```gdscript
+# Enable contact monitoring
+rigid_body.contact_monitor = true
+rigid_body.max_contacts_reported = 4
+
+# Connect to collision signals
+rigid_body.body_entered.connect(_on_body_entered)
+rigid_body.body_exited.connect(_on_body_exited)
+
+func _on_body_entered(body):
+    print("Collided with: ", body.name)
+
+# Get colliding bodies
+var bodies = rigid_body.get_colliding_bodies()
+print("Contact count: ", rigid_body.get_contact_count())
+```
+
+See doc/classes/RigidBody3D.xml:162-164, 228-230, 105-109, 112-116, 241-246, 248-253
+
+### Custom Integration
+
+```gdscript
+extends RigidBody3D
+
+func _ready():
+    custom_integrator = true
+
+func _integrate_forces(state: PhysicsDirectBodyState3D):
+    # Custom physics behavior
+    var force = Vector3(0, 10, 0)
+    state.apply_central_force(force)
+    
+    # Access and modify state
+    var velocity = state.linear_velocity
+    state.linear_velocity = velocity * 0.99  # Custom damping
+```
+
+See doc/classes/RigidBody3D.xml:21-26, 170-172
+
+### Sleep Mode
+
+```gdscript
+# Allow sleeping when not moving
+rigid_body.can_sleep = true
+
+# Check if sleeping
+if rigid_body.sleeping:
+    print("Body is asleep")
+
+# Wake up the body
+rigid_body.sleeping = false
+```
+
+See doc/classes/RigidBody3D.xml:144-145, 236-237
+
+## CharacterBody3D
+
+Script-controlled physics body perfect for player characters.
+
+### Basic Setup
+
+```gdscript
+var character = CharacterBody3D.new()
+add_child(character)
+
+# Add collision shape
+var collision = CollisionShape3D.new()
+collision.shape = CapsuleShape3D.new()
+character.add_child(collision)
+
+# Configure character properties
+character.floor_max_angle = deg_to_rad(45)  # Max slope angle
+character.floor_snap_length = 0.1  # Stick to floor
+```
+
+See doc/classes/CharacterBody3D.xml:6-8
+
+### Movement with move_and_slide
+
+```gdscript
+extends CharacterBody3D
+
+const SPEED = 5.0
+const JUMP_VELOCITY = 4.5
+
+func _physics_process(delta):
+    # Add gravity
+    if not is_on_floor():
+        velocity.y -= ProjectSettings.get_setting("physics/3d/default_gravity") * delta
+    
+    # Handle jump
+    if Input.is_action_just_pressed("jump") and is_on_floor():
+        velocity.y = JUMP_VELOCITY
+    
+    # Get input direction
+    var input_dir = Input.get_vector("left", "right", "forward", "back")
+    var direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+    
+    # Apply movement
+    if direction:
+        velocity.x = direction.x * SPEED
+        velocity.z = direction.z * SPEED
+    else:
+        velocity.x = move_toward(velocity.x, 0, SPEED)
+        velocity.z = move_toward(velocity.z, 0, SPEED)
+    
+    # Move the character
+    move_and_slide()
+```
+
+See doc/classes/CharacterBody3D.xml:132-140, 189-191
+
+### Floor Detection
+
+```gdscript
+# Check if on floor
+if character.is_on_floor():
+    print("On ground")
+
+# Check if only on floor (not on wall too)
+if character.is_on_floor_only():
+    print("Only on floor")
+
+# Get floor normal and angle
+var floor_normal = character.get_floor_normal()
+var floor_angle = character.get_floor_angle()
+print("Floor angle: ", rad_to_deg(floor_angle))
+```
+
+See doc/classes/CharacterBody3D.xml:108-112, 114-118, 33-36, 26-31
+
+### Wall and Ceiling Detection
+
+```gdscript
+# Check if touching wall
+if character.is_on_wall():
+    var wall_normal = character.get_wall_normal()
+    print("Wall normal: ", wall_normal)
+
+# Check if hitting ceiling
+if character.is_on_ceiling():
+    print("Hit ceiling")
+```
+
+See doc/classes/CharacterBody3D.xml:120-124, 89-94, 96-100
+
+### Collision Information
+
+```gdscript
+# Get number of collisions
+var collision_count = character.get_slide_collision_count()
+
+# Get collision details
+for i in range(collision_count):
+    var collision = character.get_slide_collision(i)
+    print("Collider: ", collision.get_collider())
+    print("Normal: ", collision.get_normal())
+    print("Position: ", collision.get_position())
+
+# Get last collision
+var last_collision = character.get_last_slide_collision()
+```
+
+See doc/classes/CharacterBody3D.xml:83-87, 76-81, 46-49
+
+### Motion Modes
+
+```gdscript
+# Grounded mode (for platformers)
+character.motion_mode = CharacterBody3D.MOTION_MODE_GROUNDED
+character.up_direction = Vector3.UP
+
+# Floating mode (for space games)
+character.motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
+```
+
+See doc/classes/CharacterBody3D.xml:165-166, 186-187, 198-203
+
+### Floor Behavior
+
+```gdscript
+# Stop on slopes
+character.floor_stop_on_slope = true
+
+# Constant speed on slopes
+character.floor_constant_speed = true
+
+# Block wall climbing
+character.floor_block_on_wall = true
+
+# Snap length for sticking to floor
+character.floor_snap_length = 0.1
+```
+
+See doc/classes/CharacterBody3D.xml:158-160, 147-149, 144-145, 154-156
+
+### Platform Interaction
+
+```gdscript
+# Get platform velocity
+var platform_vel = character.get_platform_velocity()
+var platform_angular_vel = character.get_platform_angular_velocity()
+
+# Configure platform layers
+character.platform_floor_layers = 1  # Which layers are platforms
+character.platform_wall_layers = 0
+
+# What happens when leaving platform
+character.platform_on_leave = CharacterBody3D.PLATFORM_ON_LEAVE_ADD_VELOCITY
+```
+
+See doc/classes/CharacterBody3D.xml:58-62, 52-56, 168-169, 174-175, 171-172, 204-212
+
+## StaticBody3D
+
+Immovable environment objects like floors, walls, and props.
+
+### Basic Setup
+
+```gdscript
+var static_body = StaticBody3D.new()
+add_child(static_body)
+
+# Add collision shape
+var collision = CollisionShape3D.new()
+collision.shape = BoxShape3D.new()
+static_body.add_child(collision)
+
+# Add visual mesh
+var mesh_instance = MeshInstance3D.new()
+mesh_instance.mesh = BoxMesh.new()
+static_body.add_child(mesh_instance)
+```
+
+See doc/classes/StaticBody3D.xml:6-9
+
+### Constant Velocities
+
+Simulate conveyor belts or rotating platforms:
+
+```gdscript
+# Conveyor belt (affects touching bodies)
+static_body.constant_linear_velocity = Vector3(2, 0, 0)
+
+# Rotating platform
+static_body.constant_angular_velocity = Vector3(0, 1, 0)
+```
+
+See doc/classes/StaticBody3D.xml:22-24, 19-20
+
+<Info>
+These velocities don't move the StaticBody3D itself - they affect touching dynamic bodies as if the static body were moving.
+</Info>
+
+## CollisionShape3D
+
+Defines the collision boundaries for physics bodies.
+
+### Shape Types
+
+```gdscript
+# Box
+var box = BoxShape3D.new()
+box.size = Vector3(2, 1, 2)
+
+# Sphere
+var sphere = SphereShape3D.new()
+sphere.radius = 1.0
+
+# Capsule (good for characters)
+var capsule = CapsuleShape3D.new()
+capsule.radius = 0.5
+capsule.height = 2.0
+
+# Cylinder
+var cylinder = CylinderShape3D.new()
+cylinder.radius = 1.0
+cylinder.height = 2.0
+
+# Convex polygon (custom shape)
+var convex = ConvexPolygonShape3D.new()
+
+# Concave polygon (for static complex meshes)
+var concave = ConcavePolygonShape3D.new()
+```
+
+### Setting Up Collision
+
+```gdscript
+var collision_shape = CollisionShape3D.new()
+collision_shape.shape = CapsuleShape3D.new()
+physics_body.add_child(collision_shape)
+
+# Disable collision temporarily
+collision_shape.disabled = true
+
+# Re-enable
+collision_shape.set_deferred("disabled", false)  # Use deferred for safety
+```
+
+See doc/classes/CollisionShape3D.xml:42-43, 39-40
+
+<Warning>
+Always change `disabled` with `set_deferred()` to avoid physics engine conflicts.
+</Warning>
+
+### Debug Visualization
+
+```gdscript
+# Custom debug color
+collision_shape.debug_color = Color.RED
+
+# Fill or wireframe
+collision_shape.debug_fill = true
+```
+
+See doc/classes/CollisionShape3D.xml:32-34, 36-37
+
+## Physics Materials
+
+Control friction and bounce:
+
+```gdscript
+var physics_mat = PhysicsMaterial.new()
+
+# Friction (0.0 = ice, 1.0 = sticky)
+physics_mat.friction = 0.5
+
+# Bounce (0.0 = no bounce, 1.0 = perfect bounce)
+physics_mat.bounce = 0.3
+
+# Apply to body
+rigid_body.physics_material_override = physics_mat
+```
+
+See doc/classes/RigidBody3D.xml:232-234, doc/classes/StaticBody3D.xml:25-27
+
+## Joints and Constraints
+
+Connect physics bodies together:
+
+### Pin Joint
+
+```gdscript
+var pin_joint = PinJoint3D.new()
+add_child(pin_joint)
+pin_joint.node_a = body_a.get_path()
+pin_joint.node_b = body_b.get_path()
+```
+
+### Hinge Joint
+
+```gdscript
+var hinge = HingeJoint3D.new()
+add_child(hinge)
+hinge.node_a = door.get_path()
+hinge.node_b = frame.get_path()
+
+# Configure limits
+hinge.set_param(HingeJoint3D.PARAM_LIMIT_UPPER, deg_to_rad(90))
+hinge.set_param(HingeJoint3D.PARAM_LIMIT_LOWER, deg_to_rad(0))
+hinge.set_flag(HingeJoint3D.FLAG_USE_LIMIT, true)
+```
+
+### Slider Joint
+
+```gdscript
+var slider = SliderJoint3D.new()
+add_child(slider)
+slider.node_a = piston.get_path()
+slider.node_b = cylinder.get_path()
+```
+
+## Raycasting in 3D
+
+Detect objects along a ray:
+
+### Using RayCast3D Node
+
+```gdscript
+var raycast = RayCast3D.new()
+add_child(raycast)
+raycast.target_position = Vector3(0, 0, -10)
+raycast.enabled = true
+
+# Check for collision
+if raycast.is_colliding():
+    var collision_point = raycast.get_collision_point()
+    var collision_normal = raycast.get_collision_normal()
+    var collider = raycast.get_collider()
+    print("Hit: ", collider.name, " at ", collision_point)
+```
+
+### Direct Space State Query
+
+```gdscript
+func _physics_process(delta):
+    var space_state = get_world_3d().direct_space_state
+    
+    var query = PhysicsRayQueryParameters3D.create(
+        global_position,
+        global_position + Vector3(0, 0, -10)
+    )
+    
+    var result = space_state.intersect_ray(query)
+    
+    if result:
+        print("Hit: ", result.collider)
+        print("Position: ", result.position)
+        print("Normal: ", result.normal)
+```
+
+### Shape Casting
+
+```gdscript
+var space_state = get_world_3d().direct_space_state
+
+# Sphere cast
+var query = PhysicsShapeQueryParameters3D.new()
+var sphere = SphereShape3D.new()
+sphere.radius = 0.5
+query.shape = sphere
+query.transform = global_transform
+
+var result = space_state.intersect_shape(query)
+for hit in result:
+    print("Overlapping: ", hit.collider)
+```
+
+## Collision Layers and Masks
+
+Control what collides with what:
+
+```gdscript
+# Set collision layer (what layer this object is on)
+physics_body.collision_layer = 0b00000001  # Layer 1
+
+# Set collision mask (what layers this object collides with)
+physics_body.collision_mask = 0b00000011  # Layers 1 and 2
+
+# Helper methods
+physics_body.set_collision_layer_value(1, true)
+physics_body.set_collision_mask_value(2, true)
+```
+
+## Performance Optimization
+
+<AccordionGroup>
+  <Accordion title="Use Simple Collision Shapes">
+    Prefer primitive shapes over complex meshes:
+    ```gdscript
+    # Good: Simple capsule
+    var capsule = CapsuleShape3D.new()
+    
+    # Avoid: Complex concave mesh (unless static)
+    var complex = ConcavePolygonShape3D.new()
+    ```
+  </Accordion>
+  
+  <Accordion title="Enable Continuous Collision Detection Selectively">
+    Only for fast-moving objects:
+    ```gdscript
+    # Only for bullets, fast projectiles
+    rigid_body.continuous_cd = true
+    ```
+  </Accordion>
+  
+  <Accordion title="Limit Contact Monitoring">
+    Only monitor when needed:
+    ```gdscript
+    rigid_body.contact_monitor = true
+    rigid_body.max_contacts_reported = 4  # Keep low
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Sleep Mode">
+    Let idle bodies sleep:
+    ```gdscript
+    rigid_body.can_sleep = true
+    ```
+  </Accordion>
+  
+  <Accordion title="Organize with Collision Layers">
+    Avoid unnecessary collision checks:
+    ```gdscript
+    # Player only collides with enemies and environment
+    player.collision_mask = 0b00000110  # Layers 2 and 3
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Common Patterns
+
+### Pickup Item
+
+```gdscript
+extends RigidBody3D
+
+func _on_body_entered(body):
+    if body.is_in_group("player"):
+        # Give item to player
+        body.add_item(self)
+        queue_free()
+```
+
+### Exploding Barrel
+
+```gdscript
+extends RigidBody3D
+
+var explosion_force = 1000.0
+var explosion_radius = 5.0
+
+func explode():
+    var bodies = get_colliding_bodies()
+    for body in bodies:
+        if body is RigidBody3D:
+            var direction = (body.global_position - global_position).normalized()
+            var distance = global_position.distance_to(body.global_position)
+            var strength = explosion_force * (1.0 - distance / explosion_radius)
+            body.apply_central_impulse(direction * strength)
+```
+
+### Jump Pad
+
+```gdscript
+extends Area3D
+
+var jump_force = 20.0
+
+func _on_body_entered(body):
+    if body is CharacterBody3D:
+        body.velocity.y = jump_force
+```
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="3D Overview" icon="cube" href="/3d/overview">
+    3D coordinate systems and transforms
+  </Card>
+  <Card title="Meshes and Materials" icon="palette" href="/3d/meshes-and-materials">
+    Visual representation
+  </Card>
+  <Card title="Area3D" icon="circle-notch" href="/api/node3d">
+    Detection zones and triggers
+  </Card>
+  <Card title="Physics Troubleshooting" icon="bug" href="/physics/physics-introduction">
+    Common physics issues
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [Physics Introduction](https://docs.godotengine.org/en/stable/tutorials/physics/physics_introduction.html)
+- [Troubleshooting Physics Issues](https://docs.godotengine.org/en/stable/tutorials/physics/troubleshooting_physics_issues.html)
+- [3D Physics Tests Demo](https://godotengine.org/asset-library/asset/2747)
+- RigidBody3D Reference: doc/classes/RigidBody3D.xml
+- CharacterBody3D Reference: doc/classes/CharacterBody3D.xml
+- StaticBody3D Reference: doc/classes/StaticBody3D.xml
+- CollisionShape3D Reference: doc/classes/CollisionShape3D.xml

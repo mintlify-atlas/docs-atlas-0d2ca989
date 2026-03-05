@@ -1,0 +1,510 @@
+---
+title: 'Meshes and Materials'
+description: 'Working with 3D meshes, materials, and textures in Godot Engine'
+---
+
+## Introduction
+
+Meshes define the 3D geometry of objects, while materials determine how they appear visually. Godot provides powerful tools for importing 3D models, applying materials, and creating stunning visuals using PBR (Physically Based Rendering) workflows.
+
+## MeshInstance3D
+
+`MeshInstance3D` is the node used to display 3D geometry in your scene. It takes a `Mesh` resource and renders it in the 3D world.
+
+### Basic Usage
+
+```gdscript
+var mesh_instance = MeshInstance3D.new()
+add_child(mesh_instance)
+
+# Create a simple box mesh
+var box_mesh = BoxMesh.new()
+box_mesh.size = Vector3(2, 2, 2)
+mesh_instance.mesh = box_mesh
+```
+
+See doc/classes/MeshInstance3D.xml:128
+
+### Built-in Primitive Meshes
+
+Godot includes several primitive mesh types for quick prototyping:
+
+<CardGroup cols={3}>
+  <Card title="BoxMesh" icon="cube">
+    Rectangular cuboid
+  </Card>
+  <Card title="SphereMesh" icon="circle">
+    UV sphere
+  </Card>
+  <Card title="CylinderMesh" icon="prescription-bottle">
+    Cylinder or cone
+  </Card>
+  <Card title="CapsuleMesh" icon="capsules">
+    Capsule shape
+  </Card>
+  <Card title="PlaneMesh" icon="table">
+    Flat plane
+  </Card>
+  <Card title="PrismMesh" icon="caret-up">
+    Triangular prism
+  </Card>
+</CardGroup>
+
+```gdscript
+# Create a sphere
+var sphere = SphereMesh.new()
+sphere.radius = 1.5
+sphere.height = 3.0
+sphere.radial_segments = 32
+sphere.rings = 16
+mesh_instance.mesh = sphere
+```
+
+## Importing 3D Models
+
+Godot supports multiple 3D file formats:
+
+- **glTF 2.0** (.gltf, .glb) - **Recommended format**
+- **FBX** (.fbx) - Widely used in game development
+- **Collada** (.dae) - Open standard
+- **Wavefront OBJ** (.obj) - Simple format, no animations
+
+<Note>
+glTF 2.0 is the preferred format as it's an open standard with excellent support for modern features like PBR materials, animations, and skinning.
+</Note>
+
+### Import Process
+
+<Steps>
+  <Step title="Import the Model">
+    Drag and drop your 3D file into the FileSystem dock. Godot will automatically import it.
+  </Step>
+  <Step title="Configure Import Settings">
+    Select the file and adjust settings in the Import dock (meshes, materials, animations).
+  </Step>
+  <Step title="Instantiate in Scene">
+    Drag the imported scene into your level or instantiate it via code:
+    ```gdscript
+    var model = preload("res://models/character.gltf").instantiate()
+    add_child(model)
+    ```
+  </Step>
+</Steps>
+
+## Materials Overview
+
+Materials control the visual appearance of meshes. Godot's `Material` class is the base for all material types (doc/classes/Material.xml:2).
+
+### Material Types
+
+<Tabs>
+  <Tab title="StandardMaterial3D">
+    The most common material type with PBR support. Provides a comprehensive set of properties without writing shaders.
+    
+    ```gdscript
+    var material = StandardMaterial3D.new()
+    material.albedo_color = Color.RED
+    material.metallic = 0.8
+    material.roughness = 0.2
+    mesh_instance.material_override = material
+    ```
+  </Tab>
+  
+  <Tab title="ORMMaterial3D">
+    Optimized variant of StandardMaterial3D that uses ORM (Occlusion, Roughness, Metallic) texture packing.
+    
+    ```gdscript
+    var orm_material = ORMMaterial3D.new()
+    # More memory efficient for complex materials
+    ```
+  </Tab>
+  
+  <Tab title="ShaderMaterial">
+    Custom materials using the Godot shading language for advanced effects.
+    
+    ```gdscript
+    var shader_material = ShaderMaterial.new()
+    shader_material.shader = preload("res://shaders/custom.gdshader")
+    mesh_instance.material_override = shader_material
+    ```
+  </Tab>
+</Tabs>
+
+## StandardMaterial3D Properties
+
+### Albedo (Base Color)
+
+The base color or texture of the material:
+
+```gdscript
+var mat = StandardMaterial3D.new()
+
+# Set solid color
+mat.albedo_color = Color(1.0, 0.5, 0.2)
+
+# Set texture
+mat.albedo_texture = preload("res://textures/wood_albedo.png")
+```
+
+See doc/classes/BaseMaterial3D.xml:60-66
+
+### Metallic and Roughness (PBR)
+
+These properties define the physically-based rendering characteristics:
+
+```gdscript
+# Metallic: 0.0 = non-metal, 1.0 = pure metal
+mat.metallic = 0.0
+mat.metallic_texture = preload("res://textures/metal_map.png")
+
+# Roughness: 0.0 = smooth/glossy, 1.0 = rough/matte
+mat.roughness = 0.5
+mat.roughness_texture = preload("res://textures/roughness_map.png")
+```
+
+<CardGroup cols={2}>
+  <Card title="Metallic = 0.0" icon="gem">
+    Non-metallic surfaces like wood, plastic, fabric
+  </Card>
+  <Card title="Metallic = 1.0" icon="shield">
+    Metallic surfaces like iron, gold, chrome
+  </Card>
+  <Card title="Roughness = 0.0" icon="water">
+    Smooth, mirror-like surfaces
+  </Card>
+  <Card title="Roughness = 1.0" icon="cube">
+    Matte, diffuse surfaces
+  </Card>
+</CardGroup>
+
+### Normal Mapping
+
+Add surface detail without additional geometry:
+
+```gdscript
+mat.normal_enabled = true
+mat.normal_texture = preload("res://textures/brick_normal.png")
+mat.normal_scale = 1.0  # Intensity of the normal map
+```
+
+### Emission
+
+Make objects glow:
+
+```gdscript
+mat.emission_enabled = true
+mat.emission = Color(0.0, 1.0, 0.0)  # Green glow
+mat.emission_energy_multiplier = 2.0
+mat.emission_texture = preload("res://textures/emission.png")
+```
+
+## Textures and UV Mapping
+
+### UV Coordinates
+
+UV coordinates map 2D textures onto 3D surfaces. Most 3D modeling software generates UVs automatically.
+
+```gdscript
+# Access UV layers (for multi-UV meshes)
+mat.uv1_scale = Vector3(2.0, 2.0, 1.0)  # Tile texture 2x
+mat.uv1_offset = Vector3(0.5, 0.5, 0.0) # Offset texture
+```
+
+### Texture Filtering
+
+```gdscript
+# Control how textures are sampled
+mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+```
+
+<Accordion title="Texture Filter Modes">
+- `TEXTURE_FILTER_NEAREST`: Pixelated look
+- `TEXTURE_FILTER_LINEAR`: Smooth interpolation
+- `TEXTURE_FILTER_LINEAR_WITH_MIPMAPS`: Smooth with distance optimization
+- `TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC`: Best quality for angled surfaces
+</Accordion>
+
+### Triplanar Mapping
+
+Project textures from three axes (useful for terrain):
+
+```gdscript
+mat.uv1_triplanar = true
+mat.uv1_triplanar_sharpness = 1.0
+```
+
+## PBR Workflow
+
+The Physically Based Rendering workflow uses real-world material properties:
+
+<Steps>
+  <Step title="Set Albedo">
+    Define the base color without lighting information
+    ```gdscript
+    mat.albedo_texture = preload("res://textures/wood_albedo.png")
+    ```
+  </Step>
+  
+  <Step title="Configure Metallic">
+    Determine if the surface is metallic
+    ```gdscript
+    mat.metallic = 0.0  # Wood is non-metallic
+    mat.metallic_texture = preload("res://textures/wood_metallic.png")
+    ```
+  </Step>
+  
+  <Step title="Adjust Roughness">
+    Control surface glossiness
+    ```gdscript
+    mat.roughness = 0.7  # Slightly rough wood
+    mat.roughness_texture = preload("res://textures/wood_roughness.png")
+    ```
+  </Step>
+  
+  <Step title="Add Normal Map">
+    Enhance surface detail
+    ```gdscript
+    mat.normal_enabled = true
+    mat.normal_texture = preload("res://textures/wood_normal.png")
+    ```
+  </Step>
+  
+  <Step title="Apply Ambient Occlusion">
+    Add depth to crevices
+    ```gdscript
+    mat.ao_enabled = true
+    mat.ao_texture = preload("res://textures/wood_ao.png")
+    ```
+  </Step>
+</Steps>
+
+## Surface Override Materials
+
+Meshes can have multiple surfaces, each with its own material:
+
+```gdscript
+# Get number of surfaces
+var surface_count = mesh_instance.mesh.get_surface_count()
+
+# Override material for specific surface
+mesh_instance.set_surface_override_material(0, custom_material)
+
+# Get the active material for a surface
+var active_mat = mesh_instance.get_active_material(0)
+```
+
+See doc/classes/MeshInstance3D.xml:95-101, 117-124
+
+## Advanced Material Features
+
+### Transparency
+
+```gdscript
+mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+mat.albedo_color = Color(1, 1, 1, 0.5)  # 50% transparent
+
+# Alpha scissor for cutout effects (grass, leaves)
+mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+mat.alpha_scissor_threshold = 0.5
+```
+
+### Refraction
+
+Simulate glass and water:
+
+```gdscript
+mat.refraction_enabled = true
+mat.refraction_scale = 0.1
+mat.refraction_texture = preload("res://textures/refraction.png")
+```
+
+### Subsurface Scattering
+
+For skin, wax, marble:
+
+```gdscript
+mat.subsurf_scatter_enabled = true
+mat.subsurf_scatter_strength = 0.5
+mat.subsurf_scatter_texture = preload("res://textures/sss.png")
+```
+
+### Rim Lighting
+
+Create edge highlights:
+
+```gdscript
+mat.rim_enabled = true
+mat.rim = 1.0
+mat.rim_tint = 0.5
+```
+
+## Blend Shapes (Morph Targets)
+
+Animate mesh deformations:
+
+```gdscript
+# Get blend shape count
+var blend_count = mesh_instance.get_blend_shape_count()
+
+# Set blend shape value (0.0 to 1.0)
+mesh_instance.set_blend_shape_value(0, 0.5)
+
+# Find blend shape by name
+var idx = mesh_instance.find_blend_shape_by_name("smile")
+if idx >= 0:
+    mesh_instance.set_blend_shape_value(idx, 1.0)
+```
+
+See doc/classes/MeshInstance3D.xml:76-80, 82-87, 109-115
+
+## Skeletal Animation
+
+For animated characters:
+
+```gdscript
+# Link mesh to skeleton
+mesh_instance.skeleton = NodePath("../Skeleton3D")
+
+# Set skin resource
+mesh_instance.skin = preload("res://models/character_skin.tres")
+```
+
+See doc/classes/MeshInstance3D.xml:131-134, 135-137
+
+## Creating Collision Shapes
+
+Generate physics collision from mesh geometry:
+
+```gdscript
+# Simple convex collision
+mesh_instance.create_convex_collision()
+
+# Multiple convex shapes (better for complex meshes)
+mesh_instance.create_multiple_convex_collisions()
+
+# Concave collision (for static geometry)
+mesh_instance.create_trimesh_collision()
+```
+
+See doc/classes/MeshInstance3D.xml:32-40, 48-53, 55-59
+
+## Material Optimization Tips
+
+<AccordionGroup>
+  <Accordion title="Use Texture Atlases">
+    Combine multiple textures into one atlas to reduce draw calls:
+    ```gdscript
+    # Instead of many small textures, use one large atlas
+    mat.albedo_texture = preload("res://textures/atlas.png")
+    mat.uv1_scale = Vector3(0.25, 0.25, 1.0)  # Use 1/4 of atlas
+    ```
+  </Accordion>
+  
+  <Accordion title="Disable Unused Features">
+    Only enable material features you actually use:
+    ```gdscript
+    # Don't enable features you don't need
+    mat.normal_enabled = false  # If no normal map
+    mat.emission_enabled = false  # If not glowing
+    ```
+  </Accordion>
+  
+  <Accordion title="Use ORMMaterial3D for Packed Textures">
+    When you have ORM-packed textures, use ORMMaterial3D:
+    ```gdscript
+    var mat = ORMMaterial3D.new()
+    mat.orm_texture = preload("res://textures/orm_packed.png")
+    ```
+  </Accordion>
+  
+  <Accordion title="Optimize Texture Sizes">
+    Use appropriate texture resolutions:
+    - Small objects: 512x512 or 1024x1024
+    - Medium objects: 2048x2048
+    - Large objects/terrain: 4096x4096
+  </Accordion>
+</AccordionGroup>
+
+## Common Material Recipes
+
+### Shiny Metal
+
+```gdscript
+var metal = StandardMaterial3D.new()
+metal.albedo_color = Color(0.8, 0.8, 0.8)
+metal.metallic = 1.0
+metal.roughness = 0.2
+```
+
+### Rough Wood
+
+```gdscript
+var wood = StandardMaterial3D.new()
+wood.albedo_texture = preload("res://textures/wood_color.png")
+wood.normal_enabled = true
+wood.normal_texture = preload("res://textures/wood_normal.png")
+wood.metallic = 0.0
+wood.roughness = 0.8
+```
+
+### Glowing Emissive
+
+```gdscript
+var glow = StandardMaterial3D.new()
+glow.albedo_color = Color.BLACK
+glow.emission_enabled = true
+glow.emission = Color(0.0, 1.0, 0.0)
+glow.emission_energy_multiplier = 3.0
+```
+
+### Transparent Glass
+
+```gdscript
+var glass = StandardMaterial3D.new()
+glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+glass.albedo_color = Color(0.9, 0.9, 1.0, 0.3)
+glass.metallic = 0.0
+glass.roughness = 0.0
+glass.refraction_enabled = true
+glass.refraction_scale = 0.05
+```
+
+## Debugging Meshes
+
+```gdscript
+# Create debug tangent visualization
+mesh_instance.create_debug_tangents()
+
+# Check mesh validity
+if mesh_instance.mesh:
+    print("Mesh loaded: ", mesh_instance.mesh.resource_name)
+    print("Surface count: ", mesh_instance.mesh.get_surface_count())
+else:
+    push_error("No mesh assigned!")
+```
+
+See doc/classes/MeshInstance3D.xml:42-46
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="3D Overview" icon="cube" href="/3d/overview">
+    Learn 3D fundamentals
+  </Card>
+  <Card title="Lighting" icon="lightbulb" href="/3d/lighting">
+    Illuminate your 3D scenes
+  </Card>
+  <Card title="Physics" icon="atom" href="/3d/physics">
+    Add collision and physics
+  </Card>
+  <Card title="Shaders" icon="wand-magic-sparkles" href="/rendering/shaders">
+    Write custom shaders
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [Standard Material 3D Documentation](https://docs.godotengine.org/en/stable/tutorials/3d/standard_material_3d.html)
+- [3D Material Testers Demo](https://godotengine.org/asset-library/asset/2742)
+- MeshInstance3D Reference: doc/classes/MeshInstance3D.xml
+- BaseMaterial3D Reference: doc/classes/BaseMaterial3D.xml

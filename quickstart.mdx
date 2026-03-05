@@ -1,80 +1,275 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Create your first game with Godot Engine in minutes"
 ---
 
-## Get started in three steps
+## Create Your First Godot Game
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will walk you through creating a simple 2D game project to get familiar with Godot's workflow.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+Before starting, make sure you have Godot installed. See the [Installation Guide](/installation) if you haven't installed it yet.
 </Note>
+
+<Steps>
+  <Step title="Launch Godot and Create a Project">
+    1. Open the Godot Engine application
+    2. In the Project Manager, click **New Project**
+    3. Choose a project name (e.g., "MyFirstGame")
+    4. Select a folder location for your project
+    5. Choose **Forward+** as the renderer (best for 3D) or **Mobile** for 2D games
+    6. Click **Create & Edit**
+
+    <Tip>
+    The project manager keeps track of all your Godot projects, making it easy to switch between them.
+    </Tip>
+  </Step>
+
+  <Step title="Understand the Editor Interface">
+    When the editor opens, you'll see several key panels:
+
+    - **Viewport** (center): Where you design your scenes visually
+    - **Scene Tree** (left): Shows the hierarchy of nodes in your current scene
+    - **Inspector** (right): Displays properties of the selected node
+    - **FileSystem** (bottom-left): Browse your project files
+    - **Bottom Panel**: Output, debugger, animation tools, etc.
+
+    <Info>
+    Godot uses a **scene system** where everything is a tree of nodes. Each node has a specific purpose and can be customized in the Inspector.
+    </Info>
+  </Step>
+
+  <Step title="Create Your First Scene">
+    Let's create a simple 2D scene:
+
+    1. In the Scene panel, click **2D Scene** (or click the + icon and add a Node2D)
+    2. Your scene now has a root Node2D
+    3. Save the scene: Press `Ctrl+S` (or `Cmd+S` on macOS)
+    4. Name it `Main.tscn`
+
+    <Warning>
+    Always save your scenes! Godot won't auto-save unsaved scenes.
+    </Warning>
+  </Step>
+
+  <Step title="Add a Sprite2D Node">
+    Let's add a visual element:
+
+    1. With the Node2D selected, click the **+** button at the top of the Scene panel
+    2. Search for **Sprite2D** and select it
+    3. Click **Create**
+    4. You now have a Sprite2D as a child of Node2D
+
+    For now, the sprite won't show anything because it doesn't have a texture. You can add one from the Inspector panel or use the Godot icon:
+
+    1. Select the Sprite2D node
+    2. In the Inspector, find the **Texture** property
+    3. Click **[empty]** and choose **Load**
+    4. Navigate to `icon.svg` in your project folder
+
+    You should now see the Godot logo in the viewport!
+  </Step>
+
+  <Step title="Attach a GDScript">
+    Now let's make our sprite interactive with code:
+
+    1. Select the Node2D (root node)
+    2. Click the **Attach Script** button (scroll/paper icon) at the top of the Scene panel
+    3. Leave the default settings and click **Create**
+
+    This creates a new GDScript file and opens it in the script editor.
+
+    <Tip>
+    GDScript files use the `.gd` extension and are saved in your project folder.
+    </Tip>
+  </Step>
+
+  <Step title="Write Your First Script">
+    Replace the default script content with this code:
+
+    ```gdscript
+    extends Node2D
+
+    # Reference to our sprite
+    @onready var sprite = $Sprite2D
+
+    # Rotation speed in radians per second
+    var rotation_speed = 2.0
+
+    # Called when the node enters the scene tree for the first time.
+    func _ready() -> void:
+        print("Game started!")
+        print("Use arrow keys to move the sprite")
+
+    # Called every frame. 'delta' is the elapsed time since the previous frame.
+    func _process(delta: float) -> void:
+        # Rotate the sprite
+        sprite.rotation += rotation_speed * delta
+        
+        # Move sprite with arrow keys
+        var velocity = Vector2.ZERO
+        
+        if Input.is_action_pressed("ui_right"):
+            velocity.x += 1
+        if Input.is_action_pressed("ui_left"):
+            velocity.x -= 1
+        if Input.is_action_pressed("ui_down"):
+            velocity.y += 1
+        if Input.is_action_pressed("ui_up"):
+            velocity.y -= 1
+        
+        # Normalize to prevent faster diagonal movement
+        if velocity.length() > 0:
+            velocity = velocity.normalized()
+        
+        # Move the sprite
+        sprite.position += velocity * 200 * delta
+    ```
+
+    **Understanding the code:**
+
+    - `extends Node2D`: This script extends the Node2D class
+    - `@onready var sprite = $Sprite2D`: Gets a reference to the Sprite2D child node
+    - `_ready()`: Called once when the node enters the scene tree
+    - `_process(delta)`: Called every frame; `delta` is time since last frame
+    - `Input.is_action_pressed()`: Checks if a key is being pressed
+    - We rotate the sprite continuously and move it based on arrow key input
+
+    <Info>
+    The `@onready` annotation ensures the variable is initialized when the node is ready, after all children are available.
+    </Info>
+  </Step>
+
+  <Step title="Run Your Scene">
+    Time to test your game!
+
+    1. Press **F5** (or click the Play button in the top-right)
+    2. If prompted to select a main scene, click **Select Current**
+    3. A game window opens showing your spinning sprite
+    4. Use the **arrow keys** to move it around
+    5. Press **F8** or close the window to stop
+
+    <Tip>
+    Press **F6** to run the currently edited scene without setting it as the main scene.
+    </Tip>
+
+    **Congratulations!** You've created your first interactive Godot scene.
+  </Step>
+</Steps>
+
+## What You've Learned
+
+<CardGroup cols={2}>
+  <Card title="Scene System" icon="sitemap">
+    How to create scenes with a hierarchy of nodes.
+  </Card>
+
+  <Card title="Node Types" icon="cube">
+    Used Node2D and Sprite2D for 2D game objects.
+  </Card>
+
+  <Card title="GDScript Basics" icon="code">
+    Wrote your first script with `_ready()` and `_process()` functions.
+  </Card>
+
+  <Card title="Input Handling" icon="keyboard">
+    Detected keyboard input to control game objects.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+Now that you've created your first Godot project, explore these topics:
+
+<Steps>
+  <Step title="Learn More About Nodes">
+    Explore different node types for 2D, 3D, UI, and more in the [Nodes and Scenes](/concepts/nodes-and-scenes) documentation.
+  </Step>
+
+  <Step title="Master GDScript">
+    Deep dive into GDScript syntax, types, and patterns in the [Scripting Guide](/scripting/gdscript).
+  </Step>
+
+  <Step title="Build a Complete Game">
+    Follow a full tutorial to create a complete 2D or 3D game from start to finish.
+  </Step>
+
+  <Step title="Explore the API">
+    Browse the [API Reference](/api/node) to discover all available classes and methods.
+  </Step>
+</Steps>
+
+## Common Patterns
+
+<Accordion title="Getting Node References">
+  There are several ways to reference other nodes in your scene:
+
+  ```gdscript
+  # Using @onready with $ shorthand (recommended)
+  @onready var player = $Player
+  @onready var child = $"Child Node"  # For nodes with spaces
+
+  # Using get_node() - equivalent to $
+  @onready var player = get_node("Player")
+  @onready var player = get_node(^"Player")  # StringName for better performance
+
+  # Getting nodes at runtime
+  func _ready():
+      var sprite = get_node("Sprite2D")
+      var parent = get_parent()
+      var tree = get_tree()
+  ```
+</Accordion>
+
+<Accordion title="Understanding Delta Time">
+  The `delta` parameter in `_process()` and `_physics_process()` represents the time elapsed since the last frame in seconds:
+
+  ```gdscript
+  func _process(delta: float) -> void:
+      # delta is typically ~0.016 at 60 FPS
+      # Multiply by delta to make movement frame-rate independent
+      position.x += 100 * delta  # Moves 100 pixels per second
+      rotation += PI * delta      # Rotates 180° per second
+  ```
+
+  <Warning>
+  Always multiply movement and time-based changes by `delta` to ensure consistent behavior regardless of frame rate.
+  </Warning>
+</Accordion>
+
+<Accordion title="Signals for Communication">
+  Signals are Godot's way of implementing the observer pattern. They let nodes communicate without tight coupling:
+
+  ```gdscript
+  # Define a signal
+  signal health_changed(new_health)
+  signal died
+
+  func take_damage(amount):
+      health -= amount
+      health_changed.emit(health)  # Emit signal with parameter
+      
+      if health <= 0:
+          died.emit()  # Emit signal without parameters
+  ```
+</Accordion>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Official Demos" icon="gamepad" href="https://github.com/godotengine/godot-demo-projects">
+    Browse official example projects covering various features.
+  </Card>
+
+  <Card title="Community Tutorials" icon="graduation-cap">
+    Explore text and video tutorials from the Godot community.
+  </Card>
+
+  <Card title="Class Reference" icon="book">
+    Access detailed documentation for every class and method.
+  </Card>
+
+  <Card title="Godot Forum" icon="comments">
+    Ask questions and share your projects with the community.
+  </Card>
+</CardGroup>

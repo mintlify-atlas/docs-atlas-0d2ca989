@@ -1,0 +1,528 @@
+---
+title: Editor Plugins
+description: Extend the Godot Editor with custom plugins using the EditorPlugin class
+---
+
+Editor plugins allow you to extend the functionality of the Godot Editor. Plugins can add custom tools, importers, export functionality, and modify the editor interface.
+
+## EditorPlugin Class
+
+All editor plugins inherit from the `EditorPlugin` class, which provides the foundation for extending the editor.
+
+### Basic Plugin Structure
+
+Create a new plugin by extending `EditorPlugin`:
+
+```gdscript
+@tool
+extends EditorPlugin
+
+func _enter_tree():
+    # Plugin initialization
+    print("My plugin activated")
+
+func _exit_tree():
+    # Cleanup
+    print("My plugin deactivated")
+```
+
+```csharp
+#if TOOLS
+using Godot;
+
+[Tool]
+public partial class MyPlugin : EditorPlugin
+{
+    public override void _EnterTree()
+    {
+        // Plugin initialization
+        GD.Print("My plugin activated");
+    }
+
+    public override void _ExitTree()
+    {
+        // Cleanup
+        GD.Print("My plugin deactivated");
+    }
+}
+#endif
+```
+
+<Note>
+The `@tool` annotation (or `[Tool]` attribute in C#) is required for editor scripts to run in the editor.
+</Note>
+
+## Plugin Configuration
+
+Create a `plugin.cfg` file in your addon directory:
+
+```ini
+[plugin]
+
+name="My Custom Plugin"
+description="A plugin that does amazing things"
+author="Your Name"
+version="1.0"
+script="plugin.gd"
+```
+
+## Creating Editor Plugins
+
+### Basic Plugin Methods
+
+```gdscript
+@tool
+extends EditorPlugin
+
+# Called when plugin is enabled
+func _enable_plugin():
+    print("Plugin enabled")
+
+# Called when plugin is disabled
+func _disable_plugin():
+    print("Plugin disabled")
+
+# Called before project runs
+func _build():
+    print("Building project")
+    return true  # Return false to abort run
+
+# Save external data
+func _save_external_data():
+    print("Saving external data")
+
+# Apply pending changes
+func _apply_changes():
+    print("Applying changes")
+```
+
+### Handling Specific Object Types
+
+Create plugins that edit specific node or resource types:
+
+```gdscript
+@tool
+extends EditorPlugin
+
+var edited_object
+
+# Return true if this plugin handles the object type
+func _handles(object):
+    return object is MyCustomNode
+
+# Called when an object should be edited
+func _edit(object):
+    edited_object = object
+    if object:
+        print("Editing: ", object.name)
+    else:
+        print("Clearing editor")
+
+# Clear editing state
+func _clear():
+    edited_object = null
+
+# Control visibility
+func _make_visible(visible):
+    # Show/hide your custom UI
+    if custom_control:
+        custom_control.visible = visible
+```
+
+## Adding Custom Dock Panels
+
+Add custom docks to the editor interface:
+
+```gdscript
+@tool
+extends EditorPlugin
+
+var dock
+
+func _enter_tree():
+    # Create dock
+    dock = preload("res://addons/my_plugin/dock.tscn").instantiate()
+    
+    # Add to editor (modern approach)
+    var editor_dock = EditorDock.new()
+    editor_dock.dock_slot = EditorPlugin.DOCK_SLOT_LEFT_UR
+    editor_dock.add_child(dock)
+    add_dock(editor_dock)
+
+func _exit_tree():
+    # Remove and free the dock
+    if dock:
+        remove_dock(dock.get_parent())  # Remove EditorDock
+        dock.queue_free()
+```
+
+### Dock Slot Positions
+
+- `DOCK_SLOT_LEFT_UL` - Left side, upper-left
+- `DOCK_SLOT_LEFT_BL` - Left side, bottom-left
+- `DOCK_SLOT_LEFT_UR` - Left side, upper-right (Scene/Import dock)
+- `DOCK_SLOT_LEFT_BR` - Left side, bottom-right (FileSystem dock)
+- `DOCK_SLOT_RIGHT_UL` - Right side, upper-left (Inspector/Node/History)
+- `DOCK_SLOT_RIGHT_BL` - Right side, bottom-left
+- `DOCK_SLOT_RIGHT_UR` - Right side, upper-right
+- `DOCK_SLOT_RIGHT_BR` - Right side, bottom-right
+- `DOCK_SLOT_BOTTOM` - Bottom panel
+
+## Custom Import Plugins
+
+Create plugins to import custom file formats:
+
+```gdscript
+@tool
+extends EditorImportPlugin
+
+func _get_importer_name():
+    return "my.custom.importer"
+
+func _get_visible_name():
+    return "Custom Resource"
+
+func _get_recognized_extensions():
+    return ["custom", "cst"]
+
+func _get_save_extension():
+    return "res"
+
+func _get_resource_type():
+    return "Resource"
+
+func _get_preset_count():
+    return 1
+
+func _get_preset_name(preset_index):
+    return "Default"
+
+func _get_import_options(path, preset_index):
+    return [
+        {"name": "quality", "default_value": 1.0},
+        {"name": "compress", "default_value": true}
+    ]
+
+func _import(source_file, save_path, options, platform_variants, gen_files):
+    var file = FileAccess.open(source_file, FileAccess.READ)
+    if file == null:
+        return FAILED
+    
+    # Create your resource
+    var resource = MyCustomResource.new()
+    # ... process file data ...
+    
+    var filename = save_path + "." + _get_save_extension()
+    return ResourceSaver.save(resource, filename)
+```
+
+Register the import plugin:
+
+```gdscript
+var import_plugin
+
+func _enter_tree():
+    import_plugin = preload("res://addons/my_plugin/importer.gd").new()
+    add_import_plugin(import_plugin)
+
+func _exit_tree():
+    remove_import_plugin(import_plugin)
+```
+
+<Note>
+See the [Import System](/editor/import-system) page for more details on custom importers.
+</Note>
+
+## Tool Scripts
+
+Tool scripts run in the editor and can be used for editor automation:
+
+```gdscript
+@tool
+extends Node
+
+@export var auto_update := false:
+    set(value):
+        auto_update = value
+        if value and Engine.is_editor_hint():
+            _update_in_editor()
+
+func _update_in_editor():
+    # This runs in the editor
+    print("Updating in editor")
+
+func _ready():
+    if Engine.is_editor_hint():
+        print("Running in editor")
+    else:
+        print("Running in game")
+```
+
+### Tool Script Best Practices
+
+<Warning>
+Always check `Engine.is_editor_hint()` before running editor-specific code to prevent issues at runtime.
+</Warning>
+
+```gdscript
+@tool
+extends EditorScript
+
+# EditorScript provides a simple way to run code in the editor
+func _run():
+    var scene = get_scene()
+    print("Current scene: ", scene.name)
+    
+    # Modify scene
+    for node in scene.get_children():
+        if node is Sprite2D:
+            node.modulate = Color.RED
+```
+
+## Enabling and Disabling Plugins
+
+Plugins can be managed programmatically:
+
+```gdscript
+# Check if plugin is enabled
+if EditorInterface.is_plugin_enabled("my_plugin"):
+    print("Plugin is active")
+
+# Enable/disable plugin
+EditorInterface.set_plugin_enabled("my_plugin", true)
+
+# Get plugin version
+var version = get_plugin_version()
+print("Plugin version: ", version)
+```
+
+## Main Screen Plugins
+
+Create plugins that add new tabs to the main editor screen:
+
+```gdscript
+@tool
+extends EditorPlugin
+
+var plugin_control
+
+func _enter_tree():
+    plugin_control = preload("res://addons/my_plugin/main_panel.tscn").instantiate()
+    EditorInterface.get_editor_main_screen().add_child(plugin_control)
+    plugin_control.hide()
+
+func _exit_tree():
+    if plugin_control:
+        plugin_control.queue_free()
+
+func _has_main_screen():
+    return true
+
+func _make_visible(visible):
+    if plugin_control:
+        plugin_control.visible = visible
+
+func _get_plugin_name():
+    return "My Tool"
+
+func _get_plugin_icon():
+    # Return custom icon or built-in icon
+    return EditorInterface.get_editor_theme().get_icon("Node", "EditorIcons")
+```
+
+## Inspector Plugins
+
+Customize how properties appear in the Inspector:
+
+```gdscript
+@tool
+extends EditorInspectorPlugin
+
+func _can_handle(object):
+    return object is MyCustomNode
+
+func _parse_property(object, type, name, hint_type, hint_string, usage_flags, wide):
+    if name == "custom_property":
+        # Add custom property editor
+        add_property_editor(name, MyCustomEditor.new())
+        return true
+    return false
+```
+
+Register the inspector plugin:
+
+```gdscript
+var inspector_plugin
+
+func _enter_tree():
+    inspector_plugin = preload("res://addons/my_plugin/inspector.gd").new()
+    add_inspector_plugin(inspector_plugin)
+
+func _exit_tree():
+    remove_inspector_plugin(inspector_plugin)
+```
+
+## Viewport Plugins
+
+Handle input and draw overlays in the 2D/3D viewports:
+
+```gdscript
+@tool
+extends EditorPlugin
+
+func _forward_3d_gui_input(camera, event):
+    if event is InputEventMouseButton:
+        if event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+            print("Clicked in 3D viewport")
+            return EditorPlugin.AFTER_GUI_INPUT_STOP
+    return EditorPlugin.AFTER_GUI_INPUT_PASS
+
+func _forward_3d_draw_over_viewport(overlay):
+    # Draw a circle at cursor position
+    overlay.draw_circle(overlay.get_local_mouse_position(), 64, Color.WHITE)
+
+func _forward_canvas_gui_input(event):
+    if event is InputEventMouseMotion:
+        update_overlays()
+        return true
+    return false
+
+func _forward_canvas_draw_over_viewport(overlay):
+    # Draw in 2D viewport
+    overlay.draw_circle(overlay.get_local_mouse_position(), 64, Color.WHITE)
+```
+
+### Input Handling Return Values
+
+For 3D viewport:
+- `AFTER_GUI_INPUT_PASS` - Forward input to other plugins
+- `AFTER_GUI_INPUT_STOP` - Consume input, prevent other plugins
+- `AFTER_GUI_INPUT_CUSTOM` - Pass to other plugins except main Node3D
+
+For 2D viewport:
+- Return `true` to consume input
+- Return `false` to forward input
+
+## Adding Tools Menu Items
+
+```gdscript
+func _enter_tree():
+    # Add menu item
+    add_tool_menu_item("My Custom Tool", _on_tool_activated)
+    
+    # Add submenu
+    var submenu = PopupMenu.new()
+    submenu.add_item("Option 1")
+    submenu.add_item("Option 2")
+    add_tool_submenu_item("My Submenu", submenu)
+
+func _exit_tree():
+    remove_tool_menu_item("My Custom Tool")
+    remove_tool_menu_item("My Submenu")
+
+func _on_tool_activated():
+    print("Tool activated!")
+```
+
+## Custom Types
+
+Register custom node types that appear in the Create Node dialog:
+
+```gdscript
+func _enter_tree():
+    # Add custom type
+    add_custom_type(
+        "MyNode",
+        "Node2D",
+        preload("res://addons/my_plugin/my_node.gd"),
+        preload("res://addons/my_plugin/icon.svg")
+    )
+
+func _exit_tree():
+    remove_custom_type("MyNode")
+```
+
+## Plugin State and Layout
+
+Save and restore plugin state:
+
+```gdscript
+func _get_plugin_name():
+    return "MyPlugin"
+
+func _get_state():
+    return {
+        "zoom": current_zoom,
+        "position": camera_position
+    }
+
+func _set_state(state):
+    current_zoom = state.get("zoom", 1.0)
+    camera_position = state.get("position", Vector2.ZERO)
+
+func _get_window_layout(configuration):
+    configuration.set_value("MyPlugin", "window_pos", window.position)
+
+func _set_window_layout(configuration):
+    window.position = configuration.get_value("MyPlugin", "window_pos", Vector2())
+```
+
+## Example: Complete Plugin
+
+```gdscript
+@tool
+extends EditorPlugin
+
+var dock
+var import_plugin
+var inspector_plugin
+
+func _enter_tree():
+    # Add dock
+    dock = preload("res://addons/my_plugin/dock.tscn").instantiate()
+    add_control_to_dock(DOCK_SLOT_LEFT_UL, dock)
+    
+    # Add import plugin
+    import_plugin = preload("res://addons/my_plugin/importer.gd").new()
+    add_import_plugin(import_plugin)
+    
+    # Add inspector plugin
+    inspector_plugin = preload("res://addons/my_plugin/inspector.gd").new()
+    add_inspector_plugin(inspector_plugin)
+    
+    # Add custom type
+    add_custom_type(
+        "CustomNode",
+        "Node",
+        preload("res://addons/my_plugin/custom_node.gd"),
+        preload("res://addons/my_plugin/icon.svg")
+    )
+
+func _exit_tree():
+    # Cleanup in reverse order
+    remove_custom_type("CustomNode")
+    remove_inspector_plugin(inspector_plugin)
+    remove_import_plugin(import_plugin)
+    remove_control_from_docks(dock)
+    dock.queue_free()
+
+func _enable_plugin():
+    print("My plugin enabled")
+
+func _disable_plugin():
+    print("My plugin disabled")
+```
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Editor Interface" icon="desktop" href="/editor/interface">
+    Learn about the editor interface components
+  </Card>
+  <Card title="Import System" icon="file-import" href="/editor/import-system">
+    Deep dive into custom importers
+  </Card>
+  <Card title="Custom Nodes" icon="cube" href="/editor/custom-nodes">
+    Create custom node types with editor features
+  </Card>
+</CardGroup>

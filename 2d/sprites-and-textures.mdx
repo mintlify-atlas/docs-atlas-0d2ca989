@@ -1,0 +1,383 @@
+---
+title: Sprites and Textures
+description: Working with Sprite2D, AnimatedSprite2D, texture loading, sprite sheets, and animations
+---
+
+## Sprite2D Node
+
+The `Sprite2D` node displays a 2D texture. It's the most common way to show images in Godot.
+
+### Loading Textures
+
+<CodeGroup>
+
+```gdscript Preload in Script
+extends Sprite2D
+
+func _ready():
+    # Load texture at compile time (recommended)
+    texture = preload("res://assets/player.png")
+```
+
+```gdscript Load at Runtime
+extends Sprite2D
+
+func _ready():
+    # Load texture at runtime
+    texture = load("res://assets/player.png")
+```
+
+```gdscript From Code
+# Create a new Sprite2D programmatically
+var sprite = Sprite2D.new()
+sprite.texture = preload("res://icon.png")
+sprite.position = Vector2(400, 300)
+add_child(sprite)
+```
+
+</CodeGroup>
+
+### Basic Properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `texture` | `Texture2D` | `null` | The texture to display |
+| `centered` | `bool` | `true` | Whether to center the texture on the node |
+| `offset` | `Vector2` | `(0, 0)` | Drawing offset from position |
+| `flip_h` | `bool` | `false` | Flip texture horizontally |
+| `flip_v` | `bool` | `false` | Flip texture vertically |
+
+### Centering and Offset
+
+```gdscript
+# Center the sprite (default)
+centered = true
+
+# Position sprite by top-left corner
+centered = false
+
+# Apply custom offset
+offset = Vector2(10, -5)
+```
+
+<Note>
+For pixel art games, set `centered = false` to avoid textures appearing between pixels, which can cause blurriness.
+</Note>
+
+### Flipping Sprites
+
+```gdscript
+extends Sprite2D
+
+func _process(delta):
+    # Flip sprite based on movement direction
+    var velocity = get_parent().velocity
+    if velocity.x < 0:
+        flip_h = true
+    elif velocity.x > 0:
+        flip_h = false
+```
+
+## Sprite Sheets
+
+Sprite sheets combine multiple frames in a single texture for efficiency.
+
+### Using hframes and vframes
+
+```gdscript
+extends Sprite2D
+
+func _ready():
+    texture = preload("res://assets/character_sheet.png")
+    
+    # 8 columns, 4 rows
+    hframes = 8
+    vframes = 4
+    
+    # Show first frame (index 0)
+    frame = 0
+
+func _process(delta):
+    # Cycle through frames
+    frame = (frame + 1) % (hframes * vframes)
+```
+
+### Frame Coordinates
+
+```gdscript
+# Set frame by coordinates instead of index
+frame_coords = Vector2i(2, 1)  # Column 2, Row 1
+
+# Get current frame coordinates
+var coords = frame_coords
+print("At column %d, row %d" % [coords.x, coords.y])
+```
+
+## Region Rect
+
+Display only a portion of a texture using region rectangles:
+
+```gdscript
+extends Sprite2D
+
+func _ready():
+    texture = preload("res://assets/atlas.png")
+    
+    # Enable region mode
+    region_enabled = true
+    
+    # Define the rectangle to display (x, y, width, height)
+    region_rect = Rect2(0, 0, 32, 32)
+    
+    # Prevent bleeding from adjacent regions
+    region_filter_clip_enabled = true
+```
+
+<Warning>
+Enable `region_filter_clip_enabled` when using texture atlases to prevent color bleeding from adjacent textures.
+</Warning>
+
+## AnimatedSprite2D
+
+`AnimatedSprite2D` is designed for frame-based animations using `SpriteFrames` resources.
+
+### Creating SpriteFrames
+
+1. Select the `AnimatedSprite2D` node
+2. In the Inspector, create a new `SpriteFrames` resource
+3. Open the SpriteFrames panel at the bottom of the editor
+4. Create animations and add frames
+
+### Playing Animations
+
+```gdscript
+extends AnimatedSprite2D
+
+func _ready():
+    # Play the "walk" animation
+    play("walk")
+
+func jump():
+    # Play "jump" animation at 1.5x speed
+    play("jump", 1.5)
+
+func take_damage():
+    # Play "hit" animation backwards
+    play_backwards("hit")
+```
+
+### Animation Control
+
+<CodeGroup>
+
+```gdscript Play/Pause/Stop
+# Play animation
+play("run")
+
+# Pause without resetting
+pause()
+
+# Resume from pause
+play()  # No arguments resumes current animation
+
+# Stop and reset to frame 0
+stop()
+```
+
+```gdscript Speed Control
+# Play at half speed
+speed_scale = 0.5
+
+# Play at double speed
+speed_scale = 2.0
+
+# Play backwards
+speed_scale = -1.0
+```
+
+```gdscript Frame Control
+# Set specific frame
+frame = 5
+
+# Get current frame
+var current = frame
+
+# Frame progress (0.0 to 1.0 within current frame)
+var progress = frame_progress
+```
+
+</CodeGroup>
+
+### Animation Signals
+
+```gdscript
+extends AnimatedSprite2D
+
+func _ready():
+    animation_finished.connect(_on_animation_finished)
+    animation_looped.connect(_on_animation_looped)
+    frame_changed.connect(_on_frame_changed)
+
+func _on_animation_finished():
+    print("Animation completed: ", animation)
+    # Switch to idle after attack
+    if animation == "attack":
+        play("idle")
+
+func _on_animation_looped():
+    print("Animation looped")
+
+func _on_frame_changed():
+    print("Now on frame: ", frame)
+    # Play sound on specific frame
+    if animation == "walk" and frame == 2:
+        $FootstepSound.play()
+```
+
+### Autoplay
+
+```gdscript
+# Set in the inspector or code
+autoplay = "idle"
+```
+
+The animation specified in `autoplay` will start automatically when the scene loads.
+
+## Advanced Sprite Techniques
+
+### Modulation (Tinting)
+
+```gdscript
+# Tint sprite red
+modulate = Color.RED
+
+# Semi-transparent
+modulate = Color(1, 1, 1, 0.5)
+
+# Flash effect
+func flash_white():
+    modulate = Color.WHITE
+    await get_tree().create_timer(0.1).timeout
+    modulate = Color(1, 1, 1, 1)
+```
+
+### Self-Modulation
+
+```gdscript
+# self_modulate doesn't affect children
+self_modulate = Color(1, 0, 0)  # Red tint
+```
+
+### Pixel Opacity Detection
+
+```gdscript
+extends Sprite2D
+
+func _input(event):
+    if event is InputEventMouseButton and event.pressed:
+        # Check if click is on opaque pixel
+        var local_pos = to_local(event.position)
+        if get_rect().has_point(local_pos):
+            if is_pixel_opaque(local_pos):
+                print("Clicked on sprite!")
+```
+
+### Get Sprite Bounds
+
+```gdscript
+# Get the sprite's rectangle in local coordinates
+var rect = get_rect()
+print("Size: ", rect.size)
+print("Position: ", rect.position)
+```
+
+## Texture Filtering
+
+Control how textures are filtered when scaled:
+
+```gdscript
+# For pixel art (crisp, no blur)
+texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+# For smooth graphics (default)
+texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+```
+
+<Note>
+You can also set the default texture filter in Project Settings under **Rendering > Textures > Canvas Textures > Default Texture Filter**.
+</Note>
+
+## Character Animation Example
+
+```gdscript
+extends CharacterBody2D
+
+@onready var sprite = $AnimatedSprite2D
+
+const SPEED = 200.0
+const JUMP_VELOCITY = -400.0
+
+func _physics_process(delta):
+    # Add gravity
+    if not is_on_floor():
+        velocity += get_gravity() * delta
+    
+    # Jump
+    if Input.is_action_just_pressed("jump") and is_on_floor():
+        velocity.y = JUMP_VELOCITY
+        sprite.play("jump")
+    
+    # Horizontal movement
+    var direction = Input.get_axis("move_left", "move_right")
+    if direction != 0:
+        velocity.x = direction * SPEED
+        sprite.flip_h = direction < 0
+        if is_on_floor():
+            sprite.play("run")
+    else:
+        velocity.x = move_toward(velocity.x, 0, SPEED)
+        if is_on_floor():
+            sprite.play("idle")
+    
+    # In air animation
+    if not is_on_floor() and velocity.y > 0:
+        sprite.play("fall")
+    
+    move_and_slide()
+```
+
+## Best Practices
+
+<AccordionGroup>
+
+<Accordion title="Use preload for frequently used textures">
+`preload()` loads assets at compile time, making them instantly available and improving performance.
+</Accordion>
+
+<Accordion title="Organize animations in SpriteFrames">
+Keep all character animations in a single `SpriteFrames` resource for easy management.
+</Accordion>
+
+<Accordion title="Use texture atlases for performance">
+Combine multiple small textures into atlases to reduce draw calls.
+</Accordion>
+
+<Accordion title="Set texture filter based on art style">
+Pixel art needs `NEAREST` filtering; HD art needs `LINEAR` filtering.
+</Accordion>
+
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Physics" icon="atom" href="/2d/physics">
+Add physics-based movement to your sprites
+</Card>
+
+<Card title="TileMaps" icon="grid" href="/2d/tilemaps">
+Create environments with tile-based graphics
+</Card>
+
+</CardGroup>

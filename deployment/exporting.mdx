@@ -1,0 +1,438 @@
+---
+title: 'Exporting projects'
+description: 'Learn about export system, export templates, presets, and one-click deploy'
+keywords: ['export', 'build', 'deployment', 'templates', 'presets', 'pck']
+---
+
+## Overview
+
+Godot's export system allows you to package and deploy your game to multiple platforms. The export process uses export templates and presets to create platform-specific builds.
+
+## Export templates
+
+Export templates are pre-compiled Godot binaries for each target platform. You need the correct templates for your Godot version.
+
+### Installing export templates
+
+<Tabs>
+  <Tab title="Editor">
+    1. Open **Editor > Manage Export Templates**
+    2. Click **Download and Install**
+    3. Templates are downloaded and installed automatically
+  </Tab>
+  
+  <Tab title="Manual installation">
+    1. Download templates from https://godotengine.org/download
+    2. Extract to the templates directory:
+       - Windows: `%APPDATA%/Godot/export_templates/`
+       - macOS: `~/Library/Application Support/Godot/export_templates/`
+       - Linux: `~/.local/share/godot/export_templates/`
+  </Tab>
+</Tabs>
+
+<Info>
+Export template version must match your Godot editor version exactly.
+</Info>
+
+## Export presets
+
+Export presets define how your project is exported for each platform.
+
+### Creating an export preset
+
+<Steps>
+  <Step title="Open export dialog">
+    Go to **Project > Export**
+  </Step>
+  
+  <Step title="Add preset">
+    Click **Add...** and select your target platform
+  </Step>
+  
+  <Step title="Configure preset">
+    Set export options like name, executable path, and platform-specific settings
+  </Step>
+  
+  <Step title="Export project">
+    Click **Export Project** or **Export PCK/Zip**
+  </Step>
+</Steps>
+
+### Preset configuration
+
+```gdscript
+# Access export presets via code
+var preset = EditorExportPlatform.create_preset()
+if preset:
+    preset.set_name("My Game - Windows")
+    preset.set_export_path("builds/windows/game.exe")
+```
+
+## Export modes
+
+### Export project
+
+Creates a complete, standalone build:
+
+```gdscript
+var platform = EditorExportPlatform.new()
+var preset = platform.create_preset()
+var result = platform.export_project(preset, false, "builds/game.exe", 0)
+
+if result == OK:
+    print("Export successful")
+```
+
+### Export PCK/Zip
+
+Exports only the game data:
+
+```gdscript
+# PCK file contains all game resources
+var result = platform.export_pack(preset, false, "game.pck", 0)
+```
+
+<Tip>
+PCK files are useful for updates and DLC. The game executable can load external PCK files at runtime.
+</Tip>
+
+### Export debug vs release
+
+<Tabs>
+  <Tab title="Debug build">
+    - Includes debug symbols
+    - Enables console output
+    - Allows remote debugging
+    - Larger file size
+    - Slower performance
+  </Tab>
+  
+  <Tab title="Release build">
+    - Optimized code
+    - No debug symbols
+    - Smaller file size
+    - Better performance
+    - Limited error information
+  </Tab>
+</Tabs>
+
+## Export options
+
+### Resources
+
+```gdscript
+# Configure which resources to export
+Preset.set_export_filter(EditorExportPreset.EXPORT_SELECTED_RESOURCES)
+Preset.set_include_filter("*.tscn,*.tres")
+Preset.set_exclude_filter("*.blend,*.psd")
+```
+
+### Features and tags
+
+```gdscript
+# Feature tags for conditional resource loading
+if OS.has_feature("mobile"):
+    # Load mobile-optimized assets
+    pass
+
+if OS.has_feature("editor"):
+    # Editor-only code
+    pass
+```
+
+### Encryption
+
+Protect your game assets:
+
+1. Enable **Encrypt Exported PCK** in export preset
+2. Generate or provide an encryption key (256-bit)
+3. Set encryption filters to include/exclude files
+
+```gdscript
+# Set encryption key in export preset
+var key = "your_256_bit_encryption_key_here"
+preset.set_encryption_key(key)
+preset.set_encryption_include_filters(PackedStringArray(["*.gd", "*.tscn"]))
+preset.set_encryption_exclude_filters(PackedStringArray(["*.png", "*.ogg"]))
+```
+
+<Warning>
+Store your encryption key securely. If lost, you won't be able to update your game.
+</Warning>
+
+## Resource packs
+
+Load additional resources at runtime:
+
+```gdscript
+# Load external PCK file
+var success = ProjectSettings.load_resource_pack("res://dlc/expansion.pck")
+
+if success:
+    # Resources from the pack are now available
+    var scene = load("res://dlc/new_level.tscn")
+
+# Load with offset (useful for embedded packs)
+ProjectSettings.load_resource_pack("game.exe", true, 12345)
+```
+
+## One-click deploy
+
+Deploy directly to connected devices:
+
+### Setup
+
+1. Enable **Runnable** checkbox in export preset
+2. Connect your device (Android, iOS, etc.)
+3. Click the one-click deploy button in the editor
+
+```gdscript
+# The editor uses this internally
+var preset = get_export_preset("Android")
+if preset.is_runnable():
+    platform.run(preset, 0, "")
+```
+
+## Custom export plugins
+
+Extend the export process:
+
+```gdscript
+@tool
+extends EditorExportPlugin
+
+func _export_begin(features, is_debug, path, flags):
+    # Called when export starts
+    print("Exporting to: ", path)
+
+func _export_file(path, type, features):
+    # Called for each exported file
+    if path.ends_with(".txt"):
+        # Skip text files
+        skip()
+
+func _export_end():
+    # Called when export completes
+    print("Export finished")
+
+# Register plugin
+func _enter_tree():
+    add_export_plugin(self)
+
+func _exit_tree():
+    remove_export_plugin(self)
+```
+
+## Customizing exported files
+
+### Modify file content
+
+```gdscript
+func _export_file(path, type, features):
+    if path.ends_with(".json"):
+        # Read original file
+        var file = FileAccess.open(path, FileAccess.READ)
+        var content = file.get_as_text()
+        file.close()
+        
+        # Modify content
+        var modified = content.replace("debug", "release")
+        
+        # Add modified file to export
+        add_file(path, modified.to_utf8_buffer(), false)
+        skip()  # Don't include original
+```
+
+### Add custom files
+
+```gdscript
+func _export_begin(features, is_debug, path, flags):
+    # Add README file
+    var readme = "Game instructions here"
+    add_file("README.txt", readme.to_utf8_buffer(), false)
+    
+    # Copy external file
+    var license = FileAccess.get_file_as_bytes("res://LICENSE")
+    add_file("LICENSE.txt", license, false)
+```
+
+## Export validation
+
+Validate export settings before building:
+
+```gdscript
+@tool
+extends EditorExportPlugin
+
+func _get_export_options(platform):
+    return [
+        {
+            "option": {"name": "custom_option", "type": TYPE_STRING},
+            "default_value": "value"
+        }
+    ]
+
+func _get_export_option_warning(platform, option):
+    if option == "custom_option":
+        var value = get_option(option)
+        if value == "":
+            return "Custom option cannot be empty"
+    return ""
+```
+
+## Build automation
+
+Automate exports from command line:
+
+```bash
+# Export using preset
+godot --headless --export-release "Windows Desktop" "builds/game.exe"
+
+# Export debug build
+godot --headless --export-debug "Linux" "builds/game.x86_64"
+
+# Export PCK only
+godot --headless --export-pack "Windows Desktop" "builds/game.pck"
+```
+
+### CI/CD integration
+
+```yaml
+# GitHub Actions example
+name: Export Game
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Export for Windows
+        uses: firebelley/godot-export@v5
+        with:
+          godot_version: 4.2
+          export_name: MyGame
+          export_preset: Windows
+```
+
+## Multi-platform exports
+
+```gdscript
+func export_all_platforms():
+    var platforms = [
+        {"name": "Windows", "path": "builds/windows/game.exe"},
+        {"name": "Linux", "path": "builds/linux/game.x86_64"},
+        {"name": "macOS", "path": "builds/macos/game.zip"},
+        {"name": "Android", "path": "builds/android/game.apk"},
+    ]
+    
+    for platform in platforms:
+        print("Exporting ", platform.name)
+        # Export logic here
+```
+
+## Common export settings
+
+<AccordionGroup>
+  <Accordion title="Application settings">
+    - **Name**: Application name
+    - **Icon**: Application icon
+    - **Version**: Version number
+    - **Company**: Company/developer name
+    - **Copyright**: Copyright notice
+  </Accordion>
+  
+  <Accordion title="Binary format">
+    - **64-bit**: Export 64-bit executable
+    - **32-bit**: Export 32-bit executable (compatibility)
+    - **Embed PCK**: Embed data in executable vs separate PCK
+  </Accordion>
+  
+  <Accordion title="Resources">
+    - **Export mode**: All resources, selected scenes, or selected resources
+    - **Filters**: Include/exclude patterns
+    - **Script export mode**: Text, compiled, or encrypted
+  </Accordion>
+  
+  <Accordion title="Advanced**">
+    - **Custom template**: Use custom export template
+    - **Export path**: Default export directory
+    - **Script encryption key**: Encryption key for scripts
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting exports
+
+### Missing export templates
+
+```gdscript
+# Check if templates are installed
+var template_dir = EditorPaths.get_data_dir().path_join("export_templates")
+if not DirAccess.dir_exists_absolute(template_dir):
+    print("Export templates not installed")
+```
+
+### Export errors
+
+<CardGroup cols={2}>
+  <Card title="Template version mismatch" icon="triangle-exclamation">
+    Ensure export template version matches Godot version exactly.
+  </Card>
+  
+  <Card title="Missing resources" icon="file-slash">
+    Check export filters and ensure all required resources are included.
+  </Card>
+  
+  <Card title="Permission errors" icon="lock">
+    Run editor with appropriate permissions or choose different export path.
+  </Card>
+  
+  <Card title="Platform-specific issues" icon="desktop">
+    Check platform documentation for specific requirements.
+  </Card>
+</CardGroup>
+
+## Best practices
+
+<CardGroup cols={2}>
+  <Card title="Test debug builds first" icon="bug">
+    Always test debug builds before creating release builds.
+  </Card>
+  
+  <Card title="Use version control" icon="code-branch">
+    Tag releases in version control for reproducibility.
+  </Card>
+  
+  <Card title="Automate exports" icon="robot">
+    Use CI/CD to automate multi-platform exports.
+  </Card>
+  
+  <Card title="Verify builds" icon="check">
+    Test exported builds on target platforms before distribution.
+  </Card>
+</CardGroup>
+
+## Next steps
+
+<CardGroup cols={4}>
+  <Card title="Android" icon="android" href="/deployment/android">
+    Export for Android devices
+  </Card>
+  
+  <Card title="iOS" icon="apple" href="/deployment/ios">
+    Export for iOS devices
+  </Card>
+  
+  <Card title="Web" icon="globe" href="/deployment/web">
+    Export for web browsers
+  </Card>
+  
+  <Card title="Desktop" icon="desktop" href="/deployment/desktop">
+    Export for desktop platforms
+  </Card>
+</CardGroup>

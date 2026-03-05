@@ -1,0 +1,187 @@
+---
+title: 'Control Nodes'
+description: 'Understanding Control base class and fundamental UI concepts in Godot'
+---
+
+## Overview
+
+Control nodes are the foundation of Godot's UI system. All UI elements inherit from the `Control` base class, which provides positioning, sizing, input handling, and theming capabilities.
+
+<Info>
+Control nodes inherit from `CanvasItem`, which means they share properties like `z_index` and `visible` with other 2D nodes.
+</Info>
+
+## The Control Base Class
+
+The `Control` class provides the fundamental building blocks for UI:
+
+- **Bounding rectangle** that defines its extents
+- **Anchor position** relative to parent control or viewport
+- **Offsets** relative to the anchor
+- **Automatic layout updates** when node, parents, or screen size change
+
+### Positioning with Anchors and Margins
+
+Anchors allow UI elements to adapt to different screen sizes. Each side of a Control has an anchor value (0.0 to 1.0) that determines its position relative to the parent:
+
+```gdscript
+# Center a button on screen
+var button = Button.new()
+button.set_anchors_preset(Control.PRESET_CENTER)
+button.text = "Click Me"
+add_child(button)
+```
+
+```csharp
+// Center a button on screen
+var button = new Button();
+button.SetAnchorsPreset(Control.LayoutPreset.Center);
+button.Text = "Click Me";
+AddChild(button);
+```
+
+<Tip>
+Use `set_anchors_preset()` to quickly set up common layouts like centering, full rect, or corner anchoring.
+</Tip>
+
+### Common Layout Presets
+
+| Preset | Description |
+|--------|-------------|
+| `PRESET_TOP_LEFT` | Anchored to top-left corner |
+| `PRESET_CENTER` | Centered in parent |
+| `PRESET_FULL_RECT` | Fills entire parent rectangle |
+| `PRESET_BOTTOM_RIGHT` | Anchored to bottom-right corner |
+
+## Common Control Nodes
+
+### Button
+
+A themed button that can contain text and an icon:
+
+```gdscript
+func _ready():
+    var button = Button.new()
+    button.text = "Click me"
+    button.pressed.connect(_button_pressed)
+    add_child(button)
+
+func _button_pressed():
+    print("Hello world!")
+```
+
+```csharp
+public override void _Ready()
+{
+    var button = new Button();
+    button.Text = "Click me";
+    button.Pressed += ButtonPressed;
+    AddChild(button);
+}
+
+private void ButtonPressed()
+{
+    GD.Print("Hello world!");
+}
+```
+
+**Key Properties:**
+- `text` - The button's display text
+- `icon` - Optional icon texture
+- `flat` - Remove button decoration
+- `alignment` - Text alignment (left, center, right)
+
+### Label
+
+Displays plain text with horizontal and vertical alignment:
+
+```gdscript
+var label = Label.new()
+label.text = "Hello, Godot!"
+label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+add_child(label)
+```
+
+```csharp
+var label = new Label();
+label.Text = "Hello, Godot!";
+label.HorizontalAlignment = HorizontalAlignment.Center;
+AddChild(label);
+```
+
+**Key Properties:**
+- `text` - Text to display
+- `horizontal_alignment` - Left, center, right, or fill
+- `vertical_alignment` - Top, center, bottom, or fill  
+- `autowrap_mode` - Enable text wrapping
+- `clip_text` - Clip text outside bounding box
+
+### LineEdit
+
+An input field for single-line text editing:
+
+```gdscript
+var line_edit = LineEdit.new()
+line_edit.placeholder_text = "Enter your name..."
+line_edit.text_submitted.connect(_on_text_submitted)
+add_child(line_edit)
+
+func _on_text_submitted(new_text: String):
+    print("You entered: ", new_text)
+```
+
+```csharp
+var lineEdit = new LineEdit();
+lineEdit.PlaceholderText = "Enter your name...";
+lineEdit.TextSubmitted += OnTextSubmitted;
+AddChild(lineEdit);
+
+private void OnTextSubmitted(string newText)
+{
+    GD.Print("You entered: ", newText);
+}
+```
+
+**Key Properties:**
+- `text` - Current text value
+- `placeholder_text` - Hint text when empty
+- `secret` - Hide characters (for passwords)
+- `max_length` - Maximum character limit
+- `editable` - Enable/disable editing
+
+**Key Signals:**
+- `text_changed` - Emitted when text changes
+- `text_submitted` - Emitted on Enter key press
+- `editing_toggled` - Emitted when entering/exiting edit mode
+
+## Minimum Size and Layout
+
+Controls can define a minimum size to ensure proper display:
+
+```gdscript
+var panel = Panel.new()
+panel.custom_minimum_size = Vector2(200, 100)
+add_child(panel)
+```
+
+```csharp
+var panel = new Panel();
+panel.CustomMinimumSize = new Vector2(200, 100);
+AddChild(panel);
+```
+
+You can also override `_get_minimum_size()` to calculate minimum size dynamically.
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Containers" icon="grid" href="/ui/containers">
+    Learn about automatic layout with container nodes
+  </Card>
+  <Card title="Themes" icon="palette" href="/ui/themes">
+    Customize the appearance of UI elements
+  </Card>
+  <Card title="Input Handling" icon="hand-pointer" href="/ui/input-handling">
+    Handle mouse, touch, and keyboard input
+  </Card>
+</CardGroup>

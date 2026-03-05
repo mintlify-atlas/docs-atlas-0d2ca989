@@ -1,0 +1,90 @@
+---
+title: "Node2D"
+---
+
+# Node2D
+
+**Inherits:** CanvasItem < Node < Object
+
+## Description
+
+A 2D game object with a transform (position, rotation, and scale). All 2D nodes, including physics objects and sprites, inherit from Node2D.
+
+## Properties
+
+<ResponseField name="position" type="Vector2" default="Vector2(0, 0)">
+  Position, relative to the node's parent.
+</ResponseField>
+
+<ResponseField name="rotation" type="float" default="0.0">
+  Rotation in radians, relative to the node's parent.
+</ResponseField>
+
+<ResponseField name="scale" type="Vector2" default="Vector2(1, 1)">
+  The node's scale. Unscaled value: (1, 1).
+</ResponseField>
+
+<ResponseField name="global_position" type="Vector2">
+  Global position. See also position.
+</ResponseField>
+
+## Methods
+
+### rotate
+
+```gdscript
+void rotate(radians: float)
+```
+
+Applies a rotation to the node, in radians.
+
+### translate
+
+```gdscript
+void translate(offset: Vector2)
+```
+
+Translates the node by the given offset in local coordinates.
+
+### look_at
+
+```gdscript
+void look_at(point: Vector2)
+```
+
+Rotates the node so that its local +X axis points towards the point.
+
+### get_angle_to
+
+```gdscript
+float get_angle_to(point: Vector2)
+```
+
+Returns the angle between the node and the point in radians.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+var sprite = Node2D.new()
+sprite.position = Vector2(100, 200)
+sprite.rotation = deg_to_rad(45)
+sprite.scale = Vector2(2, 2)
+
+# Rotate the node
+sprite.rotate(deg_to_rad(90))
+
+# Look at a point
+sprite.look_at(Vector2(500, 300))
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+var sprite = new Node2D();
+sprite.Position = new Vector2(100, 200);
+sprite.Rotation = Mathf.DegToRad(45);
+sprite.Scale = new Vector2(2, 2);
+```
+  </Tab>
+</Tabs>

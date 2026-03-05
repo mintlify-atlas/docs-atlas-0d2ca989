@@ -1,0 +1,394 @@
+---
+title: 'Physics joints'
+description: 'Connect physics bodies with joints and constraints in 2D and 3D'
+keywords: ['joints', 'constraints', 'pin', 'hinge', 'slider', 'spring', 'physics']
+---
+
+## Overview
+
+Joints connect two physics bodies together or constrain a single body relative to a point in space. Godot provides various joint types for different mechanical behaviors.
+
+## Joint basics
+
+All joints share common properties:
+
+```gdscript
+# Joint base properties (2D)
+var joint = PinJoint2D.new()
+joint.node_a = NodePath("../BodyA")
+joint.node_b = NodePath("../BodyB")
+joint.bias = 0.0  # Constraint correction speed
+joint.disable_collision = true  # Disable collision between connected bodies
+```
+
+<Info>
+Joints bind two physics bodies together. At least one of the bodies must be dynamic (RigidBody) for the joint to have any effect.
+</Info>
+
+## 2D joints
+
+### PinJoint2D
+
+Connects two bodies at a single point, allowing rotation.
+
+```gdscript
+var pin = PinJoint2D.new()
+pin.node_a = NodePath("../RigidBodyA")
+pin.node_b = NodePath("../RigidBodyB")
+pin.softness = 0.0  # 0 = rigid, higher = softer
+add_child(pin)
+```
+
+**Use cases:**
+- Pendulums
+- Ragdoll joints
+- Chains and ropes
+
+### GrooveJoint2D
+
+Constrains one body to move along a groove (line) relative to another.
+
+```gdscript
+var groove = GrooveJoint2D.new()
+groove.node_a = NodePath("../StaticBody")
+groove.node_b = NodePath("../RigidBody")
+groove.length = 100.0
+groove.initial_offset = 0.0
+add_child(groove)
+```
+
+**Use cases:**
+- Sliding doors
+- Elevator platforms
+- Linear motion constraints
+
+### DampedSpringJoint2D
+
+A spring joint with damping, creating elastic connections.
+
+```gdscript
+var spring = DampedSpringJoint2D.new()
+spring.node_a = NodePath("../BodyA")
+spring.node_b = NodePath("../BodyB")
+spring.length = 50.0  # Rest length
+spring.stiffness = 20.0  # Spring strength
+spring.damping = 1.0  # Oscillation damping
+add_child(spring)
+```
+
+**Use cases:**
+- Suspension systems
+- Elastic ropes
+- Springy platforms
+- Soft body simulation
+
+<Tip>
+Increase damping to reduce oscillation. Higher stiffness creates a stiffer spring.
+</Tip>
+
+## 3D joints
+
+### PinJoint3D
+
+Connects two bodies at a point with configurable constraints.
+
+```gdscript
+var pin = PinJoint3D.new()
+pin.node_a = NodePath("../RigidBodyA")
+pin.node_b = NodePath("../RigidBodyB")
+
+# Configure parameters
+pin.set_param(PinJoint3D.PARAM_BIAS, 0.3)
+pin.set_param(PinJoint3D.PARAM_DAMPING, 1.0)
+pin.set_param(PinJoint3D.PARAM_IMPULSE_CLAMP, 0.0)
+
+add_child(pin)
+```
+
+### HingeJoint3D
+
+A rotating hinge joint around a single axis.
+
+```gdscript
+var hinge = HingeJoint3D.new()
+hinge.node_a = NodePath("../Door")
+hinge.node_b = NodePath("../DoorFrame")
+
+# Enable angular limits
+hinge.set_flag(HingeJoint3D.FLAG_USE_LIMIT, true)
+hinge.set_param(HingeJoint3D.PARAM_LIMIT_UPPER, deg_to_rad(90))
+hinge.set_param(HingeJoint3D.PARAM_LIMIT_LOWER, deg_to_rad(-90))
+
+# Add motor
+hinge.set_flag(HingeJoint3D.FLAG_ENABLE_MOTOR, true)
+hinge.set_param(HingeJoint3D.PARAM_MOTOR_TARGET_VELOCITY, 2.0)
+hinge.set_param(HingeJoint3D.PARAM_MOTOR_MAX_IMPULSE, 10.0)
+
+add_child(hinge)
+```
+
+**Use cases:**
+- Doors
+- Wheels
+- Levers
+- Mechanical arms
+
+<AccordionGroup>
+  <Accordion title="Hinge parameters">
+    - `PARAM_BIAS`: Constraint correction speed
+    - `PARAM_LIMIT_UPPER`: Maximum angle
+    - `PARAM_LIMIT_LOWER`: Minimum angle
+    - `PARAM_LIMIT_BIAS`: Limit correction speed
+    - `PARAM_LIMIT_SOFTNESS`: Limit softness
+    - `PARAM_LIMIT_RELAXATION`: Limit relaxation
+    - `PARAM_MOTOR_TARGET_VELOCITY`: Motor speed
+    - `PARAM_MOTOR_MAX_IMPULSE`: Motor strength
+  </Accordion>
+</AccordionGroup>
+
+### SliderJoint3D
+
+Allows linear and angular motion along one axis.
+
+```gdscript
+var slider = SliderJoint3D.new()
+slider.node_a = NodePath("../Platform")
+slider.node_b = NodePath("../Rail")
+
+# Set linear limits
+slider.set_param(SliderJoint3D.PARAM_LINEAR_LIMIT_UPPER, 5.0)
+slider.set_param(SliderJoint3D.PARAM_LINEAR_LIMIT_LOWER, -5.0)
+
+# Add linear motor
+slider.set_param(SliderJoint3D.PARAM_LINEAR_MOTION_ENABLED, true)
+slider.set_param(SliderJoint3D.PARAM_LINEAR_MOTION_TARGET_VELOCITY, 1.0)
+slider.set_param(SliderJoint3D.PARAM_LINEAR_MOTION_MAX_FORCE, 100.0)
+
+add_child(slider)
+```
+
+**Use cases:**
+- Sliding doors
+- Drawer mechanics
+- Telescoping mechanisms
+- Piston motion
+
+### ConeTwistJoint3D
+
+A ball-and-socket joint with cone angle limits.
+
+```gdscript
+var cone_twist = ConeTwistJoint3D.new()
+cone_twist.node_a = NodePath("../Shoulder")
+cone_twist.node_b = NodePath("../Arm")
+
+# Set swing and twist limits
+cone_twist.set_param(ConeTwistJoint3D.PARAM_SWING_SPAN, deg_to_rad(45))
+cone_twist.set_param(ConeTwistJoint3D.PARAM_TWIST_SPAN, deg_to_rad(30))
+cone_twist.set_param(ConeTwistJoint3D.PARAM_BIAS, 0.3)
+cone_twist.set_param(ConeTwistJoint3D.PARAM_SOFTNESS, 0.8)
+cone_twist.set_param(ConeTwistJoint3D.PARAM_RELAXATION, 1.0)
+
+add_child(cone_twist)
+```
+
+**Use cases:**
+- Ragdoll shoulders
+- Ball joints
+- Gimbal systems
+- Character limbs
+
+### Generic6DOFJoint3D
+
+A highly configurable joint with 6 degrees of freedom (3 linear, 3 angular).
+
+```gdscript
+var generic = Generic6DOFJoint3D.new()
+generic.node_a = NodePath("../BodyA")
+generic.node_b = NodePath("../BodyB")
+
+# Configure X axis (linear)
+generic.set_flag_x(Generic6DOFJoint3D.FLAG_ENABLE_LINEAR_LIMIT, true)
+generic.set_param_x(Generic6DOFJoint3D.PARAM_LINEAR_UPPER_LIMIT, 2.0)
+generic.set_param_x(Generic6DOFJoint3D.PARAM_LINEAR_LOWER_LIMIT, -2.0)
+
+# Configure Y axis (angular)
+generic.set_flag_y(Generic6DOFJoint3D.FLAG_ENABLE_ANGULAR_LIMIT, true)
+generic.set_param_y(Generic6DOFJoint3D.PARAM_ANGULAR_UPPER_LIMIT, deg_to_rad(45))
+generic.set_param_y(Generic6DOFJoint3D.PARAM_ANGULAR_LOWER_LIMIT, deg_to_rad(-45))
+
+# Add motor on Z axis
+generic.set_flag_z(Generic6DOFJoint3D.FLAG_ENABLE_MOTOR, true)
+generic.set_param_z(Generic6DOFJoint3D.PARAM_MOTOR_TARGET_VELOCITY, 1.0)
+generic.set_param_z(Generic6DOFJoint3D.PARAM_MOTOR_MAX_IMPULSE, 50.0)
+
+add_child(generic)
+```
+
+**Use cases:**
+- Complex mechanical systems
+- Custom constraints
+- Advanced ragdoll joints
+- Robotic joints
+
+<Warning>
+Generic6DOFJoint3D is the most flexible but also the most complex joint. Use simpler joints when possible for better performance.
+</Warning>
+
+## Joint configuration
+
+### Bias parameter
+
+Controls how quickly the joint corrects constraint violations:
+
+```gdscript
+# Low bias = soft constraint
+joint.bias = 0.1
+
+# High bias = rigid constraint (default)
+joint.bias = 0.3
+
+# Zero bias = no correction (not recommended)
+joint.bias = 0.0
+```
+
+### Disable collision
+
+Prevent connected bodies from colliding:
+
+```gdscript
+joint.disable_collision = true  # Bodies won't collide with each other
+```
+
+### Breaking joints
+
+Joints can't be broken by default. Implement custom breaking:
+
+```gdscript
+func _physics_process(delta):
+    # Get applied impulse (implementation varies by joint type)
+    var impulse = get_joint_impulse()
+    
+    if impulse > breaking_threshold:
+        joint.queue_free()  # Break the joint
+        emit_signal("joint_broken")
+```
+
+## Common patterns
+
+### Chain simulation
+
+```gdscript
+func create_chain(segment_count: int, segment_length: float):
+    var previous_body = null
+    
+    for i in segment_count:
+        var segment = RigidBody3D.new()
+        var collision = CollisionShape3D.new()
+        collision.shape = CapsuleShape3D.new()
+        segment.add_child(collision)
+        
+        segment.position = Vector3(0, -i * segment_length, 0)
+        add_child(segment)
+        
+        if previous_body:
+            var joint = PinJoint3D.new()
+            joint.node_a = segment.get_path()
+            joint.node_b = previous_body.get_path()
+            add_child(joint)
+        
+        previous_body = segment
+```
+
+### Suspension system
+
+```gdscript
+func create_wheel_suspension(wheel: RigidBody3D, chassis: RigidBody3D):
+    var slider = SliderJoint3D.new()
+    slider.node_a = wheel.get_path()
+    slider.node_b = chassis.get_path()
+    
+    # Limit vertical movement
+    slider.set_param(SliderJoint3D.PARAM_LINEAR_LIMIT_UPPER, 0.2)
+    slider.set_param(SliderJoint3D.PARAM_LINEAR_LIMIT_LOWER, -0.2)
+    
+    # Add spring behavior
+    slider.set_param(SliderJoint3D.PARAM_LINEAR_LIMIT_RESTITUTION, 0.8)
+    slider.set_param(SliderJoint3D.PARAM_LINEAR_LIMIT_DAMPING, 0.5)
+    
+    add_child(slider)
+    return slider
+```
+
+### Ragdoll creation
+
+```gdscript
+func setup_ragdoll():
+    # Spine
+    var spine_joint = HingeJoint3D.new()
+    spine_joint.node_a = NodePath("Torso")
+    spine_joint.node_b = NodePath("Hips")
+    spine_joint.set_flag(HingeJoint3D.FLAG_USE_LIMIT, true)
+    spine_joint.set_param(HingeJoint3D.PARAM_LIMIT_UPPER, deg_to_rad(30))
+    spine_joint.set_param(HingeJoint3D.PARAM_LIMIT_LOWER, deg_to_rad(-30))
+    
+    # Shoulder (ball joint)
+    var shoulder = ConeTwistJoint3D.new()
+    shoulder.node_a = NodePath("Torso")
+    shoulder.node_b = NodePath("UpperArm")
+    shoulder.set_param(ConeTwistJoint3D.PARAM_SWING_SPAN, deg_to_rad(90))
+    shoulder.set_param(ConeTwistJoint3D.PARAM_TWIST_SPAN, deg_to_rad(45))
+    
+    # Elbow
+    var elbow = HingeJoint3D.new()
+    elbow.node_a = NodePath("UpperArm")
+    elbow.node_b = NodePath("LowerArm")
+    elbow.set_flag(HingeJoint3D.FLAG_USE_LIMIT, true)
+    elbow.set_param(HingeJoint3D.PARAM_LIMIT_UPPER, deg_to_rad(0))
+    elbow.set_param(HingeJoint3D.PARAM_LIMIT_LOWER, deg_to_rad(-140))
+```
+
+## Debugging joints
+
+Visualize joints in the editor:
+
+1. Select the joint node
+2. The joint will be displayed with debug gizmos
+3. Adjust the position to align bodies correctly
+
+```gdscript
+# Enable joint visualization in-game
+get_tree().debug_collisions_hint = true
+```
+
+## Performance considerations
+
+<CardGroup cols={2}>
+  <Card title="Minimize joint count" icon="minimize">
+    Each joint adds computational cost. Use the minimum number needed.
+  </Card>
+  
+  <Card title="Use appropriate joint types" icon="gear">
+    Simpler joints (pin, hinge) are faster than complex ones (Generic6DOF).
+  </Card>
+  
+  <Card title="Adjust solver iterations" icon="arrows-rotate">
+    Increase solver iterations in project settings for more stable joints at the cost of performance.
+  </Card>
+  
+  <Card title="Put jointed bodies to sleep" icon="bed">
+    Connected bodies automatically sleep when stationary, improving performance.
+  </Card>
+</CardGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Physics introduction" icon="book" href="/physics/physics-introduction">
+    Learn about physics fundamentals
+  </Card>
+  
+  <Card title="Collision shapes" icon="cube" href="/physics/collision-shapes">
+    Understand collision shape types
+  </Card>
+</CardGroup>

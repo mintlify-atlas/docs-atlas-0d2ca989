@@ -1,0 +1,135 @@
+---
+title: "CharacterBody3D"
+---
+
+# CharacterBody3D
+
+**Inherits:** PhysicsBody3D < CollisionObject3D < Node3D < Node < Object
+
+## Description
+
+A 3D physics body specialized for characters moved by script. They are mainly used to provide high-level API to move objects with wall and slope detection.
+
+## Properties
+
+<ResponseField name="velocity" type="Vector3" default="Vector3(0, 0, 0)">
+  Current velocity vector (typically meters per second), used and modified during calls to move_and_slide.
+</ResponseField>
+
+<ResponseField name="motion_mode" type="MotionMode" default="MOTION_MODE_GROUNDED">
+  Sets the motion mode which defines the behavior of move_and_slide.
+</ResponseField>
+
+<ResponseField name="up_direction" type="Vector3" default="Vector3(0, 1, 0)">
+  Vector pointing upwards, used to determine what is a wall and what is a floor.
+</ResponseField>
+
+<ResponseField name="floor_max_angle" type="float" default="0.785398">
+  Maximum angle (in radians) where a slope is still considered a floor (45 degrees).
+</ResponseField>
+
+<ResponseField name="floor_snap_length" type="float" default="0.1">
+  Sets a snapping distance. When set to a value different from 0.0, the body is kept attached to slopes.
+</ResponseField>
+
+## Methods
+
+### move_and_slide
+
+```gdscript
+bool move_and_slide()
+```
+
+Moves the body based on velocity. Returns true if the body collided.
+
+### is_on_floor
+
+```gdscript
+bool is_on_floor()
+```
+
+Returns true if the body collided with the floor.
+
+### is_on_wall
+
+```gdscript
+bool is_on_wall()
+```
+
+Returns true if the body collided with a wall.
+
+### is_on_ceiling
+
+```gdscript
+bool is_on_ceiling()
+```
+
+Returns true if the body collided with the ceiling.
+
+### get_floor_normal
+
+```gdscript
+Vector3 get_floor_normal()
+```
+
+Returns the collision normal of the floor at the last collision point.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+extends CharacterBody3D
+
+const SPEED = 5.0
+const JUMP_VELOCITY = 4.5
+
+func _physics_process(delta):
+    # Add gravity
+    if not is_on_floor():
+        velocity.y -= ProjectSettings.get_setting("physics/3d/default_gravity") * delta
+    
+    # Handle jump
+    if Input.is_action_just_pressed("ui_accept") and is_on_floor():
+        velocity.y = JUMP_VELOCITY
+    
+    # Get input direction
+    var input_dir = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+    var direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+    
+    if direction:
+        velocity.x = direction.x * SPEED
+        velocity.z = direction.z * SPEED
+    else:
+        velocity.x = move_toward(velocity.x, 0, SPEED)
+        velocity.z = move_toward(velocity.z, 0, SPEED)
+    
+    move_and_slide()
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+public partial class Player : CharacterBody3D
+{
+    public const float Speed = 5.0f;
+    public const float JumpVelocity = 4.5f;
+
+    public override void _PhysicsProcess(double delta)
+    {
+        Vector3 velocity = Velocity;
+
+        // Add gravity
+        if (!IsOnFloor())
+            velocity.Y -= (float)ProjectSettings.GetSetting("physics/3d/default_gravity") * (float)delta;
+
+        // Handle jump
+        if (Input.IsActionJustPressed("ui_accept") && IsOnFloor())
+            velocity.Y = JumpVelocity;
+
+        Velocity = velocity;
+        MoveAndSlide();
+    }
+}
+```
+  </Tab>
+</Tabs>

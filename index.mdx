@@ -1,97 +1,197 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Godot Engine Documentation"
+description: "Multi-platform 2D and 3D game engine with comprehensive development tools"
 ---
 
-## Setting up
+<div className="relative overflow-hidden bg-gradient-to-br from-[#448cbc] via-[#3a7ba8] to-[#2d5f85] dark:from-[#1a2f42] dark:via-[#162839] dark:to-[#0f1a27] py-20 lg:py-24">
+  <div className="max-w-7xl mx-auto px-6 lg:px-8">
+    <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+          Welcome to Godot Engine
+        </h1>
+        <p className="text-lg sm:text-xl text-white/90 mb-8 max-w-2xl">
+          Build 2D and 3D games with a powerful, free, and open-source game engine. Learn how to create amazing games and export them to multiple platforms.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+          <a 
+            href="/quickstart" 
+            className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-white text-[#448cbc] font-semibold hover:bg-gray-100 transition-colors no-underline"
+          >
+            Get Started
+          </a>
+          <a 
+            href="/api/node" 
+            className="inline-flex items-center justify-center px-6 py-3 rounded-lg border-2 border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors no-underline"
+          >
+            API Reference
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    Quick Start
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Get up and running with Godot in minutes
+  </p>
+  
+  <Steps>
+    <Step title="Download Godot Engine">
+      Download the latest stable version of Godot Engine from the [official website](https://godotengine.org/download) or compile from source. Choose the standard or Mono version (for C# support).
+      
+      ```bash
+      # For Linux, you can use package managers
+      flatpak install flathub org.godotengine.Godot
+      ```
+    </Step>
+    
+    <Step title="Create Your First Project">
+      Launch Godot, click **New Project**, choose a location, and select a renderer (Forward+, Mobile, or Compatibility).
+      
+      <Note>
+        Choose **Forward+** for high-end 3D games, **Mobile** for mobile/web games, or **Compatibility** for maximum compatibility with older devices.
+      </Note>
+    </Step>
+    
+    <Step title="Build Your First Scene">
+      Create a new scene with a Node2D or Node3D root, add child nodes like Sprite2D or MeshInstance3D, and attach a script to add behavior.
+      
+      ```gdscript
+      extends Node2D
+      
+      func _ready():
+          print("Hello, Godot!")
+      
+      func _process(delta):
+          # Game logic runs every frame
+          pass
+      ```
+      
+      See the [quickstart guide](/quickstart) for a complete tutorial.
+    </Step>
+  </Steps>
+</div>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    Explore by Topic
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Learn about Godot's powerful features and capabilities
+  </p>
+  
+  <CardGroup cols={3}>
+    <Card title="Core Concepts" icon="cube" href="/concepts/nodes-and-scenes">
+      Understand nodes, scenes, signals, and the scene tree
+    </Card>
+    <Card title="2D Development" icon="gamepad" href="/2d/overview">
+      Create 2D games with sprites, physics, and tilemaps
+    </Card>
+    <Card title="3D Development" icon="cubes" href="/3d/overview">
+      Build 3D worlds with meshes, materials, and lighting
+    </Card>
+    <Card title="Scripting" icon="code" href="/scripting/gdscript">
+      Write game logic with GDScript, C#, or GDExtension
+    </Card>
+    <Card title="Animation" icon="film" href="/animation/overview">
+      Animate sprites, 3D models, and create state machines
+    </Card>
+    <Card title="UI System" icon="window-maximize" href="/ui/control-nodes">
+      Design game interfaces with Control nodes
+    </Card>
+    <Card title="Physics" icon="atom" href="/physics/physics-introduction">
+      Implement realistic physics and collision detection
+    </Card>
+    <Card title="Audio" icon="volume-high" href="/audio/overview">
+      Add music, sound effects, and spatial audio
+    </Card>
+    <Card title="Networking" icon="network-wired" href="/networking/overview">
+      Build multiplayer games with high-level APIs
+    </Card>
+    <Card title="Rendering" icon="palette" href="/rendering/overview">
+      Create stunning visuals with shaders and effects
+    </Card>
+    <Card title="Deployment" icon="rocket" href="/deployment/exporting">
+      Export to desktop, mobile, web, and consoles
+    </Card>
+    <Card title="Editor" icon="wrench" href="/editor/interface">
+      Extend Godot with custom editor plugins
+    </Card>
+  </CardGroup>
+</div>
 
-## Make it yours
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    API Reference
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Complete documentation for Godot's classes and methods
+  </p>
+  
+  <CardGroup cols={2}>
+    <Card title="Core Classes" icon="circle-nodes" href="/api/node">
+      Node, Object, Resource, and RefCounted base classes
+    </Card>
+    <Card title="Scene Management" icon="sitemap" href="/api/scenetree">
+      SceneTree, Node2D, Node3D, and Viewport
+    </Card>
+    <Card title="Input Handling" icon="keyboard" href="/api/input">
+      Input singleton, InputEvent, and InputMap
+    </Card>
+    <Card title="Rendering API" icon="eye" href="/api/renderingserver">
+      RenderingServer, Mesh, Material, and Shader
+    </Card>
+    <Card title="Physics" icon="maximize" href="/api/rigidbody2d">
+      RigidBody, CharacterBody, and collision shapes
+    </Card>
+    <Card title="Audio System" icon="music" href="/api/audioserver">
+      AudioServer, AudioStreamPlayer, and effects
+    </Card>
+  </CardGroup>
+</div>
 
-Design a docs site that looks great and empowers your users.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    Community & Support
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Join the Godot community and get help with your projects
+  </p>
+  
+  <CardGroup cols={2}>
+    <Card title="GitHub Repository" icon="github" href="https://github.com/godotengine/godot">
+      Contribute to Godot's development and report issues
+    </Card>
+    <Card title="Official Forums" icon="comments" href="https://forum.godotengine.org">
+      Ask questions and share your projects
+    </Card>
+    <Card title="Discord Community" icon="discord" href="https://discord.gg/4JBkykG">
+      Chat with other Godot developers in real-time
+    </Card>
+    <Card title="Q&A Platform" icon="circle-question" href="https://ask.godotengine.org">
+      Get answers to technical questions
+    </Card>
+  </CardGroup>
+</div>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<div className="mt-20 mb-16 max-w-5xl mx-auto px-6">
+  <div className="bg-[#f1f5f9] dark:bg-[#1a1d27] rounded-2xl border border-transparent dark:border-[#27272a] p-8 lg:p-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      Ready to Start Creating?
+    </h2>
+    <p className="text-base text-gray-600 dark:text-gray-400 mb-6 max-w-2xl">
+      Download Godot Engine and build your first game today. It's free, open-source, and runs on all major platforms.
+    </p>
+    <a 
+      href="/quickstart" 
+      className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-[#448cbc] text-white font-semibold hover:bg-[#3a7ba8] transition-colors no-underline"
+    >
+      Get Started Now
+    </a>
+  </div>
+</div>

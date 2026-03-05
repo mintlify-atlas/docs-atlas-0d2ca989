@@ -1,0 +1,242 @@
+---
+title: Animation System Overview
+description: Understanding Godot's animation system, keyframe animation, property tracks, and animation resources
+---
+
+Godot Engine provides a comprehensive animation system for creating dynamic, interpolated animations for 2D and 3D games. The animation system is built around several core components that work together to bring your game objects to life.
+
+## Core Animation Concepts
+
+The animation system in Godot is based on **keyframe animation**, where you define specific values at specific times, and the engine automatically interpolates between them.
+
+### Animation Resource
+
+At the heart of the system is the `Animation` resource, which stores animation data including:
+
+- **Tracks**: Different types of data that can be animated
+- **Keyframes**: Specific values at specific points in time
+- **Length**: Total duration of the animation
+- **Loop Mode**: How the animation repeats (none, linear, or ping-pong)
+
+<CodeGroup>
+```gdscript GDScript
+var animation = Animation.new()
+animation.length = 2.0
+animation.loop_mode = Animation.LOOP_LINEAR
+```
+
+```csharp C#
+var animation = new Animation();
+animation.Length = 2.0f;
+animation.LoopMode = Animation.LoopModeEnum.Linear;
+```
+</CodeGroup>
+
+## Track Types
+
+Godot supports multiple track types for animating different kinds of data:
+
+### Property Tracks (Value Tracks)
+
+Animate any property of a node, such as position, color, or custom properties.
+
+- **Type**: `Animation.TYPE_VALUE`
+- **Interpolation**: Nearest, Linear, Cubic, Linear Angle, Cubic Angle
+- **Update Mode**: Continuous, Discrete, or Capture
+
+<CodeGroup>
+```gdscript GDScript
+# Add a track for animating position
+var track_index = animation.add_track(Animation.TYPE_VALUE)
+animation.track_set_path(track_index, "Sprite2D:position")
+
+# Insert keyframes
+animation.track_insert_key(track_index, 0.0, Vector2(0, 0))
+animation.track_insert_key(track_index, 1.0, Vector2(100, 100))
+```
+
+```csharp C#
+// Add a track for animating position
+int trackIndex = animation.AddTrack(Animation.TrackType.Value);
+animation.TrackSetPath(trackIndex, "Sprite2D:position");
+
+// Insert keyframes
+animation.TrackInsertKey(trackIndex, 0.0, new Vector2(0, 0));
+animation.TrackInsertKey(trackIndex, 1.0, new Vector2(100, 100));
+```
+</CodeGroup>
+
+### Transform Tracks
+
+Specialized tracks for 3D transformations that can be compressed for better performance:
+
+- **TYPE_POSITION_3D**: Position in 3D space (Vector3)
+- **TYPE_ROTATION_3D**: Rotation using quaternions
+- **TYPE_SCALE_3D**: Scale in 3D space (Vector3)
+- **TYPE_BLEND_SHAPE**: Blend shape/morph target values
+
+These tracks are optimized for skeletal animation and character movement.
+
+### Method Call Tracks
+
+Call methods on nodes at specific times during animation playback.
+
+<CodeGroup>
+```gdscript GDScript
+var method_track = animation.add_track(Animation.TYPE_METHOD)
+animation.track_set_path(method_track, ".")
+
+# Call a method at 0.5 seconds
+animation.track_insert_key(method_track, 0.5, {
+    "method": "play_sound",
+    "args": ["footstep"]
+})
+```
+
+```csharp C#
+int methodTrack = animation.AddTrack(Animation.TrackType.Method);
+animation.TrackSetPath(methodTrack, ".");
+
+// Call a method at 0.5 seconds
+var methodCall = new Godot.Collections.Dictionary
+{
+    { "method", "play_sound" },
+    { "args", new Godot.Collections.Array { "footstep" } }
+};
+animation.TrackInsertKey(methodTrack, 0.5, methodCall);
+```
+</CodeGroup>
+
+### Bezier Curve Tracks
+
+Create smooth, custom interpolation curves for advanced animation control.
+
+- **Type**: `Animation.TYPE_BEZIER`
+- Provides precise control over animation timing and easing
+- Uses cubic Bezier curves with adjustable handles
+
+<Note>
+Bezier tracks are particularly useful for creating custom easing functions and smooth camera movements.
+</Note>
+
+### Audio and Animation Tracks
+
+- **TYPE_AUDIO**: Play audio streams synchronized with animation
+- **TYPE_ANIMATION**: Play other animations as part of an animation
+
+## Interpolation Types
+
+Godot provides several interpolation methods for smooth transitions between keyframes:
+
+<CardGroup cols={2}>
+  <Card title="Nearest" icon="square">
+    No interpolation - snaps to the nearest keyframe value
+  </Card>
+  <Card title="Linear" icon="arrow-trend-up">
+    Straight-line interpolation between keyframes
+  </Card>
+  <Card title="Cubic" icon="wave-square">
+    Smooth cubic interpolation with automatic tangent calculation
+  </Card>
+  <Card title="Angle Interpolation" icon="rotate">
+    Specialized interpolation for rotations (linear or cubic)
+  </Card>
+</CardGroup>
+
+## Update Modes
+
+Property tracks support different update modes:
+
+- **UPDATE_CONTINUOUS**: Smoothly interpolates values every frame
+- **UPDATE_DISCRETE**: Updates only on keyframes (no interpolation)
+- **UPDATE_CAPTURE**: Captures the current value before animation starts for smooth transitions
+
+## Loop Modes
+
+Animations can be configured to loop in different ways:
+
+```gdscript
+# No looping - plays once and stops
+animation.loop_mode = Animation.LOOP_NONE
+
+# Linear loop - restarts from beginning
+animation.loop_mode = Animation.LOOP_LINEAR
+
+# Ping-pong - plays forward then backward
+animation.loop_mode = Animation.LOOP_PINGPONG
+```
+
+## Animation Libraries
+
+Animations are organized into `AnimationLibrary` resources, which can contain multiple animations:
+
+<CodeGroup>
+```gdscript GDScript
+var library = AnimationLibrary.new()
+library.add_animation("walk", walk_animation)
+library.add_animation("run", run_animation)
+
+# Add library to AnimationPlayer
+$AnimationPlayer.add_animation_library("", library)
+```
+
+```csharp C#
+var library = new AnimationLibrary();
+library.AddAnimation("walk", walkAnimation);
+library.AddAnimation("run", runAnimation);
+
+// Add library to AnimationPlayer
+GetNode<AnimationPlayer>("AnimationPlayer").AddAnimationLibrary("", library);
+```
+</CodeGroup>
+
+<Tip>
+The default library uses an empty string as its key. Named libraries use the format `"library_name/animation_name"` for referencing animations.
+</Tip>
+
+## Working with Keyframes
+
+Keyframes are the foundation of animation. Each keyframe has:
+
+- **Time**: Position in the animation timeline (in seconds)
+- **Value**: The property value at that time
+- **Transition**: Easing/transition value (default 1.0 for linear)
+
+### Adding Keyframes
+
+```gdscript
+# Insert a keyframe at 1.5 seconds
+animation.track_insert_key(track_index, 1.5, Vector2(50, 75), 1.0)
+
+# Remove a keyframe
+animation.track_remove_key(track_index, key_index)
+
+# Get keyframe value
+var value = animation.track_get_key_value(track_index, key_index)
+```
+
+## Animation Step
+
+The animation step defines the granularity of keyframe placement:
+
+```gdscript
+animation.step = 0.1  # Snap keyframes to 0.1 second intervals
+```
+
+Default step is `1.0 / 30` (approximately 0.033 seconds, or 30 FPS).
+
+## Next Steps
+
+Now that you understand the core animation concepts, explore how to use them:
+
+<CardGroup cols={2}>
+  <Card title="AnimationPlayer" icon="play" href="/animation/animationplayer">
+    Learn how to play and control animations in your game
+  </Card>
+  <Card title="AnimationTree" icon="diagram-project" href="/animation/animationtree">
+    Create complex animation blending and state machines
+  </Card>
+  <Card title="Skeletal Animation" icon="person" href="/animation/skeletal-animation">
+    Animate 3D characters with bones and skeletons
+  </Card>
+</CardGroup>

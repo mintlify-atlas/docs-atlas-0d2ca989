@@ -1,0 +1,546 @@
+---
+title: 'Desktop export'
+description: 'Export Godot games to Windows, macOS, and Linux desktop platforms'
+keywords: ['desktop', 'windows', 'macos', 'linux', 'exe', 'dmg', 'executable']
+---
+
+## Overview
+
+Godot supports exporting to all major desktop platforms: Windows, macOS, and Linux. Desktop exports provide the best performance and access to native platform features.
+
+## Supported platforms
+
+<Tabs>
+  <Tab title="Windows">
+    - Windows 7 and later
+    - 32-bit and 64-bit builds
+    - DirectX 11/12 or Vulkan rendering
+    - Native executable (.exe)
+  </Tab>
+  
+  <Tab title="macOS">
+    - macOS 10.13 (High Sierra) and later
+    - Universal builds (Intel + Apple Silicon)
+    - Metal rendering
+    - .app bundle or .dmg installer
+  </Tab>
+  
+  <Tab title="Linux">
+    - Most distributions (Ubuntu, Fedora, Arch, etc.)
+    - x86_64 architecture
+    - Vulkan or OpenGL rendering
+    - Executable binary
+  </Tab>
+</Tabs>
+
+## Windows export
+
+### Creating Windows preset
+
+1. Go to **Project > Export**
+2. Click **Add...** and select **Windows Desktop**
+3. Configure settings
+
+```gdscript
+# Windows export settings
+Binary Format:
+  64 Bits: true  # Create 64-bit executable
+  32 Bits: false  # Optional 32-bit build
+  
+Embedded PCK: true  # Embed game data in .exe
+
+Application:
+  Name: "My Game"
+  Icon: "res://icon.ico"  # .ico file
+  Company Name: "Your Company"
+  Product Name: "My Game"
+  File Version: "1.0.0.0"
+  Product Version: "1.0.0.0"
+  Copyright: "© 2024 Your Company"
+```
+
+### Export Windows build
+
+```bash
+# 64-bit build
+godot --headless --export-release "Windows Desktop" "builds/windows/MyGame.exe"
+
+# With console (for debugging)
+godot --headless --export-debug "Windows Desktop" "builds/windows/MyGame_debug.exe"
+```
+
+### Windows icon
+
+Create a .ico file with multiple sizes:
+
+```bash
+# Using ImageMagick
+convert icon_16.png icon_32.png icon_48.png icon_256.png icon.ico
+
+# Or use online tools like:
+# https://www.icoconverter.com/
+```
+
+### Code signing (Windows)
+
+Sign your executable for Windows SmartScreen:
+
+```bash
+# Using signtool (Windows SDK)
+signtool sign /f certificate.pfx /p password /t http://timestamp.digicert.com MyGame.exe
+
+# Self-signed certificate (for testing)
+makecert -r -pe -n "CN=Your Company" -sv cert.pvk cert.cer
+pvk2pfx -pvk cert.pvk -spc cert.cer -pfx certificate.pfx
+```
+
+<Info>
+Code signing requires a certificate from a trusted Certificate Authority for production releases.
+</Info>
+
+### Windows installer
+
+Create an installer with Inno Setup:
+
+```iss
+; installer.iss
+[Setup]
+AppName=My Game
+AppVersion=1.0.0
+DefaultDirName={pf}\My Game
+DefaultGroupName=My Game
+OutputDir=builds\installer
+OutputBaseFilename=MyGame_Setup
+
+[Files]
+Source: "builds\windows\MyGame.exe"; DestDir: "{app}"
+Source: "builds\windows\*.dll"; DestDir: "{app}"
+
+[Icons]
+Name: "{group}\My Game"; Filename: "{app}\MyGame.exe"
+Name: "{commondesktop}\My Game"; Filename: "{app}\MyGame.exe"
+
+[Run]
+Filename: "{app}\MyGame.exe"; Description: "Launch My Game"; Flags: nowait postinstall
+```
+
+Compile installer:
+
+```bash
+iscc installer.iss
+```
+
+## macOS export
+
+### Creating macOS preset
+
+1. Go to **Project > Export**
+2. Click **Add...** and select **macOS**
+3. Configure settings
+
+```gdscript
+# macOS export settings
+Binary Format:
+  Universal: true  # Intel + Apple Silicon
+  
+Application:
+  Name: "My Game"
+  Icon: "res://icon.icns"  # .icns file
+  Identifier: "com.yourcompany.mygame"
+  Version: "1.0.0"
+  Short Version: "1.0"
+  Copyright: "© 2024 Your Company"
+  
+Minimum macOS Version: "10.13"  # High Sierra
+
+Codesign:
+  Enable: true
+  Identity: "Developer ID Application: Your Name"
+  Entitlements: "res://entitlements.plist"
+```
+
+<Warning>
+macOS export requires a Mac for code signing and notarization. You can export unsigned builds on any platform, but they won't run properly on macOS without signing.
+</Warning>
+
+### macOS icon
+
+Create .icns file:
+
+```bash
+# Create iconset folder
+mkdir MyIcon.iconset
+
+# Generate required sizes
+sips -z 16 16     icon.png --out MyIcon.iconset/icon_16x16.png
+sips -z 32 32     icon.png --out MyIcon.iconset/icon_16x16@2x.png
+sips -z 32 32     icon.png --out MyIcon.iconset/icon_32x32.png
+sips -z 64 64     icon.png --out MyIcon.iconset/icon_32x32@2x.png
+sips -z 128 128   icon.png --out MyIcon.iconset/icon_128x128.png
+sips -z 256 256   icon.png --out MyIcon.iconset/icon_128x128@2x.png
+sips -z 256 256   icon.png --out MyIcon.iconset/icon_256x256.png
+sips -z 512 512   icon.png --out MyIcon.iconset/icon_256x256@2x.png
+sips -z 512 512   icon.png --out MyIcon.iconset/icon_512x512.png
+sips -z 1024 1024 icon.png --out MyIcon.iconset/icon_512x512@2x.png
+
+# Create .icns
+iconutil -c icns MyIcon.iconset
+```
+
+### Code signing (macOS)
+
+```bash
+# Sign the app
+codesign --force --deep --sign "Developer ID Application: Your Name" MyGame.app
+
+# Verify signature
+codesign -vvv --deep --strict MyGame.app
+spctl -a -vvv -t install MyGame.app
+```
+
+### Notarization (macOS)
+
+Required for macOS 10.15+:
+
+```bash
+# Create DMG
+hdiutil create -volname "My Game" -srcfolder MyGame.app -ov -format UDZO MyGame.dmg
+
+# Submit for notarization
+xcrun notarytool submit MyGame.dmg \
+  --apple-id "your@email.com" \
+  --team-id "TEAM_ID" \
+  --password "app-specific-password" \
+  --wait
+
+# Staple notarization ticket
+xcrun stapler staple MyGame.dmg
+```
+
+### Create DMG installer
+
+```bash
+# Using create-dmg tool
+create-dmg \
+  --volname "My Game" \
+  --window-pos 200 120 \
+  --window-size 800 400 \
+  --icon-size 100 \
+  --icon "MyGame.app" 200 190 \
+  --hide-extension "MyGame.app" \
+  --app-drop-link 600 185 \
+  "MyGame.dmg" \
+  "MyGame.app"
+```
+
+## Linux export
+
+### Creating Linux preset
+
+1. Go to **Project > Export**
+2. Click **Add...** and select **Linux/X11**
+3. Configure settings
+
+```gdscript
+# Linux export settings
+Binary Format:
+  64 Bits: true
+  
+Embedded PCK: true
+
+Texture Format:
+  ETC2: false  # Desktop doesn't need mobile compression
+```
+
+### Export Linux build
+
+```bash
+# Export executable
+godot --headless --export-release "Linux" "builds/linux/MyGame.x86_64"
+
+# Make executable
+chmod +x builds/linux/MyGame.x86_64
+```
+
+### Linux desktop entry
+
+Create .desktop file for desktop integration:
+
+```ini
+# MyGame.desktop
+[Desktop Entry]
+Type=Application
+Name=My Game
+Comment=An awesome game
+Exec=/usr/bin/mygame
+Icon=/usr/share/icons/mygame.png
+Terminal=false
+Categories=Game;ArcadeGame;
+```
+
+### Package for Linux
+
+<Tabs>
+  <Tab title="AppImage">
+    ```bash
+    # Create AppImage structure
+    mkdir -p MyGame.AppDir/usr/bin
+    mkdir -p MyGame.AppDir/usr/share/icons
+    
+    # Copy files
+    cp MyGame.x86_64 MyGame.AppDir/usr/bin/
+    cp icon.png MyGame.AppDir/usr/share/icons/
+    cp MyGame.desktop MyGame.AppDir/
+    
+    # Create AppImage
+    appimagetool MyGame.AppDir MyGame.AppImage
+    ```
+  </Tab>
+  
+  <Tab title="Flatpak">
+    ```yaml
+    # com.yourcompany.MyGame.yml
+    app-id: com.yourcompany.MyGame
+    runtime: org.freedesktop.Platform
+    runtime-version: '22.08'
+    sdk: org.freedesktop.Sdk
+    command: mygame
+    
+    modules:
+      - name: mygame
+        buildsystem: simple
+        build-commands:
+          - install -Dm755 MyGame.x86_64 /app/bin/mygame
+          - install -Dm644 icon.png /app/share/icons/hicolor/256x256/apps/mygame.png
+    ```
+    
+    ```bash
+    flatpak-builder build com.yourcompany.MyGame.yml
+    flatpak build-export export build
+    flatpak build-bundle export MyGame.flatpak com.yourcompany.MyGame
+    ```
+  </Tab>
+  
+  <Tab title="Snap">
+    ```yaml
+    # snapcraft.yaml
+    name: mygame
+    version: '1.0.0'
+    summary: My awesome game
+    description: A game made with Godot
+    
+    grade: stable
+    confinement: strict
+    
+    apps:
+      mygame:
+        command: MyGame.x86_64
+        plugs: [x11, opengl, pulseaudio]
+    
+    parts:
+      mygame:
+        plugin: dump
+        source: .
+        organize:
+          MyGame.x86_64: bin/MyGame.x86_64
+    ```
+    
+    ```bash
+    snapcraft
+    ```
+  </Tab>
+</Tabs>
+
+## Cross-platform considerations
+
+### File paths
+
+```gdscript
+# Use OS-independent paths
+var save_path = "user://savegame.dat"  # Cross-platform user directory
+
+# Get user directory
+var user_dir = OS.get_user_data_dir()
+print(user_dir)
+# Windows: C:\Users\Username\AppData\Roaming\Godot\app_userdata\GameName
+# macOS: ~/Library/Application Support/Godot/app_userdata/GameName
+# Linux: ~/.local/share/godot/app_userdata/GameName
+```
+
+### Platform detection
+
+```gdscript
+func _ready():
+    match OS.get_name():
+        "Windows":
+            setup_windows()
+        "macOS":
+            setup_macos()
+        "Linux", "FreeBSD", "NetBSD", "OpenBSD", "BSD":
+            setup_linux()
+```
+
+### Native dialogs
+
+```gdscript
+# File dialog
+var file_dialog = FileDialog.new()
+file_dialog.access = FileDialog.ACCESS_FILESYSTEM
+file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+file_dialog.add_filter("*.txt", "Text Files")
+add_child(file_dialog)
+file_dialog.popup_centered_ratio(0.8)
+
+# Native OS file dialog
+func open_file_native():
+    DisplayServer.file_dialog_show(
+        "Open File",
+        OS.get_system_dir(OS.SYSTEM_DIR_DOCUMENTS),
+        "*.txt",
+        false,
+        DisplayServer.FILE_DIALOG_MODE_OPEN_FILE,
+        _on_file_selected
+    )
+```
+
+## Steam integration
+
+Integrate with Steam (using GodotSteam):
+
+```gdscript
+var steam
+
+func _ready():
+    OS.set_environment("SteamAppId", "YOUR_APP_ID")
+    
+    if Engine.has_singleton("Steam"):
+        steam = Engine.get_singleton("Steam")
+        
+        var init = steam.steamInit()
+        if init.status == 1:  # Success
+            print("Steam initialized")
+            var username = steam.getPersonaName()
+            print("Steam user: ", username)
+
+func unlock_achievement(achievement_name: String):
+    if steam:
+        steam.setAchievement(achievement_name)
+        steam.storeStats()
+```
+
+## Distribution
+
+### Steam
+
+1. Register Steamworks account
+2. Create app in Steamworks
+3. Upload builds using SteamPipe
+4. Configure store page
+5. Submit for review
+
+### GOG
+
+1. Apply to GOG as developer
+2. Submit game for curation
+3. If accepted, use GOG Galaxy SDK
+4. Build with GOG pipeline
+
+### itch.io
+
+```bash
+# Using butler (itch.io upload tool)
+butler push builds/windows user/game:windows
+butler push builds/linux user/game:linux
+butler push builds/macos user/game:mac
+```
+
+### Epic Games Store
+
+1. Apply to Epic Games Store
+2. Integrate Epic Online Services
+3. Submit build through Epic Developer Portal
+
+## Performance optimization
+
+<CardGroup cols={2}>
+  <Card title="Use appropriate renderer" icon="display">
+    Forward+ for high-end, Mobile for broader compatibility.
+  </Card>
+  
+  <Card title="Profile regularly" icon="chart-line">
+    Use built-in profiler to identify bottlenecks.
+  </Card>
+  
+  <Card title="Optimize assets" icon="file-image">
+    Compress textures, optimize meshes, reduce shader complexity.
+  </Card>
+  
+  <Card title="Multi-threading" icon="layer-group">
+    Use threading for heavy operations outside render loop.
+  </Card>
+</CardGroup>
+
+## Launch options
+
+```bash
+# Run with custom resolution
+./MyGame --resolution 1920x1080
+
+# Run in windowed mode
+./MyGame --windowed
+
+# Run in fullscreen
+./MyGame --fullscreen
+
+# Custom user data directory
+./MyGame --user-data-dir /path/to/data
+```
+
+Handle in code:
+
+```gdscript
+func _ready():
+    var args = OS.get_cmdline_args()
+    for arg in args:
+        if arg == "--windowed":
+            DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+        elif arg.begins_with("--resolution="):
+            var res = arg.split("=")[1].split("x")
+            var size = Vector2i(int(res[0]), int(res[1]))
+            DisplayServer.window_set_size(size)
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Missing dependencies (Linux)">
+    Install required libraries:
+    ```bash
+    sudo apt install libgl1 libasound2 libpulse0
+    ```
+  </Accordion>
+  
+  <Accordion title="App won't open (macOS)">
+    App needs to be code signed and notarized for macOS 10.15+.
+  </Accordion>
+  
+  <Accordion title="SmartScreen warning (Windows)">
+    Code sign with a trusted certificate to avoid SmartScreen warnings.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Android" icon="android" href="/deployment/android">
+    Export for Android devices
+  </Card>
+  
+  <Card title="iOS" icon="apple" href="/deployment/ios">
+    Export for iOS devices
+  </Card>
+  
+  <Card title="Web" icon="globe" href="/deployment/web">
+    Export for web browsers
+  </Card>
+</CardGroup>

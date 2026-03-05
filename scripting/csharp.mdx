@@ -1,0 +1,621 @@
+---
+title: 'C# Scripting'
+description: 'Use C# and .NET to script your Godot games'
+keywords: ['csharp', 'c#', 'dotnet', '.net', 'mono', 'scripting']
+icon: 'hashtag'
+---
+
+## Overview
+
+Godot supports C# as a scripting language through .NET integration. C# offers strong typing, powerful language features, and access to the entire .NET ecosystem.
+
+<Info>
+C# support requires a special build of Godot with Mono/.NET enabled. Download the .NET version from the official Godot website.
+</Info>
+
+## Getting Started
+
+### Prerequisites
+
+<Steps>
+  <Step title="Download .NET Godot">
+    Download the Godot .NET version from [godotengine.org](https://godotengine.org/download). The standard version doesn't include C# support.
+  </Step>
+  
+  <Step title="Install .NET SDK">
+    Install the [.NET SDK](https://dotnet.microsoft.com/download) version 6.0 or later.
+    
+    Verify installation:
+    ```bash
+    dotnet --version
+    ```
+  </Step>
+  
+  <Step title="Create a C# project">
+    In Godot, go to **Project → Project Settings → Dotnet** and click **Create C# Solution**.
+    
+    This generates the necessary `.csproj` and `.sln` files.
+  </Step>
+</Steps>
+
+### Your First C# Script
+
+```csharp Player.cs
+using Godot;
+using System;
+
+public partial class Player : CharacterBody2D
+{
+    // Called when the node enters the scene tree for the first time
+    public override void _Ready()
+    {
+        GD.Print("Player is ready!");
+    }
+
+    // Called every frame. 'delta' is the elapsed time since the previous frame
+    public override void _Process(double delta)
+    {
+        // Update logic here
+    }
+}
+```
+
+<Note>
+All C# classes that extend Godot nodes must be marked as `partial`. This is required for Godot's source generators.
+</Note>
+
+## C# vs GDScript
+
+### Syntax Comparison
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+extends CharacterBody2D
+
+const SPEED = 300.0
+const JUMP_VELOCITY = -400.0
+
+func _physics_process(delta: float) -> void:
+	if not is_on_floor():
+		velocity += get_gravity() * delta
+	
+	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
+		velocity.y = JUMP_VELOCITY
+	
+	var direction := Input.get_axis("ui_left", "ui_right")
+	if direction:
+		velocity.x = direction * SPEED
+	else:
+		velocity.x = move_toward(velocity.x, 0, SPEED)
+	
+	move_and_slide()
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+using Godot;
+
+public partial class Player : CharacterBody2D
+{
+    public const float Speed = 300.0f;
+    public const float JumpVelocity = -400.0f;
+
+    public override void _PhysicsProcess(double delta)
+    {
+        Vector2 velocity = Velocity;
+
+        if (!IsOnFloor())
+        {
+            velocity += GetGravity() * (float)delta;
+        }
+
+        if (Input.IsActionJustPressed("ui_accept") && IsOnFloor())
+        {
+            velocity.Y = JumpVelocity;
+        }
+
+        Vector2 direction = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
+        if (direction != Vector2.Zero)
+        {
+            velocity.X = direction.X * Speed;
+        }
+        else
+        {
+            velocity.X = Mathf.MoveToward(Velocity.X, 0, Speed);
+        }
+
+        Velocity = velocity;
+        MoveAndSlide();
+    }
+}
+```
+  </Tab>
+</Tabs>
+
+### Key Differences
+
+<AccordionGroup>
+  <Accordion title="Naming conventions">
+    **GDScript:** `snake_case` for methods and variables
+    
+    **C#:** `PascalCase` for methods, properties, and public members; `camelCase` for private fields
+    
+    ```csharp
+    // C# naming
+    public void MovePlayer() { }  // Method
+    public int Health { get; set; }  // Property
+    private float speed = 10.0f;  // Private field
+    ```
+  </Accordion>
+  
+  <Accordion title="Type system">
+    C# is statically typed by default, while GDScript supports gradual typing:
+    
+    ```csharp
+    // C# - must specify types
+    int health = 100;
+    string playerName = "Hero";
+    Vector2 position = new Vector2(0, 0);
+    ```
+  </Accordion>
+  
+  <Accordion title="Properties vs setters/getters">
+    C# uses properties instead of GDScript's `set` and `get`:
+    
+    ```csharp
+    private int _health = 100;
+    
+    public int Health
+    {
+        get => _health;
+        set
+        {
+            _health = value;
+            EmitSignal(SignalName.HealthChanged, _health);
+        }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Collections">
+    C# uses generic collections:
+    
+    ```csharp
+    // Godot arrays
+    Godot.Collections.Array items = new();
+    Godot.Collections.Array<string> names = new();
+    
+    // .NET collections
+    List<string> dotnetList = new();
+    Dictionary<string, int> scores = new();
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Exported Variables
+
+Use the `[Export]` attribute to expose variables in the Inspector:
+
+```csharp
+public partial class Player : CharacterBody2D
+{
+    [Export]
+    public float Speed { get; set; } = 100.0f;
+    
+    [Export]
+    public int MaxHealth { get; set; } = 100;
+    
+    [Export]
+    public string PlayerName { get; set; } = "Hero";
+    
+    // Export with range
+    [Export(PropertyHint.Range, "0,100,")]
+    public int Volume { get; set; } = 50;
+    
+    // Export node paths
+    [Export]
+    public Node2D Target { get; set; }
+    
+    [Export]
+    public NodePath TargetPath { get; set; }
+    
+    // Export file paths
+    [Export(PropertyHint.File)]
+    public string ConfigFile { get; set; }
+    
+    // Export enums
+    public enum CharacterClass { Warrior, Mage, Rogue }
+    
+    [Export]
+    public CharacterClass Class { get; set; } = CharacterClass.Warrior;
+}
+```
+
+## Signals in C#
+
+### Declaring Signals
+
+```csharp
+public partial class Player : Node
+{
+    // Declare signals
+    [Signal]
+    public delegate void HealthChangedEventHandler(int newHealth);
+    
+    [Signal]
+    public delegate void PlayerDiedEventHandler();
+    
+    [Signal]
+    public delegate void ItemCollectedEventHandler(string itemName, int quantity);
+    
+    private int _health = 100;
+    
+    public int Health
+    {
+        get => _health;
+        set
+        {
+            _health = value;
+            EmitSignal(SignalName.HealthChanged, _health);
+            
+            if (_health <= 0)
+            {
+                EmitSignal(SignalName.PlayerDied);
+            }
+        }
+    }
+}
+```
+
+### Connecting Signals
+
+<CodeGroup>
+
+```csharp Method connection
+public override void _Ready()
+{
+    // Connect to signal
+    HealthChanged += OnHealthChanged;
+    PlayerDied += OnPlayerDied;
+}
+
+private void OnHealthChanged(int newHealth)
+{
+    GD.Print($"Health is now: {newHealth}");
+}
+
+private void OnPlayerDied()
+{
+    GD.Print("Game Over");
+}
+```
+
+```csharp Lambda connection
+public override void _Ready()
+{
+    HealthChanged += (newHealth) => GD.Print($"Health: {newHealth}");
+    PlayerDied += () => GD.Print("Game Over");
+}
+```
+
+```csharp Connect method
+public override void _Ready()
+{
+    // Alternative connection syntax
+    Connect(SignalName.HealthChanged, Callable.From<int>(OnHealthChanged));
+}
+```
+
+</CodeGroup>
+
+## Node References
+
+### Getting Nodes
+
+```csharp
+public partial class Player : Node2D
+{
+    // Get nodes in _Ready()
+    private Sprite2D _sprite;
+    private AnimationPlayer _animation;
+    private ProgressBar _healthBar;
+    
+    public override void _Ready()
+    {
+        _sprite = GetNode<Sprite2D>("Sprite2D");
+        _animation = GetNode<AnimationPlayer>("AnimationPlayer");
+        _healthBar = GetNode<ProgressBar>("UI/HealthBar");
+        
+        // Using NodePath
+        var enemy = GetNode<CharacterBody2D>(new NodePath("../Enemy"));
+        
+        // Safer alternative with null check
+        if (HasNode("Sprite2D"))
+        {
+            _sprite = GetNode<Sprite2D>("Sprite2D");
+        }
+    }
+}
+```
+
+### OnReady Pattern
+
+C# doesn't have `@onready`, but you can use lazy initialization:
+
+```csharp
+public partial class Player : Node2D
+{
+    private Sprite2D _sprite;
+    private Sprite2D Sprite => _sprite ??= GetNode<Sprite2D>("Sprite2D");
+    
+    public override void _Process(double delta)
+    {
+        Sprite.Visible = true;  // Automatically initialized on first access
+    }
+}
+```
+
+## Using .NET Libraries
+
+One major advantage of C# is access to the entire .NET ecosystem:
+
+```csharp
+using Godot;
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.IO;
+using System.Threading.Tasks;
+
+public partial class GameManager : Node
+{
+    // LINQ queries
+    public void ProcessScores(List<int> scores)
+    {
+        var topScores = scores
+            .Where(s => s > 1000)
+            .OrderByDescending(s => s)
+            .Take(10)
+            .ToList();
+        
+        var average = scores.Average();
+        GD.Print($"Average score: {average}");
+    }
+    
+    // JSON serialization
+    public void SaveGameData()
+    {
+        var data = new GameData
+        {
+            PlayerName = "Hero",
+            Level = 10,
+            Score = 5000
+        };
+        
+        string json = JsonSerializer.Serialize(data);
+        File.WriteAllText("user://savegame.json", json);
+    }
+    
+    // Async/await
+    public async Task LoadDataAsync()
+    {
+        await Task.Delay(1000);  // Simulate loading
+        GD.Print("Data loaded!");
+    }
+}
+
+public class GameData
+{
+    public string PlayerName { get; set; }
+    public int Level { get; set; }
+    public int Score { get; set; }
+}
+```
+
+<Warning>
+Be cautious with blocking async operations in Godot's main thread. Use `await` properly or consider using Godot's built-in threading.
+</Warning>
+
+## Performance Considerations
+
+<CardGroup cols={2}>
+  <Card title="C# is compiled" icon="gauge-high">
+    C# is compiled to native code, offering better performance for CPU-intensive tasks.
+  </Card>
+  
+  <Card title="Startup overhead" icon="hourglass">
+    C# has slightly longer initial startup time due to .NET runtime initialization.
+  </Card>
+  
+  <Card title="Strong typing benefits" icon="shield-check">
+    Static typing enables better compiler optimizations and catches errors at compile time.
+  </Card>
+  
+  <Card title="Memory management" icon="memory">
+    C# uses garbage collection, which can cause occasional frame hitches if not managed carefully.
+  </Card>
+</CardGroup>
+
+## Building and Exporting
+
+### Build Configuration
+
+C# projects require compilation before running:
+
+<Steps>
+  <Step title="Build the project">
+    In Godot, click **Build** in the top-right corner or press **Alt+B**.
+  </Step>
+  
+  <Step title="Configure export templates">
+    Download the .NET export templates for your target platform from the Godot download page.
+  </Step>
+  
+  <Step title="Export settings">
+    In **Project → Export**, ensure **Embed .NET Runtime** is enabled for standalone executables.
+  </Step>
+</Steps>
+
+### NuGet Packages
+
+You can use NuGet packages in your Godot project:
+
+```bash
+dotnet add package Newtonsoft.Json
+```
+
+Or edit the `.csproj` file directly:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+</ItemGroup>
+```
+
+## IDE Setup
+
+<Tabs>
+  <Tab title="Visual Studio Code">
+    Install the C# extension:
+    
+    1. Install [C# Dev Kit](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit)
+    2. Open your Godot project folder
+    3. VS Code will detect the `.sln` file automatically
+    
+    **External Editor Settings:**
+    - Go to **Editor → Editor Settings → Dotnet → Editor**
+    - Set **External Editor** to **Visual Studio Code**
+  </Tab>
+  
+  <Tab title="Visual Studio">
+    1. Install [Visual Studio 2022](https://visualstudio.microsoft.com/) with .NET workload
+    2. Open the `.sln` file generated by Godot
+    3. Set Godot as external editor in Visual Studio
+    
+    **External Editor Settings:**
+    - Go to **Editor → Editor Settings → Dotnet → Editor**
+    - Set **External Editor** to **Visual Studio**
+  </Tab>
+  
+  <Tab title="JetBrains Rider">
+    1. Install [JetBrains Rider](https://www.jetbrains.com/rider/)
+    2. Install the Godot support plugin
+    3. Open the `.sln` file
+    
+    **External Editor Settings:**
+    - Go to **Editor → Editor Settings → Dotnet → Editor**
+    - Set **External Editor** to **JetBrains Rider**
+  </Tab>
+</Tabs>
+
+## Common Patterns
+
+### Singleton Pattern
+
+```csharp GameManager.cs
+public partial class GameManager : Node
+{
+    private static GameManager _instance;
+    
+    public static GameManager Instance
+    {
+        get => _instance;
+    }
+    
+    public int Score { get; set; }
+    
+    public override void _EnterTree()
+    {
+        if (_instance != null)
+        {
+            QueueFree();
+            return;
+        }
+        
+        _instance = this;
+    }
+    
+    public override void _ExitTree()
+    {
+        if (_instance == this)
+        {
+            _instance = null;
+        }
+    }
+}
+
+// Usage
+GameManager.Instance.Score += 100;
+```
+
+### Resource Management
+
+```csharp
+public partial class Player : Node2D
+{
+    private AudioStreamPlayer _audioPlayer;
+    
+    public override void _Ready()
+    {
+        // Load resources
+        var texture = GD.Load<Texture2D>("res://player.png");
+        var scene = GD.Load<PackedScene>("res://bullet.tscn");
+        
+        // Preload in C# (loaded at class initialization)
+        // Not available - use GD.Load instead
+    }
+    
+    public void PlaySound()
+    {
+        var audioStream = GD.Load<AudioStream>("res://sounds/jump.ogg");
+        _audioPlayer.Stream = audioStream;
+        _audioPlayer.Play();
+    }
+}
+```
+
+## Debugging
+
+```csharp
+public partial class Player : CharacterBody2D
+{
+    public override void _Ready()
+    {
+        // Print to console
+        GD.Print("Player ready");
+        GD.PrintErr("Error message");
+        GD.PrintRaw("No newline");
+        
+        // Formatted output
+        GD.Print($"Player health: {Health}");
+        
+        // Assertions
+        System.Diagnostics.Debug.Assert(Health > 0, "Health must be positive");
+        
+        // Debugger breakpoint (when attached)
+        System.Diagnostics.Debugger.Break();
+    }
+}
+```
+
+<Tip>
+Attach the Visual Studio or VS Code debugger to Godot for breakpoint debugging. Run Godot, then attach to the `Godot` process.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="GDScript" icon="code" href="/scripting/gdscript">
+    Learn Godot's built-in scripting language
+  </Card>
+  
+  <Card title="GDExtension" icon="plug" href="/scripting/gdextension">
+    Create native C++ extensions
+  </Card>
+  
+  <Card title="Visual Scripting" icon="diagram-project" href="/scripting/visual-scripting">
+    Explore node-based programming
+  </Card>
+</CardGroup>

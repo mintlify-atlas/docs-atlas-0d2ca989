@@ -1,0 +1,110 @@
+---
+title: "AudioServer"
+---
+
+# AudioServer
+
+**Inherits:** Object
+
+## Description
+
+Server interface for low-level audio access. AudioServer is in charge of creating sample data (playable audio) as well as its playback via a voice interface.
+
+## Methods
+
+### add_bus
+
+```gdscript
+void add_bus(at_position: int = -1)
+```
+
+Adds a bus at the specified position.
+
+### add_bus_effect
+
+```gdscript
+void add_bus_effect(bus_idx: int, effect: AudioEffect, at_position: int = -1)
+```
+
+Adds an AudioEffect effect to the bus at the specified position.
+
+<ParamField path="bus_idx" type="int">
+  The bus index
+</ParamField>
+
+<ParamField path="effect" type="AudioEffect">
+  The audio effect to add
+</ParamField>
+
+### get_bus_name
+
+```gdscript
+String get_bus_name(bus_idx: int)
+```
+
+Returns the name of the bus with the given index.
+
+### get_bus_volume_db
+
+```gdscript
+float get_bus_volume_db(bus_idx: int)
+```
+
+Returns the volume of the bus at index in dB.
+
+### set_bus_volume_db
+
+```gdscript
+void set_bus_volume_db(bus_idx: int, volume_db: float)
+```
+
+Sets the volume of the bus at index in dB.
+
+### get_mix_rate
+
+```gdscript
+float get_mix_rate()
+```
+
+Returns the sample rate at the output of the AudioServer.
+
+### get_output_latency
+
+```gdscript
+float get_output_latency()
+```
+
+Returns the audio driver's effective output latency.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+# Get the master bus volume
+var master_idx = AudioServer.get_bus_index("Master")
+var volume = AudioServer.get_bus_volume_db(master_idx)
+print("Master volume: ", volume, " dB")
+
+# Set music bus volume
+var music_idx = AudioServer.get_bus_index("Music")
+AudioServer.set_bus_volume_db(music_idx, -10.0)
+
+# Add a reverb effect
+var reverb = AudioEffectReverb.new()
+AudioServer.add_bus_effect(master_idx, reverb)
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+// Get the master bus volume
+int masterIdx = AudioServer.GetBusIndex("Master");
+float volume = AudioServer.GetBusVolumeDb(masterIdx);
+GD.Print("Master volume: ", volume, " dB");
+
+// Set music bus volume
+int musicIdx = AudioServer.GetBusIndex("Music");
+AudioServer.SetBusVolumeDb(musicIdx, -10.0f);
+```
+  </Tab>
+</Tabs>

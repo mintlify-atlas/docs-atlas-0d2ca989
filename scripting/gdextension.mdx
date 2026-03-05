@@ -1,0 +1,734 @@
+---
+title: 'GDExtension'
+description: 'Create high-performance native extensions with C++ and other languages'
+keywords: ['gdextension', 'c++', 'native', 'performance', 'extension', 'binding']
+icon: 'plug'
+---
+
+## Overview
+
+GDExtension is Godot's system for creating native extensions using C++ or other compiled languages. It provides a C API for extending Godot's functionality with high-performance code while maintaining full engine integration.
+
+<Info>
+GDExtension replaces GDNative from Godot 3.x with improved performance, better compatibility, and easier development.
+</Info>
+
+## Why Use GDExtension?
+
+<CardGroup cols={2}>
+  <Card title="Maximum performance" icon="rocket">
+    Native compiled code for CPU-intensive algorithms, physics, and AI.
+  </Card>
+  
+  <Card title="Existing C++ libraries" icon="book-open">
+    Integrate third-party C++ libraries directly into Godot.
+  </Card>
+  
+  <Card title="Platform-specific code" icon="microchip">
+    Access platform APIs and SDKs not exposed by Godot.
+  </Card>
+  
+  <Card title="Reusable modules" icon="puzzle-piece">
+    Share compiled extensions across projects without source code.
+  </Card>
+</CardGroup>
+
+## Getting Started
+
+### Prerequisites
+
+<Steps>
+  <Step title="Install a C++ compiler">
+    **Windows:** Visual Studio 2019+ or MinGW-w64
+    
+    **macOS:** Xcode Command Line Tools
+    
+    **Linux:** GCC or Clang
+    
+    ```bash
+    # Linux (Ubuntu/Debian)
+    sudo apt install build-essential
+    
+    # macOS
+    xcode-select --install
+    ```
+  </Step>
+  
+  <Step title="Install SCons build system">
+    ```bash
+    pip install scons
+    ```
+  </Step>
+  
+  <Step title="Clone godot-cpp">
+    ```bash
+    git clone https://github.com/godotengine/godot-cpp
+    cd godot-cpp
+    git checkout godot-4.3-stable  # Match your Godot version
+    ```
+  </Step>
+  
+  <Step title="Build godot-cpp">
+    ```bash
+    scons platform=<platform> target=template_debug
+    scons platform=<platform> target=template_release
+    ```
+    
+    Replace `<platform>` with: `windows`, `linux`, `macos`, `android`, or `ios`
+  </Step>
+</Steps>
+
+## Project Structure
+
+A typical GDExtension project structure:
+
+```
+my_extension/
+├── godot-cpp/              # Godot C++ bindings (submodule)
+├── src/
+│   ├── register_types.cpp  # Extension entry point
+│   ├── register_types.h
+│   ├── my_class.cpp       # Your custom classes
+│   └── my_class.h
+├── demo/                   # Godot project for testing
+│   ├── bin/
+│   │   └── my_extension.gdextension
+│   └── project.godot
+├── SConstruct              # Build configuration
+└── my_extension.gdextension # Extension configuration
+```
+
+## Creating Your First Extension
+
+### 1. Define a Custom Class
+
+```cpp my_class.h
+#ifndef MY_CLASS_H
+#define MY_CLASS_H
+
+#include <godot_cpp/classes/node.hpp>
+#include <godot_cpp/variant/string.hpp>
+
+namespace godot {
+
+class MyClass : public Node {
+    GDCLASS(MyClass, Node)
+
+private:
+    int health;
+    float speed;
+    String player_name;
+
+protected:
+    static void _bind_methods();
+
+public:
+    MyClass();
+    ~MyClass();
+
+    // Godot lifecycle methods
+    void _ready() override;
+    void _process(double delta) override;
+
+    // Custom methods
+    void set_health(int p_health);
+    int get_health() const;
+    
+    void set_speed(float p_speed);
+    float get_speed() const;
+    
+    void take_damage(int amount);
+    void heal(int amount);
+};
+
+}
+
+#endif // MY_CLASS_H
+```
+
+### 2. Implement the Class
+
+```cpp my_class.cpp
+#include "my_class.h"
+#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+
+using namespace godot;
+
+MyClass::MyClass() {
+    health = 100;
+    speed = 5.0f;
+    player_name = "Player";
+}
+
+MyClass::~MyClass() {
+    // Cleanup if needed
+}
+
+void MyClass::_bind_methods() {
+    // Bind properties
+    ClassDB::bind_method(D_METHOD("set_health", "health"), &MyClass::set_health);
+    ClassDB::bind_method(D_METHOD("get_health"), &MyClass::get_health);
+    ClassDB::add_property("MyClass", PropertyInfo(Variant::INT, "health"), "set_health", "get_health");
+    
+    ClassDB::bind_method(D_METHOD("set_speed", "speed"), &MyClass::set_speed);
+    ClassDB::bind_method(D_METHOD("get_speed"), &MyClass::get_speed);
+    ClassDB::add_property("MyClass", PropertyInfo(Variant::FLOAT, "speed"), "set_speed", "get_speed");
+    
+    // Bind custom methods
+    ClassDB::bind_method(D_METHOD("take_damage", "amount"), &MyClass::take_damage);
+    ClassDB::bind_method(D_METHOD("heal", "amount"), &MyClass::heal);
+    
+    // Define signals
+    ADD_SIGNAL(MethodInfo("health_changed", PropertyInfo(Variant::INT, "new_health")));
+    ADD_SIGNAL(MethodInfo("player_died"));
+}
+
+void MyClass::_ready() {
+    UtilityFunctions::print("MyClass is ready!");
+}
+
+void MyClass::_process(double delta) {
+    // Called every frame
+}
+
+void MyClass::set_health(int p_health) {
+    health = p_health;
+    emit_signal("health_changed", health);
+    
+    if (health <= 0) {
+        emit_signal("player_died");
+    }
+}
+
+int MyClass::get_health() const {
+    return health;
+}
+
+void MyClass::set_speed(float p_speed) {
+    speed = p_speed;
+}
+
+float MyClass::get_speed() const {
+    return speed;
+}
+
+void MyClass::take_damage(int amount) {
+    set_health(health - amount);
+}
+
+void MyClass::heal(int amount) {
+    set_health(health + amount);
+}
+```
+
+### 3. Register the Extension
+
+```cpp register_types.h
+#ifndef MY_EXTENSION_REGISTER_TYPES_H
+#define MY_EXTENSION_REGISTER_TYPES_H
+
+#include <godot_cpp/core/class_db.hpp>
+
+using namespace godot;
+
+void initialize_my_extension_module(ModuleInitializationLevel p_level);
+void uninitialize_my_extension_module(ModuleInitializationLevel p_level);
+
+#endif // MY_EXTENSION_REGISTER_TYPES_H
+```
+
+```cpp register_types.cpp
+#include "register_types.h"
+#include "my_class.h"
+
+#include <gdextension_interface.h>
+#include <godot_cpp/core/defs.hpp>
+#include <godot_cpp/godot.hpp>
+
+using namespace godot;
+
+void initialize_my_extension_module(ModuleInitializationLevel p_level) {
+    if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
+        return;
+    }
+    
+    ClassDB::register_class<MyClass>();
+}
+
+void uninitialize_my_extension_module(ModuleInitializationLevel p_level) {
+    if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
+        return;
+    }
+}
+
+extern "C" {
+    // Initialization
+    GDExtensionBool GDE_EXPORT my_extension_library_init(
+        GDExtensionInterfaceGetProcAddress p_get_proc_address,
+        const GDExtensionClassLibraryPtr p_library,
+        GDExtensionInitialization *r_initialization
+    ) {
+        godot::GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
+        
+        init_obj.register_initializer(initialize_my_extension_module);
+        init_obj.register_terminator(uninitialize_my_extension_module);
+        init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE);
+        
+        return init_obj.init();
+    }
+}
+```
+
+### 4. GDExtension Configuration
+
+Create `my_extension.gdextension`:
+
+```ini my_extension.gdextension
+[configuration]
+entry_symbol = "my_extension_library_init"
+compatibility_minimum = 4.1
+
+[libraries]
+linux.debug.x86_64 = "res://bin/libmy_extension.linux.template_debug.x86_64.so"
+linux.release.x86_64 = "res://bin/libmy_extension.linux.template_release.x86_64.so"
+windows.debug.x86_64 = "res://bin/libmy_extension.windows.template_debug.x86_64.dll"
+windows.release.x86_64 = "res://bin/libmy_extension.windows.template_release.x86_64.dll"
+macos.debug = "res://bin/libmy_extension.macos.template_debug.framework"
+macos.release = "res://bin/libmy_extension.macos.template_release.framework"
+```
+
+### 5. Build Configuration (SConstruct)
+
+```python SConstruct
+#!/usr/bin/env python
+import os
+import sys
+
+env = SConscript("godot-cpp/SConstruct")
+
+# Add source files
+env.Append(CPPPATH=["src/"])
+sources = Glob("src/*.cpp")
+
+# Build the library
+if env["platform"] == "macos":
+    library = env.SharedLibrary(
+        "demo/bin/libmy_extension.{}.{}.framework/libmy_extension.{}.{}".format(
+            env["platform"], env["target"], env["platform"], env["target"]
+        ),
+        source=sources,
+    )
+else:
+    library = env.SharedLibrary(
+        "demo/bin/libmy_extension{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
+        source=sources,
+    )
+
+Default(library)
+```
+
+### 6. Build the Extension
+
+```bash
+# Debug build
+scons platform=linux target=template_debug
+
+# Release build
+scons platform=linux target=template_release
+
+# Build for multiple platforms
+scons platform=windows target=template_release
+scons platform=macos target=template_release
+```
+
+## Using Your Extension in Godot
+
+### In GDScript
+
+```gdscript
+extends Node
+
+func _ready():
+	# Create an instance of your custom class
+	var my_object = MyClass.new()
+	
+	# Use properties
+	my_object.health = 100
+	my_object.speed = 5.5
+	
+	print("Health: ", my_object.health)
+	
+	# Call methods
+	my_object.take_damage(25)
+	my_object.heal(10)
+	
+	# Connect signals
+	my_object.health_changed.connect(_on_health_changed)
+	my_object.player_died.connect(_on_player_died)
+	
+	add_child(my_object)
+
+func _on_health_changed(new_health: int):
+	print("Health changed to: ", new_health)
+
+func _on_player_died():
+	print("Player died!")
+```
+
+### In C#
+
+```csharp
+using Godot;
+
+public partial class GameManager : Node
+{
+    public override void _Ready()
+    {
+        // Use the GDExtension class
+        var myObject = new MyClass();
+        
+        myObject.Health = 100;
+        myObject.Speed = 5.5f;
+        
+        GD.Print($"Health: {myObject.Health}");
+        
+        myObject.TakeDamage(25);
+        myObject.Heal(10);
+        
+        myObject.HealthChanged += OnHealthChanged;
+        myObject.PlayerDied += OnPlayerDied;
+        
+        AddChild(myObject);
+    }
+    
+    private void OnHealthChanged(int newHealth)
+    {
+        GD.Print($"Health changed to: {newHealth}");
+    }
+    
+    private void OnPlayerDied()
+    {
+        GD.Print("Player died!");
+    }
+}
+```
+
+## Advanced Features
+
+### Working with Godot Types
+
+```cpp
+#include <godot_cpp/variant/vector2.hpp>
+#include <godot_cpp/variant/vector3.hpp>
+#include <godot_cpp/variant/array.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
+#include <godot_cpp/classes/node2d.hpp>
+
+void example_function() {
+    // Vectors
+    Vector2 pos2d(10.0f, 20.0f);
+    Vector3 pos3d(1.0f, 2.0f, 3.0f);
+    
+    // Arrays
+    Array items;
+    items.append("sword");
+    items.append("shield");
+    items.append(100);  // Mixed types
+    
+    // Typed arrays
+    TypedArray<Node2D> nodes;
+    
+    // Dictionaries
+    Dictionary player_data;
+    player_data["name"] = "Hero";
+    player_data["level"] = 10;
+    player_data["position"] = pos2d;
+}
+```
+
+### Resource Management
+
+```cpp
+#include <godot_cpp/classes/resource_loader.hpp>
+#include <godot_cpp/classes/texture2d.hpp>
+#include <godot_cpp/classes/packed_scene.hpp>
+
+class ResourceExample : public Node {
+private:
+    Ref<Texture2D> texture;
+    Ref<PackedScene> scene;
+
+public:
+    void load_resources() {
+        ResourceLoader *loader = ResourceLoader::get_singleton();
+        
+        // Load texture
+        texture = loader->load("res://icon.png");
+        
+        // Load scene
+        scene = loader->load("res://player.tscn");
+        
+        // Instantiate scene
+        if (scene.is_valid()) {
+            Node *instance = scene->instantiate();
+            add_child(instance);
+        }
+    }
+};
+```
+
+### Calling Godot Singletons
+
+```cpp
+#include <godot_cpp/classes/input.hpp>
+#include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/classes/os.hpp>
+
+void use_singletons() {
+    // Input singleton
+    Input *input = Input::get_singleton();
+    if (input->is_action_pressed("ui_accept")) {
+        UtilityFunctions::print("Action pressed!");
+    }
+    
+    // Engine singleton
+    Engine *engine = Engine::get_singleton();
+    int fps = engine->get_frames_per_second();
+    
+    // OS singleton
+    OS *os = OS::get_singleton();
+    String os_name = os->get_name();
+}
+```
+
+## Performance Benefits
+
+<Tabs>
+  <Tab title="CPU-intensive tasks">
+```cpp
+// Fast pathfinding algorithm in C++
+Array calculate_path(Vector2 start, Vector2 end, Array obstacles) {
+    // A* pathfinding implementation
+    // Runs 10-100x faster than GDScript for complex grids
+    Array path;
+    // ... implementation ...
+    return path;
+}
+```
+  </Tab>
+  
+  <Tab title="Data processing">
+```cpp
+// Process thousands of entities efficiently
+void update_entities(TypedArray<Node2D> entities, double delta) {
+    for (int i = 0; i < entities.size(); i++) {
+        Node2D *entity = Object::cast_to<Node2D>(entities[i]);
+        // Fast batch processing
+        Vector2 pos = entity->get_position();
+        entity->set_position(pos + Vector2(1.0f, 0.0f) * delta);
+    }
+}
+```
+  </Tab>
+  
+  <Tab title="Math operations">
+```cpp
+// Complex mathematical calculations
+float calculate_complex_value(float x, float y) {
+    // Matrix operations, FFT, noise generation, etc.
+    // Significantly faster than GDScript for math-heavy code
+    return sin(x * y) * cos(x / (y + 0.001f));
+}
+```
+  </Tab>
+</Tabs>
+
+<Info>
+GDExtension provides near-native C++ performance, often 10-100x faster than GDScript for CPU-intensive operations.
+</Info>
+
+## Debugging
+
+### Print Debugging
+
+```cpp
+#include <godot_cpp/variant/utility_functions.hpp>
+
+void debug_example() {
+    UtilityFunctions::print("Debug message");
+    UtilityFunctions::print("Value: ", 42);
+    UtilityFunctions::printerr("Error message");
+}
+```
+
+### Native Debugger
+
+Attach a C++ debugger to the running Godot process:
+
+<Tabs>
+  <Tab title="Visual Studio">
+1. Build with debug symbols (`target=template_debug`)
+2. Run Godot
+3. **Debug → Attach to Process**
+4. Select the Godot process
+5. Set breakpoints in your C++ code
+  </Tab>
+  
+  <Tab title="GDB (Linux)">
+```bash
+# Run Godot under GDB
+gdb godot
+(gdb) run --path /path/to/project
+
+# Or attach to running process
+gdb attach <godot_pid>
+```
+  </Tab>
+  
+  <Tab title="LLDB (macOS)">
+```bash
+# Run Godot under LLDB
+lldb godot
+(lldb) run --path /path/to/project
+
+# Set breakpoint
+(lldb) breakpoint set --name MyClass::_process
+```
+  </Tab>
+</Tabs>
+
+## Platform-Specific Code
+
+```cpp
+#ifdef _WIN32
+    #include <windows.h>
+    void windows_specific() {
+        // Windows API calls
+    }
+#elif __APPLE__
+    #include <TargetConditionals.h>
+    #if TARGET_OS_IPHONE
+        void ios_specific() {
+            // iOS specific code
+        }
+    #else
+        void macos_specific() {
+            // macOS specific code
+        }
+    #endif
+#elif __linux__
+    void linux_specific() {
+        // Linux specific code
+    }
+#elif __ANDROID__
+    void android_specific() {
+        // Android specific code
+    }
+#endif
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Profile first" icon="chart-line">
+    Only use GDExtension for proven performance bottlenecks. GDScript is sufficient for most game logic.
+  </Card>
+  
+  <Card title="Clear API boundaries" icon="border-all">
+    Design clean interfaces between GDScript and C++ code.
+  </Card>
+  
+  <Card title="Error handling" icon="triangle-exclamation">
+    Validate input from GDScript. Check for null pointers and invalid data.
+  </Card>
+  
+  <Card title="Memory management" icon="memory">
+    Use Godot's reference counting (`Ref<T>`) for resources. Don't use raw `new`/`delete`.
+  </Card>
+  
+  <Card title="Build for all platforms" icon="globe">
+    Test your extension on all target platforms early.
+  </Card>
+  
+  <Card title="Documentation" icon="book">
+    Document your C++ API thoroughly for GDScript users.
+  </Card>
+</CardGroup>
+
+<Warning>
+**Common pitfalls:**
+
+- Memory leaks from improper reference counting
+- Crashes from null pointer dereference
+- Thread safety issues when accessing Godot APIs
+- Platform-specific bugs from untested code paths
+</Warning>
+
+## Language Bindings
+
+GDExtension isn't limited to C++. Community bindings exist for:
+
+- **Rust:** [gdext](https://github.com/godot-rust/gdext)
+- **D:** [godot-dlang](https://github.com/godot-dlang/godot-dlang)
+- **Nim:** [godot-nim](https://github.com/godot-nim/gdext-nim)
+- **Swift:** [SwiftGodot](https://github.com/migueldeicaza/SwiftGodot)
+- **Zig:** [godot-zig](https://github.com/godot-zig/godot-zig)
+
+Each provides idiomatic APIs for their respective languages.
+
+## Example: Rust GDExtension
+
+```rust
+use godot::prelude::*;
+
+#[derive(GodotClass)]
+#[class(base=Node)]
+struct MyRustClass {
+    base: Base<Node>,
+    health: i32,
+}
+
+#[godot_api]
+impl INode for MyRustClass {
+    fn init(base: Base<Node>) -> Self {
+        Self {
+            base,
+            health: 100,
+        }
+    }
+    
+    fn ready(&mut self) {
+        godot_print!("Rust class ready!");
+    }
+}
+
+#[godot_api]
+impl MyRustClass {
+    #[func]
+    fn take_damage(&mut self, amount: i32) {
+        self.health -= amount;
+        godot_print!("Health: {}", self.health);
+    }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="GDScript" icon="code" href="/scripting/gdscript">
+    Learn Godot's built-in scripting language
+  </Card>
+  
+  <Card title="C# Scripting" icon="hashtag" href="/scripting/csharp">
+    Use C# for managed code with .NET
+  </Card>
+  
+  <Card title="godot-cpp Repository" icon="github" href="https://github.com/godotengine/godot-cpp">
+    Official C++ bindings repository
+  </Card>
+  
+  <Card title="Performance Optimization" icon="gauge-high" href="/concepts/nodes-and-scenes">
+    Learn more about optimizing Godot games
+  </Card>
+</CardGroup>

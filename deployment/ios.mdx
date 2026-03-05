@@ -1,0 +1,488 @@
+---
+title: 'iOS export'
+description: 'Deploy Godot games to iOS devices and App Store with proper provisioning and signing'
+keywords: ['ios', 'app store', 'xcode', 'provisioning', 'testflight', 'apple']
+---
+
+## Overview
+
+Exporting to iOS requires a Mac with Xcode installed and an Apple Developer account. The process involves code signing, provisioning profiles, and App Store submission.
+
+## Prerequisites
+
+### Required software
+
+<Steps>
+  <Step title="macOS computer">
+    iOS export requires macOS. Virtual machines are not officially supported by Apple.
+  </Step>
+  
+  <Step title="Install Xcode">
+    Download Xcode from the Mac App Store (free)
+  </Step>
+  
+  <Step title="Install command line tools">
+    ```bash
+    xcode-select --install
+    ```
+  </Step>
+  
+  <Step title="Apple Developer account">
+    Sign up at https://developer.apple.com ($99/year for App Store publishing)
+  </Step>
+</Steps>
+
+<Info>
+You can test on your own devices with a free Apple Developer account, but App Store publishing requires a paid account.
+</Info>
+
+## Creating iOS export preset
+
+1. Go to **Project > Export**
+2. Click **Add...** and select **iOS**
+3. Configure preset settings
+
+### Basic configuration
+
+```gdscript
+# Essential iOS export settings
+# Configured in the export preset
+
+# App identifier (reverse domain notation)
+Identifier: "com.yourcompany.yourgame"
+
+# App name
+Name: "My Game"
+
+# Version
+Version: "1.0.0"
+
+# Build number (increment for each build)
+Build Number: "1"
+
+# Minimum iOS version
+iOS Version: "12.0"
+
+# Targeted device family
+Targeted Device Family: 1,2  # 1=iPhone, 2=iPad
+```
+
+## Code signing
+
+iOS apps must be signed with certificates and provisioning profiles.
+
+### Creating certificates
+
+<Steps>
+  <Step title="Generate certificate request">
+    1. Open **Keychain Access** on Mac
+    2. Keychain Access > Certificate Assistant > Request a Certificate from a Certificate Authority
+    3. Enter email and name, save to disk
+  </Step>
+  
+  <Step title="Create certificate in Apple Developer portal">
+    1. Go to https://developer.apple.com/account
+    2. Certificates, IDs & Profiles > Certificates
+    3. Create **iOS Development** and **iOS Distribution** certificates
+    4. Upload certificate request
+    5. Download and install certificates
+  </Step>
+</Steps>
+
+### Provisioning profiles
+
+<Tabs>
+  <Tab title="Development">
+    For testing on your devices:
+    
+    1. Register device UDIDs in Apple Developer portal
+    2. Create App ID matching your bundle identifier
+    3. Create Development provisioning profile
+    4. Download and install profile
+  </Tab>
+  
+  <Tab title="App Store">
+    For App Store distribution:
+    
+    1. Create App ID in Apple Developer portal
+    2. Create App Store provisioning profile
+    3. Download profile
+    4. Configure in Godot export preset
+  </Tab>
+</Tabs>
+
+### Automatic signing
+
+```gdscript
+# In export preset
+Automatically Manage Signing: true
+Team ID: "YOUR_TEAM_ID"  # From Apple Developer account
+```
+
+<Tip>
+Automatic signing is simpler but requires Xcode. Manual signing gives more control.
+</Tip>
+
+## Export process
+
+### Export Xcode project
+
+Godot exports an Xcode project that you build with Xcode:
+
+```bash
+# Export from command line
+godot --headless --export-debug "iOS" "builds/ios/"
+
+# This creates an Xcode project in builds/ios/
+```
+
+### Build in Xcode
+
+<Steps>
+  <Step title="Open project">
+    Open the exported `.xcodeproj` file in Xcode
+  </Step>
+  
+  <Step title="Select target">
+    Choose your device or simulator from the target dropdown
+  </Step>
+  
+  <Step title="Configure signing">
+    Go to project settings > Signing & Capabilities
+    Select your team and provisioning profile
+  </Step>
+  
+  <Step title="Build and run">
+    Click the Play button or Product > Run (Cmd+R)
+  </Step>
+</Steps>
+
+## App icons
+
+iOS requires multiple icon sizes:
+
+```gdscript
+# Configure in export preset
+Icons:
+  iPhone 120x120 (2x): "res://icons/icon_120.png"
+  iPhone 180x180 (3x): "res://icons/icon_180.png"
+  iPad 152x152 (2x): "res://icons/icon_152.png"
+  iPad 167x167 (2x): "res://icons/icon_167.png"
+  App Store 1024x1024: "res://icons/icon_1024.png"
+```
+
+<Info>
+All icons should be square PNG files without transparency or rounded corners. iOS applies the shape automatically.
+</Info>
+
+## Launch screens
+
+Configure launch screen (splash screen):
+
+```gdscript
+# Storyboard launch screen
+Launch Screen:
+  Type: "Storyboard"
+  Storyboard: "res://launch_screen.storyboard"
+  Background Color: Color(0, 0, 0, 1)
+  
+# Or use image
+Launch Screen:
+  Type: "Image"
+  Image: "res://splash.png"
+  Background Color: Color(0, 0, 0, 1)
+```
+
+## Capabilities and permissions
+
+### Required capabilities
+
+```gdscript
+# Enable in export preset under "Capabilities"
+
+# Common capabilities
+Camera Usage: true
+Microphone Usage: true
+Location Services: true
+Push Notifications: true
+GameCenter: true
+In-App Purchase: true
+```
+
+### Privacy descriptions
+
+iOS requires descriptions for permission requests:
+
+```xml
+<!-- In Info.plist -->
+<key>NSCameraUsageDescription</key>
+<string>This app needs camera access for photo features</string>
+
+<key>NSMicrophoneUsageDescription</key>
+<string>This app needs microphone access for voice chat</string>
+
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>This app needs your location for nearby features</string>
+```
+
+Configure in export preset:
+
+```gdscript
+Privacy:
+  Camera Usage Description: "App needs camera for photos"
+  Microphone Usage Description: "App needs microphone for chat"
+  Location Usage Description: "App needs location for features"
+```
+
+## iOS plugins
+
+Extend functionality with iOS plugins:
+
+### Native plugin example
+
+```swift
+// MyPlugin.swift
+import Foundation
+
+@objc public class MyPlugin: NSObject {
+    
+    @objc public func showAlert(_ message: String) {
+        DispatchQueue.main.async {
+            let alert = UIAlertController(
+                title: "Alert",
+                message: message,
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            
+            if let window = UIApplication.shared.windows.first,
+               let rootVC = window.rootViewController {
+                rootVC.present(alert, animated: true)
+            }
+        }
+    }
+}
+```
+
+Use from GDScript:
+
+```gdscript
+var my_plugin
+
+func _ready():
+    if Engine.has_singleton("MyPlugin"):
+        my_plugin = Engine.get_singleton("MyPlugin")
+        my_plugin.showAlert("Hello from iOS!")
+```
+
+## Screen orientation
+
+```gdscript
+# Configure in export preset
+Supported Orientations:
+  Portrait: true
+  Portrait Upside Down: false
+  Landscape Left: true
+  Landscape Right: true
+
+# Change at runtime
+DisplayServer.window_set_orientation(DisplayServer.SCREEN_LANDSCAPE)
+```
+
+## TestFlight
+
+Test your app with beta testers:
+
+<Steps>
+  <Step title="Archive app">
+    In Xcode: Product > Archive
+  </Step>
+  
+  <Step title="Upload to App Store Connect">
+    Window > Organizer > Distribute App > App Store Connect
+  </Step>
+  
+  <Step title="Configure TestFlight">
+    In App Store Connect, add beta testers and submit for review
+  </Step>
+  
+  <Step title="Distribute to testers">
+    Once approved, testers receive TestFlight invite
+  </Step>
+</Steps>
+
+## Publishing to App Store
+
+### Preparing for submission
+
+<Steps>
+  <Step title="Create app in App Store Connect">
+    1. Go to https://appstoreconnect.apple.com
+    2. My Apps > + > New App
+    3. Fill in app information
+  </Step>
+  
+  <Step title="Prepare metadata">
+    - App name and subtitle
+    - Description and keywords
+    - Screenshots (required sizes for each device)
+    - App icon (1024x1024)
+    - Privacy policy URL
+  </Step>
+  
+  <Step title="Build release version">
+    Create archive in Xcode with App Store provisioning profile
+  </Step>
+  
+  <Step title="Upload to App Store Connect">
+    Use Xcode Organizer or Transporter app to upload
+  </Step>
+</Steps>
+
+### App Review guidelines
+
+<CardGroup cols={2}>
+  <Card title="Complete app" icon="check">
+    App must be fully functional, not a demo or beta.
+  </Card>
+  
+  <Card title="Accurate metadata" icon="info">
+    Screenshots and descriptions must match actual app.
+  </Card>
+  
+  <Card title="No crashes" icon="bug">
+    Thoroughly test to ensure stability.
+  </Card>
+  
+  <Card title="Privacy compliance" icon="shield">
+    Include privacy policy and comply with data regulations.
+  </Card>
+</CardGroup>
+
+## In-App Purchases
+
+Implement IAP for monetization:
+
+```gdscript
+var store
+
+func _ready():
+    if Engine.has_singleton("InAppStore"):
+        store = Engine.get_singleton("InAppStore")
+        store.request_product_info(["com.example.product1"])
+        
+func purchase_product(product_id: String):
+    store.purchase({"product_id": product_id})
+```
+
+## Game Center
+
+Integrate Game Center for leaderboards and achievements:
+
+```gdscript
+var game_center
+
+func _ready():
+    if Engine.has_singleton("GameCenter"):
+        game_center = Engine.get_singleton("GameCenter")
+        game_center.authenticate()
+
+func post_score(score: int, leaderboard: String):
+    game_center.post_score({"score": score, "category": leaderboard})
+
+func unlock_achievement(achievement_id: String):
+    game_center.award_achievement({"name": achievement_id})
+```
+
+## Performance optimization
+
+<CardGroup cols={2}>
+  <Card title="Use Metal" icon="bolt">
+    Metal is the default graphics API on iOS for best performance.
+  </Card>
+  
+  <Card title="Optimize for battery" icon="battery-full">
+    Limit frame rate and reduce background processing.
+  </Card>
+  
+  <Card title="Test on real devices" icon="mobile">
+    Simulator doesn't reflect actual device performance.
+  </Card>
+  
+  <Card title="Use mobile renderer" icon="mobile-screen">
+    Select Mobile renderer for better performance on iOS devices.
+  </Card>
+</CardGroup>
+
+## Device-specific code
+
+```gdscript
+func _ready():
+    if OS.get_name() == "iOS":
+        # iOS-specific code
+        print("iOS version: ", OS.get_version())
+        print("Device model: ", OS.get_model_name())
+        
+        # Get safe area (for iPhone X notch)
+        var safe_area = DisplayServer.get_display_safe_area()
+        
+        # Adjust UI for safe area
+        adjust_ui_for_safe_area(safe_area)
+```
+
+## Troubleshooting
+
+### Code signing issues
+
+<AccordionGroup>
+  <Accordion title="No valid provisioning profiles">
+    Ensure provisioning profile matches bundle ID and is not expired.
+  </Accordion>
+  
+  <Accordion title="Certificate not trusted">
+    Install certificates in Keychain Access and ensure they're valid.
+  </Accordion>
+  
+  <Accordion title="Team ID mismatch">
+    Verify Team ID matches your Apple Developer account.
+  </Accordion>
+</AccordionGroup>
+
+### Build errors
+
+```bash
+# Clean build folder
+rm -rf ~/Library/Developer/Xcode/DerivedData
+
+# Reset provisioning profiles
+rm -rf ~/Library/MobileDevice/Provisioning\ Profiles
+
+# Re-download from Apple Developer portal
+```
+
+## App Store rejection common causes
+
+<Warning>
+- Crashes or bugs
+- Incomplete functionality
+- Misleading screenshots
+- Missing privacy policy
+- Guideline violations
+- Incomplete app information
+</Warning>
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Android" icon="android" href="/deployment/android">
+    Export for Android devices
+  </Card>
+  
+  <Card title="Web" icon="globe" href="/deployment/web">
+    Export for web browsers
+  </Card>
+  
+  <Card title="Desktop" icon="desktop" href="/deployment/desktop">
+    Export for desktop platforms
+  </Card>
+</CardGroup>

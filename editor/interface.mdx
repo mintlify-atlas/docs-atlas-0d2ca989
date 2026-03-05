@@ -1,0 +1,329 @@
+---
+title: Editor Interface
+description: Understanding and customizing the Godot Editor interface
+---
+
+The Godot Editor interface provides a comprehensive environment for game development. The `EditorInterface` singleton gives you programmatic access to all major editor components.
+
+## Editor Layout Overview
+
+The editor is divided into several key areas that can be accessed and customized through code:
+
+### Main Screen
+
+The main screen hosts the primary workspace tabs (2D, 3D, Script, Game, AssetLib):
+
+```gdscript
+# Get the main screen container
+var main_screen = EditorInterface.get_editor_main_screen()
+
+# Switch to a specific workspace
+EditorInterface.set_main_screen_editor("3D")
+```
+
+```csharp
+// In C# you can access it via the static Singleton property
+VBoxContainer mainScreen = EditorInterface.Singleton.GetEditorMainScreen();
+
+// Switch workspace
+EditorInterface.Singleton.SetMainScreenEditor("3D");
+```
+
+<Note>
+The main screen node is a `VBoxContainer`. If you add a child Control, set its `size_flags_vertical` to `SIZE_EXPAND_FILL` to make it use the full available space.
+</Note>
+
+### 2D and 3D Viewports
+
+Access the editor viewports for custom rendering or camera manipulation:
+
+```gdscript
+# Get the 2D viewport
+var viewport_2d = EditorInterface.get_editor_viewport_2d()
+# Access canvas transform directly
+var canvas_transform = viewport_2d.global_canvas_transform
+
+# Get 3D viewports (0-3 for different views)
+var viewport_3d = EditorInterface.get_editor_viewport_3d(0)
+var camera = viewport_3d.get_camera_3d()
+```
+
+<Warning>
+The 2D viewport does not have a camera. View transforms are done directly using `global_canvas_transform`.
+</Warning>
+
+### Scene Dock
+
+The scene tree displays the hierarchy of nodes in your current scene:
+
+```gdscript
+# Get the currently edited scene root
+var scene_root = EditorInterface.get_edited_scene_root()
+
+# Edit a specific node (selects it in the tree)
+EditorInterface.edit_node(some_node)
+```
+
+### FileSystem Dock
+
+The filesystem dock shows your project's files and directories:
+
+```gdscript
+# Get the FileSystemDock instance
+var fs_dock = EditorInterface.get_file_system_dock()
+
+# Get current directory being viewed
+var current_dir = EditorInterface.get_current_directory()
+var current_path = EditorInterface.get_current_path()
+
+# Select a file in the filesystem
+EditorInterface.select_file("res://icon.svg")
+
+# Get selected files
+var selected = EditorInterface.get_selected_paths()
+```
+
+### Inspector
+
+The inspector shows and edits properties of the selected node or resource:
+
+```gdscript
+# Get the inspector instance
+var inspector = EditorInterface.get_inspector()
+
+# Inspect an object
+EditorInterface.inspect_object(my_object)
+
+# Inspect a specific property
+EditorInterface.inspect_object(my_object, "position", false)
+```
+
+### Node List
+
+Access the current selection of nodes:
+
+```gdscript
+# Get the selection manager
+var selection = EditorInterface.get_selection()
+
+# Get selected nodes
+var selected_nodes = selection.get_selected_nodes()
+```
+
+## Bottom Panel
+
+The bottom panel contains tabs for Output, Debugger, Animation, and custom panels:
+
+```gdscript
+# Add a custom bottom panel (deprecated - use add_dock instead)
+var button = add_control_to_bottom_panel(control, "My Panel")
+
+# Show/hide bottom panel
+hide_bottom_panel()
+make_bottom_panel_item_visible(control)
+```
+
+## Toolbar
+
+Add custom controls to various toolbar containers:
+
+```gdscript
+func _enter_tree():
+    var button = Button.new()
+    button.text = "Custom"
+    # Add to main toolbar
+    add_control_to_container(
+        EditorPlugin.CONTAINER_TOOLBAR,
+        button
+    )
+
+func _exit_tree():
+    remove_control_from_container(
+        EditorPlugin.CONTAINER_TOOLBAR,
+        button
+    )
+    button.queue_free()
+```
+
+### Available Container Positions
+
+- `CONTAINER_TOOLBAR` - Main editor toolbar
+- `CONTAINER_SPATIAL_EDITOR_MENU` - 3D editor toolbar
+- `CONTAINER_SPATIAL_EDITOR_SIDE_LEFT` - 3D left sidebar
+- `CONTAINER_SPATIAL_EDITOR_SIDE_RIGHT` - 3D right sidebar
+- `CONTAINER_SPATIAL_EDITOR_BOTTOM` - 3D bottom panel
+- `CONTAINER_CANVAS_EDITOR_MENU` - 2D editor toolbar
+- `CONTAINER_CANVAS_EDITOR_SIDE_LEFT` - 2D left sidebar
+- `CONTAINER_CANVAS_EDITOR_SIDE_RIGHT` - 2D right sidebar
+- `CONTAINER_CANVAS_EDITOR_BOTTOM` - 2D bottom panel
+- `CONTAINER_INSPECTOR_BOTTOM` - Inspector bottom section
+
+## Editor Settings
+
+Access and modify editor settings programmatically:
+
+```gdscript
+# Get editor settings
+var settings = EditorInterface.get_editor_settings()
+
+# Get editor scale
+var scale = EditorInterface.get_editor_scale()
+
+# Get editor theme
+var theme = EditorInterface.get_editor_theme()
+
+# Get editor language
+var language = EditorInterface.get_editor_language()
+```
+
+## Distraction-Free Mode
+
+Toggle distraction-free mode to hide side docks:
+
+```gdscript
+# Enable distraction-free mode
+EditorInterface.distraction_free_mode = true
+
+# Check if enabled
+if EditorInterface.is_distraction_free_mode_enabled():
+    print("Distraction-free mode is active")
+```
+
+## Dialogs and Popups
+
+The editor provides several built-in dialogs:
+
+```gdscript
+# Node selector dialog
+EditorInterface.popup_node_selector(_on_node_selected, ["Button"])
+
+func _on_node_selected(node_path):
+    if node_path.is_empty():
+        print("Selection canceled")
+    else:
+        print("Selected: ", node_path)
+
+# Property selector
+EditorInterface.popup_property_selector(object, _on_property_selected)
+
+# Method selector
+EditorInterface.popup_method_selector(object, _on_method_selected)
+
+# Quick open dialog
+EditorInterface.popup_quick_open(_on_resource_selected, ["Texture2D"])
+
+# Custom dialog
+var dialog = AcceptDialog.new()
+EditorInterface.popup_dialog_centered(dialog, Vector2i(400, 300))
+```
+
+## Working with Scenes
+
+```gdscript
+# Get open scenes
+var open_scenes = EditorInterface.get_open_scenes()
+var open_roots = EditorInterface.get_open_scene_roots()
+
+# Check for unsaved changes
+var unsaved = EditorInterface.get_unsaved_scenes()
+
+# Save operations
+EditorInterface.save_scene()  # Save current scene
+EditorInterface.save_all_scenes()  # Save all open scenes
+EditorInterface.save_scene_as("res://new_scene.tscn")
+
+# Open/reload scenes
+EditorInterface.open_scene_from_path("res://main.tscn")
+EditorInterface.reload_scene_from_path("res://main.tscn")
+
+# Mark scene as modified
+EditorInterface.mark_scene_as_unsaved()
+```
+
+## Multi-Window Support
+
+Check if multi-window mode is available:
+
+```gdscript
+if EditorInterface.is_multi_window_enabled():
+    print("Multi-window support is enabled")
+```
+
+<Note>
+Multi-window support requires all of these conditions:
+- `interface/multi_window/enable` is true in EditorSettings
+- `interface/editor/display/single_window_mode` is false
+- Platform supports multiple windows (not Web)
+</Note>
+
+## Base Control
+
+Get the root control for the entire editor window:
+
+```gdscript
+# Get the editor's base control
+var base = EditorInterface.get_base_control()
+var editor_size = base.size
+```
+
+<Warning>
+Removing and freeing the base control will render the editor useless and may cause a crash.
+</Warning>
+
+## Editor Utilities
+
+```gdscript
+# Get various editor subsystems
+var file_system = EditorInterface.get_resource_filesystem()
+var previewer = EditorInterface.get_resource_previewer()
+var script_editor = EditorInterface.get_script_editor()
+var undo_redo = EditorInterface.get_editor_undo_redo()
+var paths = EditorInterface.get_editor_paths()
+var toaster = EditorInterface.get_editor_toaster()
+var command_palette = EditorInterface.get_command_palette()
+```
+
+## Example: Custom Editor Layout
+
+```gdscript
+@tool
+extends EditorPlugin
+
+var custom_panel
+var toolbar_button
+
+func _enter_tree():
+    # Create custom panel
+    custom_panel = preload("res://addons/my_plugin/panel.tscn").instantiate()
+    
+    # Add to main screen
+    EditorInterface.get_editor_main_screen().add_child(custom_panel)
+    custom_panel.hide()
+    
+    # Add toolbar button
+    toolbar_button = Button.new()
+    toolbar_button.text = "Toggle Panel"
+    toolbar_button.pressed.connect(_on_toggle_pressed)
+    add_control_to_container(CONTAINER_TOOLBAR, toolbar_button)
+
+func _exit_tree():
+    if custom_panel:
+        custom_panel.queue_free()
+    if toolbar_button:
+        remove_control_from_container(CONTAINER_TOOLBAR, toolbar_button)
+        toolbar_button.queue_free()
+
+func _on_toggle_pressed():
+    custom_panel.visible = !custom_panel.visible
+```
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Editor Plugins" icon="puzzle-piece" href="/editor/plugins">
+    Learn how to create custom editor plugins
+  </Card>
+  <Card title="Custom Nodes" icon="cube" href="/editor/custom-nodes">
+    Create custom node types with editor integration
+  </Card>
+</CardGroup>

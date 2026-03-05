@@ -1,0 +1,483 @@
+---
+title: 'Shaders'
+description: 'Write custom shaders using Godot shading language for advanced rendering effects'
+keywords: ['shaders', 'gdshader', 'vertex', 'fragment', 'spatial', 'canvas']
+---
+
+## Overview
+
+Godot uses its own shading language based on GLSL, with added features for easier development. Shaders allow you to control exactly how objects are rendered on the GPU.
+
+## Shader language
+
+Godot shaders are written in `.gdshader` files:
+
+```glsl
+shader_type spatial;
+
+uniform vec4 color : source_color = vec4(1.0, 0.0, 0.0, 1.0);
+uniform float metallic : hint_range(0.0, 1.0) = 0.5;
+
+void fragment() {
+    ALBEDO = color.rgb;
+    METALLIC = metallic;
+    ROUGHNESS = 0.5;
+}
+```
+
+<Info>
+Godot's shader language compiles to the appropriate backend (GLSL, HLSL, or SPIR-V) depending on the rendering driver.
+</Info>
+
+## Shader types
+
+Godot supports different shader modes for different rendering contexts:
+
+### Spatial shaders (3D)
+
+For 3D objects and materials:
+
+```glsl
+shader_type spatial;
+
+void vertex() {
+    // Modify vertex position
+    VERTEX += NORMAL * 0.1;
+}
+
+void fragment() {
+    // Set surface properties
+    ALBEDO = vec3(1.0, 0.0, 0.0);
+    ROUGHNESS = 0.5;
+}
+```
+
+### Canvas shaders (2D)
+
+For 2D sprites, particles, and UI:
+
+```glsl
+shader_type canvas_item;
+
+uniform sampler2D noise_texture;
+
+void fragment() {
+    vec4 color = texture(TEXTURE, UV);
+    float noise = texture(noise_texture, UV).r;
+    COLOR = color * vec4(vec3(noise), 1.0);
+}
+```
+
+### Particles shaders
+
+For custom particle behavior:
+
+```glsl
+shader_type particles;
+
+void process() {
+    // Modify particle transform and velocity
+    TRANSFORM[3].xyz += VELOCITY * DELTA;
+    VELOCITY.y -= 9.8 * DELTA; // Gravity
+}
+```
+
+### Sky shaders
+
+For procedural sky rendering:
+
+```glsl
+shader_type sky;
+
+void sky() {
+    vec3 sky_color = mix(
+        vec3(0.1, 0.3, 0.8),  // Top color
+        vec3(0.8, 0.6, 0.4),  // Horizon color
+        1.0 - EYEDIR.y
+    );
+    COLOR = sky_color;
+}
+```
+
+### Fog shaders
+
+For volumetric fog effects:
+
+```glsl
+shader_type fog;
+
+void fog() {
+    DENSITY = 0.01;
+    ALBEDO = vec3(0.8, 0.8, 0.9);
+}
+```
+
+## Shader functions
+
+### Vertex function
+
+Runs for each vertex:
+
+```glsl
+void vertex() {
+    // Vertex position in model space
+    vec3 pos = VERTEX;
+    
+    // Wave animation
+    pos.y += sin(TIME + pos.x * 2.0) * 0.5;
+    VERTEX = pos;
+    
+    // Pass data to fragment shader
+    UV = UV;
+}
+```
+
+<Tip>
+The vertex function is ideal for deformations, animations, and per-vertex calculations.
+</Tip>
+
+### Fragment function
+
+Runs for each pixel:
+
+```glsl
+void fragment() {
+    // Sample texture
+    vec4 tex = texture(TEXTURE, UV);
+    
+    // Apply color
+    ALBEDO = tex.rgb;
+    ALPHA = tex.a;
+    
+    // PBR properties
+    METALLIC = 0.0;
+    ROUGHNESS = 0.8;
+    SPECULAR = 0.5;
+}
+```
+
+### Light function
+
+Custom lighting calculations:
+
+```glsl
+void light() {
+    // Custom diffuse lighting
+    float NdotL = dot(NORMAL, LIGHT);
+    DIFFUSE_LIGHT += clamp(NdotL, 0.0, 1.0) * ATTENUATION * LIGHT_COLOR;
+}
+```
+
+## Built-in variables
+
+### Spatial shader variables
+
+<AccordionGroup>
+  <Accordion title="Vertex variables">
+    - `VERTEX`: Vertex position in model space
+    - `NORMAL`: Vertex normal
+    - `TANGENT`: Vertex tangent
+    - `BINORMAL`: Vertex binormal
+    - `UV`: Primary UV coordinates
+    - `UV2`: Secondary UV coordinates
+    - `COLOR`: Vertex color
+    - `INSTANCE_CUSTOM`: Custom per-instance data
+  </Accordion>
+  
+  <Accordion title="Fragment variables">
+    - `ALBEDO`: Base color (RGB)
+    - `ALPHA`: Transparency
+    - `METALLIC`: Metallic property (0-1)
+    - `ROUGHNESS`: Surface roughness (0-1)
+    - `SPECULAR`: Specular intensity
+    - `EMISSION`: Emissive color
+    - `NORMAL`: Surface normal (in tangent space)
+    - `AO`: Ambient occlusion
+  </Accordion>
+  
+  <Accordion title="Global variables">
+    - `TIME`: Elapsed time since start
+    - `VIEWPORT_SIZE`: Viewport dimensions
+    - `FRAGCOORD`: Fragment screen coordinate
+    - `SCREEN_UV`: Screen-space UV
+    - `CAMERA_POSITION_WORLD`: Camera world position
+    - `INV_VIEW_MATRIX`: Inverse view matrix
+  </Accordion>
+</AccordionGroup>
+
+### Canvas shader variables
+
+```glsl
+void fragment() {
+    COLOR;        // Output color
+    TEXTURE;      // Current texture
+    UV;           // Texture coordinates
+    SCREEN_UV;    // Screen-space UV
+    SCREEN_PIXEL_SIZE; // Pixel size in screen space
+    POINT_COORD;  // Point sprite coordinate
+    TIME;         // Elapsed time
+}
+```
+
+## Uniforms
+
+Pass parameters from GDScript to shaders:
+
+```glsl
+uniform vec4 base_color : source_color = vec4(1.0);
+uniform float speed : hint_range(0.0, 10.0) = 1.0;
+uniform sampler2D albedo_texture : source_color;
+uniform bool use_texture = false;
+
+void fragment() {
+    if (use_texture) {
+        ALBEDO = texture(albedo_texture, UV).rgb * base_color.rgb;
+    } else {
+        ALBEDO = base_color.rgb;
+    }
+}
+```
+
+Set uniforms from code:
+
+```gdscript
+var material = ShaderMaterial.new()
+material.shader = preload("res://shaders/custom.gdshader")
+
+# Set shader parameters
+material.set_shader_parameter("base_color", Color.RED)
+material.set_shader_parameter("speed", 5.0)
+material.set_shader_parameter("albedo_texture", texture)
+material.set_shader_parameter("use_texture", true)
+```
+
+### Uniform hints
+
+```glsl
+// Color picker
+uniform vec4 color : source_color;
+
+// Slider
+uniform float value : hint_range(0.0, 1.0, 0.1);
+
+// Texture with filter
+uniform sampler2D texture_name : source_color, filter_linear;
+
+// HDR color
+uniform vec4 emission : source_color, hint_color_hdr;
+```
+
+## Shader preprocessor
+
+Use preprocessor directives:
+
+```glsl
+#define USE_ADVANCED_LIGHTING
+
+#ifdef USE_ADVANCED_LIGHTING
+    // Advanced lighting code
+#else
+    // Simple lighting code
+#endif
+
+// Include other shader files
+#include "res://shaders/common.gdshaderinc"
+```
+
+## Common shader patterns
+
+### Dissolve effect
+
+```glsl
+shader_type spatial;
+
+uniform sampler2D dissolve_texture;
+uniform float dissolve_amount : hint_range(0.0, 1.0) = 0.0;
+
+void fragment() {
+    float dissolve = texture(dissolve_texture, UV).r;
+    if (dissolve < dissolve_amount) {
+        discard;
+    }
+    ALPHA = smoothstep(dissolve_amount, dissolve_amount + 0.1, dissolve);
+}
+```
+
+### Water surface
+
+```glsl
+shader_type spatial;
+
+uniform vec4 water_color : source_color = vec4(0.0, 0.4, 0.6, 0.8);
+uniform float wave_speed = 1.0;
+uniform float wave_height = 0.1;
+
+void vertex() {
+    float wave = sin(TIME * wave_speed + VERTEX.x * 2.0) * wave_height;
+    wave += cos(TIME * wave_speed * 0.7 + VERTEX.z * 1.5) * wave_height * 0.5;
+    VERTEX.y += wave;
+}
+
+void fragment() {
+    ALBEDO = water_color.rgb;
+    METALLIC = 0.0;
+    ROUGHNESS = 0.1;
+    ALPHA = water_color.a;
+}
+```
+
+### Outline shader
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+uniform float outline_width = 0.05;
+uniform vec4 outline_color : source_color = vec4(0.0, 0.0, 0.0, 1.0);
+
+void vertex() {
+    VERTEX += NORMAL * outline_width;
+}
+
+void fragment() {
+    ALBEDO = outline_color.rgb;
+}
+```
+
+### Screen-space effects
+
+```glsl
+shader_type canvas_item;
+
+uniform sampler2D screen_texture : hint_screen_texture;
+
+void fragment() {
+    vec2 uv = SCREEN_UV;
+    
+    // Pixelate effect
+    float pixelation = 100.0;
+    uv = floor(uv * pixelation) / pixelation;
+    
+    COLOR = texture(screen_texture, uv);
+}
+```
+
+### UV animation
+
+```glsl
+shader_type spatial;
+
+uniform sampler2D texture_albedo : source_color;
+uniform vec2 scroll_speed = vec2(0.1, 0.0);
+
+void fragment() {
+    vec2 uv = UV + TIME * scroll_speed;
+    ALBEDO = texture(texture_albedo, uv).rgb;
+}
+```
+
+## Visual shader editor
+
+Create shaders visually without code:
+
+1. Create a new shader resource
+2. Choose **Visual Shader** instead of text shader
+3. Connect nodes to build shader logic
+
+```gdscript
+# Load visual shader
+var visual_shader = preload("res://shaders/visual_shader.tres")
+var material = ShaderMaterial.new()
+material.shader = visual_shader
+```
+
+<Info>
+Visual shaders can be converted to text shaders but not vice versa.
+</Info>
+
+## Shader includes
+
+Reuse shader code across multiple shaders:
+
+```glsl
+// noise.gdshaderinc
+float random(vec2 uv) {
+    return fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
+}
+```
+
+```glsl
+// main.gdshader
+shader_type spatial;
+
+#include "res://shaders/noise.gdshaderinc"
+
+void fragment() {
+    float noise = random(UV);
+    ALBEDO = vec3(noise);
+}
+```
+
+## Render modes
+
+Control rendering behavior:
+
+```glsl
+shader_type spatial;
+render_mode blend_mix, cull_back, diffuse_burley, specular_schlick_ggx;
+
+// Other render modes:
+// render_mode unshaded;        // No lighting
+// render_mode blend_add;       // Additive blending
+// render_mode depth_draw_never; // Don't write to depth buffer
+// render_mode cull_disabled;   // Two-sided rendering
+```
+
+## Performance tips
+
+<CardGroup cols={2}>
+  <Card title="Minimize texture samples" icon="image">
+    Each texture lookup has a cost. Cache results when possible.
+  </Card>
+  
+  <Card title="Use vertex calculations" icon="diagram-project">
+    Move calculations from fragment to vertex shader when possible.
+  </Card>
+  
+  <Card title="Avoid branches" icon="code-branch">
+    Use mathematical operations instead of if statements when possible.
+  </Card>
+  
+  <Card title="Optimize uniforms" icon="sliders">
+    Group related uniforms and minimize uniform updates.
+  </Card>
+</CardGroup>
+
+## Debugging shaders
+
+Debug shader values by outputting to color:
+
+```glsl
+void fragment() {
+    // Visualize UV coordinates
+    ALBEDO = vec3(UV, 0.0);
+    
+    // Visualize normals
+    ALBEDO = NORMAL * 0.5 + 0.5;
+    
+    // Visualize depth
+    ALBEDO = vec3(FRAGCOORD.z);
+}
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Environment" icon="sun" href="/rendering/environment">
+    Configure world environment settings
+  </Card>
+  
+  <Card title="Particles" icon="sparkles" href="/rendering/particles">
+    Create particle effects
+  </Card>
+</CardGroup>

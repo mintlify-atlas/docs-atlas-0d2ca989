@@ -1,0 +1,437 @@
+---
+title: Canvas Layers
+description: Using CanvasLayer for UI separation, ParallaxBackground and ParallaxLayer for scrolling effects
+---
+
+## CanvasLayer Overview
+
+`CanvasLayer` nodes render their children on separate rendering layers, independent of the camera and scene hierarchy. They're primarily used for:
+
+- **UI overlays** (HUD, menus)
+- **Parallax backgrounds**
+- **Foreground effects**
+- **Multi-layered scenes**
+
+## Basic CanvasLayer
+
+### Creating a UI Layer
+
+```gdscript
+extends CanvasLayer
+
+func _ready():
+    # Set layer index (higher = drawn on top)
+    layer = 1
+    
+    # Make visible
+    visible = true
+```
+
+### Layer Ordering
+
+Layers are drawn in order of their `layer` property:
+
+```gdscript
+# Background layer
+background_layer.layer = -1
+
+# Game layer (default is 0)
+game_layer.layer = 0
+
+# UI layer
+ui_layer.layer = 1
+
+# Debug overlay
+debug_layer.layer = 2
+```
+
+<Note>
+Embedded windows are on layer 1024. Layers 1025+ appear above embedded windows.
+</Note>
+
+## UI with CanvasLayer
+
+### Basic HUD Setup
+
+```
+Game (Node2D)
+├── Level (Node2D)
+│   ├── Player
+│   └── Enemies
+└── HUD (CanvasLayer)
+    ├── HealthBar
+    ├── ScoreLabel
+    └── PauseButton
+```
+
+### Example HUD Script
+
+```gdscript
+extends CanvasLayer
+
+@onready var health_bar = $HealthBar
+@onready var score_label = $ScoreLabel
+
+func _ready():
+    layer = 1  # Above game content
+
+func update_health(value: int):
+    health_bar.value = value
+
+func update_score(value: int):
+    score_label.text = "Score: %d" % value
+```
+
+### Following the Viewport
+
+```gdscript
+# Layer stays fixed on screen (default)
+follow_viewport_enabled = false
+
+# Layer follows camera in world space
+follow_viewport_enabled = true
+follow_viewport_scale = 1.0  # Adjust scale for parallax effect
+```
+
+## Transform Properties
+
+`CanvasLayer` has its own transform, independent of the scene:
+
+```gdscript
+extends CanvasLayer
+
+func _ready():
+    # Offset the entire layer
+    offset = Vector2(10, 10)
+    
+    # Rotate the layer
+    rotation = deg_to_rad(5)
+    
+    # Scale the layer
+    scale = Vector2(1.5, 1.5)
+
+func shake():
+    # Shake effect for the whole layer
+    var tween = create_tween()
+    tween.tween_property(self, "offset", Vector2(randf_range(-5, 5), randf_range(-5, 5)), 0.05)
+    tween.tween_property(self, "offset", Vector2.ZERO, 0.05)
+```
+
+## Custom Viewport
+
+```gdscript
+# Assign specific viewport
+custom_viewport = $SubViewport
+
+# Use default viewport
+custom_viewport = null
+```
+
+## ParallaxBackground
+
+`ParallaxBackground` creates parallax scrolling effects for backgrounds.
+
+<Warning>
+`ParallaxBackground` is deprecated in favor of `Parallax2D`. However, it's still widely used and functional.
+</Warning>
+
+### Basic Setup
+
+```
+Level (Node2D)
+├── ParallaxBackground
+│   ├── ParallaxLayer (Sky)
+│   │   └── Sprite2D
+│   ├── ParallaxLayer (Clouds)
+│   │   └── Sprite2D
+│   └── ParallaxLayer (Mountains)
+│       └── Sprite2D
+├── TileMap
+└── Player
+```
+
+### ParallaxBackground Properties
+
+```gdscript
+extends ParallaxBackground
+
+func _ready():
+    # Scroll offset (usually controlled by camera)
+    scroll_offset = Vector2(0, 0)
+    
+    # Base offset for all layers
+    scroll_base_offset = Vector2(0, 0)
+    
+    # Base scale for all layers
+    scroll_base_scale = Vector2(1, 1)
+    
+    # Ignore camera zoom
+    scroll_ignore_camera_zoom = false
+    
+    # Scroll limits
+    scroll_limit_begin = Vector2(0, 0)
+    scroll_limit_end = Vector2(0, 0)
+```
+
+### Manual Scrolling (No Camera)
+
+```gdscript
+extends ParallaxBackground
+
+func _process(delta):
+    # Manual scroll control
+    scroll_offset.x += 50 * delta
+```
+
+## ParallaxLayer
+
+`ParallaxLayer` must be a child of `ParallaxBackground`. Each layer moves at a different rate.
+
+### Motion Scale
+
+```gdscript
+extends ParallaxLayer
+
+func _ready():
+    # Move at half speed (far background)
+    motion_scale = Vector2(0.5, 0.5)
+    
+    # Move at double speed (foreground)
+    # motion_scale = Vector2(2.0, 2.0)
+    
+    # No horizontal movement
+    # motion_scale = Vector2(0, 1)
+```
+
+### Motion Offset
+
+```gdscript
+# Initial offset
+motion_offset = Vector2(100, 0)
+```
+
+### Infinite Scrolling
+
+```gdscript
+extends ParallaxLayer
+
+func _ready():
+    # Repeat texture every 512 pixels horizontally
+    motion_mirroring = Vector2(512, 0)
+    
+    # No vertical mirroring
+    # motion_mirroring.y = 0
+```
+
+<Note>
+For pixel-perfect mirroring, set `motion_mirroring` to match your background sprite's width.
+</Note>
+
+## Complete Parallax Example
+
+```gdscript
+# ParallaxBackground.gd
+extends ParallaxBackground
+
+func _ready():
+    layer = -100  # Behind everything
+
+# Sky Layer (ParallaxLayer)
+# motion_scale = Vector2(0.1, 0.1)
+# motion_mirroring = Vector2(1024, 0)
+
+# Cloud Layer (ParallaxLayer)
+# motion_scale = Vector2(0.3, 0.3)
+# motion_mirroring = Vector2(768, 0)
+
+# Mountain Layer (ParallaxLayer)
+# motion_scale = Vector2(0.6, 0.6)
+# motion_mirroring = Vector2(512, 0)
+```
+
+### With Camera2D
+
+When using `Camera2D`, the parallax updates automatically:
+
+```
+Player (CharacterBody2D)
+├── Camera2D
+└── Sprite2D
+
+Level (Node2D)
+└── ParallaxBackground
+    ├── SkyLayer (ParallaxLayer)
+    ├── CloudLayer (ParallaxLayer)
+    └── MountainLayer (ParallaxLayer)
+```
+
+## Multi-Layer Scene Example
+
+```gdscript
+# Game structure with multiple canvas layers
+extends Node2D
+
+func _ready():
+    # Background parallax
+    var bg = $BackgroundLayer
+    bg.layer = -1
+    
+    # Main game layer (default, layer 0)
+    # Contains player, enemies, etc.
+    
+    # UI overlay
+    var ui = $UILayer
+    ui.layer = 1
+    
+    # Pause menu
+    var pause = $PauseLayer
+    pause.layer = 2
+    pause.visible = false
+
+func _input(event):
+    if event.is_action_pressed("pause"):
+        toggle_pause()
+
+func toggle_pause():
+    var pause_layer = $PauseLayer
+    pause_layer.visible = !pause_layer.visible
+    get_tree().paused = pause_layer.visible
+```
+
+## Advanced: Dynamic Parallax
+
+```gdscript
+extends ParallaxLayer
+
+var base_motion_scale = Vector2(0.5, 0.5)
+
+func _process(delta):
+    # Change parallax speed based on player state
+    var player = get_tree().get_first_node_in_group("player")
+    if player:
+        if player.is_running:
+            motion_scale = base_motion_scale * 1.5
+        else:
+            motion_scale = base_motion_scale
+```
+
+## Visibility Control
+
+```gdscript
+# Hide entire layer and children
+visible = false
+
+# Show layer
+visible = true
+
+# Toggle visibility
+func toggle_layer():
+    visible = !visible
+
+# Fade layer
+func fade_out():
+    var tween = create_tween()
+    tween.tween_property(self, "modulate:a", 0.0, 1.0)
+
+func fade_in():
+    var tween = create_tween()
+    tween.tween_property(self, "modulate:a", 1.0, 1.0)
+```
+
+## Canvas Layer for Screen Effects
+
+```gdscript
+extends CanvasLayer
+
+@onready var color_rect = $ColorRect
+
+func _ready():
+    layer = 10  # Very high layer
+    color_rect.color = Color(0, 0, 0, 0)
+
+func flash_white():
+    var tween = create_tween()
+    tween.tween_property(color_rect, "color", Color.WHITE, 0.1)
+    tween.tween_property(color_rect, "color", Color(1, 1, 1, 0), 0.1)
+
+func fade_to_black():
+    var tween = create_tween()
+    tween.tween_property(color_rect, "color", Color.BLACK, 1.0)
+```
+
+## Split-Screen with CanvasLayers
+
+```gdscript
+# Each viewport needs its own CanvasLayer setup
+# Player 1 Viewport
+var viewport1 = SubViewport.new()
+var canvas1 = CanvasLayer.new()
+canvas1.custom_viewport = viewport1
+
+# Player 2 Viewport  
+var viewport2 = SubViewport.new()
+var canvas2 = CanvasLayer.new()
+canvas2.custom_viewport = viewport2
+```
+
+## Best Practices
+
+<AccordionGroup>
+
+<Accordion title="Use CanvasLayer for all UI">
+Always put UI elements in a `CanvasLayer` to keep them independent of the game camera.
+</Accordion>
+
+<Accordion title="Set appropriate layer indices">
+Organize layers logically: backgrounds (-1), game (0), UI (1+), overlays (high numbers).
+</Accordion>
+
+<Accordion title="Keep parallax layers simple">
+Too many parallax layers can hurt performance. Use 3-5 layers maximum.
+</Accordion>
+
+<Accordion title="Match mirroring to sprite size">
+For seamless scrolling, set `motion_mirroring` to exactly match your sprite width.
+</Accordion>
+
+<Accordion title="One ParallaxBackground per viewport">
+Each viewport needs its own `ParallaxBackground` for split-screen games.
+</Accordion>
+
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+
+<Accordion title="UI not showing">
+Check that `layer` is higher than game content and `visible` is true.
+</Accordion>
+
+<Accordion title="Parallax not moving">
+Ensure there's a `Camera2D` in the scene, or manually update `scroll_offset`.
+</Accordion>
+
+<Accordion title="Parallax gaps/seams">
+Verify `motion_mirroring` matches sprite width exactly, and sprite edges tile seamlessly.
+</Accordion>
+
+<Accordion title="Layer affected by camera">
+Set `follow_viewport_enabled = false` to fix UI in screen space.
+</Accordion>
+
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="2D Overview" icon="map" href="/2d/overview">
+Revisit 2D fundamentals and camera systems
+</Card>
+
+<Card title="Sprites and Textures" icon="image" href="/2d/sprites-and-textures">
+Learn more about displaying graphics
+</Card>
+
+</CardGroup>

@@ -1,0 +1,92 @@
+---
+title: "Resource"
+---
+
+# Resource
+
+**Inherits:** RefCounted < Object
+
+## Description
+
+Base class for serializable objects. Resources are reference-counted and freed when no longer in use. They can be nested within other resources and saved on disk.
+
+## Inheritance
+
+`Resource` < `RefCounted` < `Object`
+
+## Properties
+
+<ResponseField name="resource_local_to_scene" type="bool" default="false">
+  If true, the resource is duplicated for each instance of all scenes using it.
+</ResponseField>
+
+<ResponseField name="resource_name" type="String" default="">
+  An optional name for this resource. Displayed in the Inspector dock.
+</ResponseField>
+
+<ResponseField name="resource_path" type="String" default="">
+  The unique path to this resource. If saved to disk, the value will be its filepath.
+</ResponseField>
+
+## Methods
+
+### duplicate
+
+```gdscript
+Resource duplicate(deep: bool = false)
+```
+
+Duplicates this resource, returning a new resource with its exported or PROPERTY_USAGE_STORAGE properties copied from the original.
+
+<ParamField path="deep" type="bool">
+  If true, performs a deep copy where nested arrays and resources are also duplicated
+</ParamField>
+
+### emit_changed
+
+```gdscript
+void emit_changed()
+```
+
+Emits the changed signal. Call this method whenever a meaningful change occurs.
+
+### take_over_path
+
+```gdscript
+void take_over_path(path: String)
+```
+
+Sets the resource_path to path, potentially overriding an existing cache entry.
+
+## Signals
+
+### changed()
+
+Emitted when the resource changes, usually when one of its properties is modified.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+var resource = Resource.new()
+resource.resource_name = "MyResource"
+
+# Duplicate the resource
+var copy = resource.duplicate()
+
+# Connect to change signal
+resource.changed.connect(func(): print("Resource changed"))
+resource.emit_changed()
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+var resource = new Resource();
+resource.ResourceName = "MyResource";
+
+// Duplicate the resource
+var copy = resource.Duplicate();
+```
+  </Tab>
+</Tabs>

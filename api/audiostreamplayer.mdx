@@ -1,0 +1,117 @@
+---
+title: "AudioStreamPlayer"
+---
+
+# AudioStreamPlayer
+
+**Inherits:** Node < Object
+
+## Description
+
+A node for audio playback. The AudioStreamPlayer node plays an audio stream non-positionally. It is ideal for user interfaces, menus, or background music.
+
+## Properties
+
+<ResponseField name="stream" type="AudioStream">
+  The AudioStream resource to be played.
+</ResponseField>
+
+<ResponseField name="volume_db" type="float" default="0.0">
+  Volume of sound, in decibels.
+</ResponseField>
+
+<ResponseField name="pitch_scale" type="float" default="1.0">
+  The audio's pitch and tempo, as a multiplier of the stream's sample rate.
+</ResponseField>
+
+<ResponseField name="playing" type="bool" default="false">
+  If true, this node is playing sounds.
+</ResponseField>
+
+<ResponseField name="autoplay" type="bool" default="false">
+  If true, this node calls play when entering the tree.
+</ResponseField>
+
+<ResponseField name="bus" type="StringName" default="Master">
+  The target bus name. All sounds from this node will be playing on this bus.
+</ResponseField>
+
+## Methods
+
+### play
+
+```gdscript
+void play(from_position: float = 0.0)
+```
+
+Plays a sound from the beginning, or the given position in seconds.
+
+<ParamField path="from_position" type="float">
+  Position in seconds to start playback from (default: 0.0)
+</ParamField>
+
+### stop
+
+```gdscript
+void stop()
+```
+
+Stops all sounds from this node.
+
+### seek
+
+```gdscript
+void seek(to_position: float)
+```
+
+Restarts all sounds to be played from the given position, in seconds.
+
+### get_playback_position
+
+```gdscript
+float get_playback_position()
+```
+
+Returns the position in the AudioStream of the latest sound, in seconds.
+
+## Signals
+
+### finished()
+
+Emitted when a sound finishes playing without interruptions.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+var player = AudioStreamPlayer.new()
+add_child(player)
+
+# Load and play a sound
+player.stream = load("res://sounds/music.ogg")
+player.volume_db = -10.0
+player.play()
+
+# Connect to finished signal
+player.finished.connect(func(): print("Sound finished"))
+
+# Stop the sound
+player.stop()
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+var player = new AudioStreamPlayer();
+AddChild(player);
+
+// Load and play a sound
+player.Stream = GD.Load<AudioStream>("res://sounds/music.ogg");
+player.VolumeDb = -10.0f;
+player.Play();
+
+// Connect to finished signal
+player.Finished += () => GD.Print("Sound finished");
+```
+  </Tab>
+</Tabs>

@@ -1,0 +1,489 @@
+---
+title: 2D Physics
+description: Physics bodies, collision detection, raycasting, and physics layers in Godot 2D
+---
+
+## Physics Body Types
+
+Godot provides four main 2D physics body types, each suited for different use cases:
+
+| Body Type | Use Case | Affected by Physics |
+|-----------|----------|--------------------|
+| `RigidBody2D` | Dynamic objects (boxes, ragdolls) | Yes |
+| `CharacterBody2D` | Player/AI controlled characters | No |
+| `StaticBody2D` | Walls, floors, static obstacles | No |
+| `AnimatableBody2D` | Moving platforms, doors | No |
+
+## RigidBody2D
+
+Physics-simulated bodies affected by gravity, forces, and collisions.
+
+### Basic Setup
+
+```gdscript
+extends RigidBody2D
+
+func _ready():
+    # Set mass
+    mass = 10.0
+    
+    # Set gravity scale (1.0 = normal gravity)
+    gravity_scale = 1.0
+    
+    # Allow rotation
+    lock_rotation = false
+```
+
+### Applying Forces
+
+<CodeGroup>
+
+```gdscript Impulses (One-time)
+# Apply central impulse (at center of mass)
+apply_central_impulse(Vector2(0, -500))  # Jump
+
+# Apply impulse at position (causes rotation)
+apply_impulse(Vector2(100, 0), Vector2(0, 50))
+
+# Apply torque impulse (rotation)
+apply_torque_impulse(1000.0)
+```
+
+```gdscript Forces (Continuous)
+# Apply central force every physics frame
+func _physics_process(delta):
+    apply_central_force(Vector2(100, 0))
+
+# Apply force at position
+apply_force(Vector2(0, -100), Vector2(10, 0))
+
+# Apply torque
+apply_torque(50.0)
+```
+
+```gdscript Constant Forces
+# Add constant force (like wind)
+add_constant_central_force(Vector2(50, 0))
+
+# Clear constant forces
+constant_force = Vector2.ZERO
+
+# Add constant torque
+add_constant_torque(10.0)
+```
+
+</CodeGroup>
+
+### Velocity Control
+
+```gdscript
+# Set velocity directly
+linear_velocity = Vector2(200, -300)
+
+# Set angular velocity (rotation speed)
+angular_velocity = 2.0
+
+# Set velocity on specific axis
+set_axis_velocity(Vector2(0, -400))  # Useful for jumping
+```
+
+### Damping
+
+```gdscript
+# Linear damping (resistance to movement)
+linear_damp = 0.5
+linear_damp_mode = RigidBody2D.DAMP_MODE_COMBINE
+
+# Angular damping (resistance to rotation)
+angular_damp = 1.0
+angular_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
+```
+
+### Collision Detection
+
+```gdscript
+extends RigidBody2D
+
+func _ready():
+    # Enable collision monitoring
+    contact_monitor = true
+    max_contacts_reported = 10
+    
+    # Connect signals
+    body_entered.connect(_on_body_entered)
+    body_exited.connect(_on_body_exited)
+
+func _on_body_entered(body: Node):
+    print("Collided with: ", body.name)
+    if body.is_in_group("enemies"):
+        # Handle collision
+        pass
+
+func _on_body_exited(body: Node):
+    print("Stopped colliding with: ", body.name)
+```
+
+### Custom Integration
+
+```gdscript
+extends RigidBody2D
+
+func _ready():
+    # Disable standard physics, use custom
+    custom_integrator = true
+
+func _integrate_forces(state: PhysicsDirectBodyState2D):
+    # Custom physics logic
+    var transform = state.transform
+    var velocity = state.linear_velocity
+    
+    # Apply custom forces
+    if Input.is_action_pressed("move_right"):
+        state.apply_central_force(Vector2(1000, 0))
+    
+    # Modify velocity directly
+    state.linear_velocity = velocity.limit_length(500)
+```
+
+## CharacterBody2D
+
+Best for player and AI-controlled characters with precise movement control.
+
+### Basic Movement
+
+```gdscript
+extends CharacterBody2D
+
+const SPEED = 300.0
+const JUMP_VELOCITY = -400.0
+
+func _physics_process(delta):
+    # Add gravity
+    if not is_on_floor():
+        velocity += get_gravity() * delta
+    
+    # Handle jump
+    if Input.is_action_just_pressed("jump") and is_on_floor():
+        velocity.y = JUMP_VELOCITY
+    
+    # Get input direction
+    var direction = Input.get_axis("move_left", "move_right")
+    if direction:
+        velocity.x = direction * SPEED
+    else:
+        velocity.x = move_toward(velocity.x, 0, SPEED)
+    
+    move_and_slide()
+```
+
+### Collision Detection
+
+```gdscript
+func _physics_process(delta):
+    velocity += get_gravity() * delta
+    move_and_slide()
+    
+    # Check if on floor/wall/ceiling
+    if is_on_floor():
+        print("On ground")
+    if is_on_wall():
+        print("Touching wall")
+    if is_on_ceiling():
+        print("Hit ceiling")
+```
+
+### Getting Collision Information
+
+```gdscript
+func _physics_process(delta):
+    move_and_slide()
+    
+    # Iterate through all collisions
+    for i in get_slide_collision_count():
+        var collision = get_slide_collision(i)
+        print("Collided with: ", collision.get_collider().name)
+        print("At position: ", collision.get_position())
+        print("Normal: ", collision.get_normal())
+```
+
+### Platformer Movement Settings
+
+```gdscript
+extends CharacterBody2D
+
+func _ready():
+    # Floor detection angle (45 degrees)
+    floor_max_angle = deg_to_rad(45)
+    
+    # Snap to floor when going down slopes
+    floor_snap_length = 8.0
+    
+    # Stop on slopes when not moving
+    floor_stop_on_slope = true
+    
+    # Constant speed on slopes
+    floor_constant_speed = false
+    
+    # Max number of slides per move
+    max_slides = 4
+    
+    # Up direction for floor detection
+    up_direction = Vector2.UP
+```
+
+### Wall Jumping
+
+```gdscript
+extends CharacterBody2D
+
+const WALL_JUMP_VELOCITY = Vector2(300, -400)
+
+func _physics_process(delta):
+    if not is_on_floor():
+        velocity += get_gravity() * delta
+    
+    # Wall jump
+    if is_on_wall() and Input.is_action_just_pressed("jump"):
+        var wall_normal = get_wall_normal()
+        velocity = Vector2(wall_normal.x * WALL_JUMP_VELOCITY.x, WALL_JUMP_VELOCITY.y)
+    
+    move_and_slide()
+```
+
+### Platform Movement
+
+```gdscript
+# Get platform velocity when on a moving platform
+func _physics_process(delta):
+    move_and_slide()
+    
+    if is_on_floor():
+        var platform_velocity = get_platform_velocity()
+        print("Platform moving at: ", platform_velocity)
+```
+
+## StaticBody2D
+
+Immovable bodies for walls, floors, and obstacles.
+
+```gdscript
+extends StaticBody2D
+
+func _ready():
+    # Set constant linear velocity (conveyor belt)
+    constant_linear_velocity = Vector2(100, 0)
+    
+    # Set constant angular velocity (rotating platform)
+    constant_angular_velocity = 1.0
+```
+
+<Note>
+`constant_linear_velocity` doesn't move the body but affects touching bodies as if it were moving.
+</Note>
+
+## AnimatableBody2D
+
+For moving platforms and animated obstacles.
+
+```gdscript
+extends AnimatableBody2D
+
+var direction = 1
+const SPEED = 100.0
+const DISTANCE = 200.0
+var start_position: Vector2
+
+func _ready():
+    start_position = position
+
+func _physics_process(delta):
+    # Move platform back and forth
+    position.x += direction * SPEED * delta
+    
+    if abs(position.x - start_position.x) > DISTANCE:
+        direction *= -1
+```
+
+## Collision Shapes
+
+All physics bodies need collision shapes:
+
+```gdscript
+# Add collision shape in code
+var shape = RectangleShape2D.new()
+shape.size = Vector2(32, 32)
+
+var collision = CollisionShape2D.new()
+collision.shape = shape
+add_child(collision)
+```
+
+### Common Shape Types
+
+- `RectangleShape2D` - Rectangles and squares
+- `CircleShape2D` - Circles
+- `CapsuleShape2D` - Capsules (good for characters)
+- `ConvexPolygonShape2D` - Convex polygons
+- `ConcavePolygonShape2D` - Concave polygons (static only)
+
+## Physics Layers and Masks
+
+Control which objects collide with each other:
+
+```gdscript
+# Collision layer: What layer is this object on?
+collision_layer = 0b0001  # Layer 1
+
+# Collision mask: Which layers does this object detect?
+collision_mask = 0b0011  # Layers 1 and 2
+```
+
+### Layer Examples
+
+```gdscript
+# Layer definitions
+const LAYER_PLAYER = 1
+const LAYER_ENEMY = 2
+const LAYER_WORLD = 3
+const LAYER_PICKUP = 4
+
+# Player setup
+player.collision_layer = 1 << (LAYER_PLAYER - 1)
+player.collision_mask = (1 << (LAYER_ENEMY - 1)) | (1 << (LAYER_WORLD - 1)) | (1 << (LAYER_PICKUP - 1))
+
+# Enemy setup
+enemy.collision_layer = 1 << (LAYER_ENEMY - 1)
+enemy.collision_mask = (1 << (LAYER_PLAYER - 1)) | (1 << (LAYER_WORLD - 1))
+```
+
+## Raycasting
+
+### RayCast2D Node
+
+```gdscript
+extends RayCast2D
+
+func _ready():
+    # Enable raycast
+    enabled = true
+    
+    # Set target position
+    target_position = Vector2(0, 100)
+    
+    # Collision mask
+    collision_mask = 0b0001
+
+func _physics_process(delta):
+    if is_colliding():
+        var collider = get_collider()
+        var collision_point = get_collision_point()
+        var collision_normal = get_collision_normal()
+        print("Hit: ", collider.name, " at ", collision_point)
+```
+
+### PhysicsRayQueryParameters2D
+
+```gdscript
+func cast_ray(from: Vector2, to: Vector2) -> Dictionary:
+    var space_state = get_world_2d().direct_space_state
+    var query = PhysicsRayQueryParameters2D.create(from, to)
+    query.collision_mask = 1
+    query.exclude = [self]
+    
+    var result = space_state.intersect_ray(query)
+    return result
+
+func _physics_process(delta):
+    var result = cast_ray(global_position, global_position + Vector2(0, 100))
+    if result:
+        print("Hit: ", result.collider.name)
+        print("Position: ", result.position)
+        print("Normal: ", result.normal)
+```
+
+## Area2D
+
+Detect overlaps without physics simulation:
+
+```gdscript
+extends Area2D
+
+func _ready():
+    # Connect signals
+    body_entered.connect(_on_body_entered)
+    body_exited.connect(_on_body_exited)
+    area_entered.connect(_on_area_entered)
+
+func _on_body_entered(body: Node2D):
+    if body.is_in_group("players"):
+        print("Player entered area")
+
+func _on_body_exited(body: Node2D):
+    print("Body exited")
+
+func _on_area_entered(area: Area2D):
+    print("Another area overlapped")
+```
+
+### Manual Overlap Detection
+
+```gdscript
+func _physics_process(delta):
+    # Get all overlapping bodies
+    var overlapping_bodies = get_overlapping_bodies()
+    for body in overlapping_bodies:
+        print("Overlapping: ", body.name)
+    
+    # Get all overlapping areas
+    var overlapping_areas = get_overlapping_areas()
+```
+
+## Physics Material
+
+Control friction and bounce:
+
+```gdscript
+# Create physics material
+var material = PhysicsMaterial.new()
+material.friction = 0.8
+material.bounce = 0.5
+
+# Apply to body
+physics_material_override = material
+```
+
+## Best Practices
+
+<AccordionGroup>
+
+<Accordion title="Use CharacterBody2D for player control">
+`CharacterBody2D` provides better control and is deterministic, perfect for player characters.
+</Accordion>
+
+<Accordion title="Use RigidBody2D for physics objects">
+Objects that should react realistically to forces like crates, balls, and ragdolls.
+</Accordion>
+
+<Accordion title="Set up physics layers properly">
+Properly configured layers prevent unnecessary collision checks and improve performance.
+</Accordion>
+
+<Accordion title="Enable contact monitoring only when needed">
+On `RigidBody2D`, only enable `contact_monitor` when you need collision signals to save performance.
+</Accordion>
+
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="TileMaps" icon="grid" href="/2d/tilemaps">
+Add physics to tile-based levels
+</Card>
+
+<Card title="Canvas Layers" icon="layer-group" href="/2d/canvas-layers">
+Organize your game's visual layers
+</Card>
+
+</CardGroup>

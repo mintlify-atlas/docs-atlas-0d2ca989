@@ -1,0 +1,134 @@
+---
+title: "Introduction to Godot Engine"
+description: "Learn about Godot Engine, a free and open-source game engine for creating 2D and 3D games"
+---
+
+## What is Godot Engine?
+
+Godot Engine is a feature-packed, cross-platform game engine to create 2D and 3D games from a unified interface. It provides a comprehensive set of common tools, so that users can focus on making games without having to reinvent the wheel.
+
+<Info>
+Godot is completely **free and open source** under the very permissive MIT license. No strings attached, no royalties, nothing. Your games are yours, down to the last line of engine code.
+</Info>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="2D & 3D Support" icon="cubes">
+    Create both 2D and 3D games with dedicated rendering pipelines and node systems optimized for each.
+  </Card>
+
+  <Card title="Cross-Platform" icon="globe">
+    Export with one click to Windows, macOS, Linux, Android, iOS, Web, and consoles.
+  </Card>
+
+  <Card title="Open Source" icon="code-branch">
+    MIT licensed with no royalties. The community drives development through the Godot Foundation.
+  </Card>
+
+  <Card title="Multiple Languages" icon="code">
+    Script in GDScript (Python-like), C#, C++, or use visual scripting.
+  </Card>
+</CardGroup>
+
+## Engine Architecture
+
+Godot uses a scene system where everything is organized as a tree of nodes. Each node has a specific purpose and can be extended with custom behavior through scripts.
+
+### Core Subsystems
+
+The engine is built with several server subsystems that handle different aspects of game functionality:
+
+<Accordion title="Rendering Server">
+  Handles all visual rendering, including 2D and 3D graphics, shaders, materials, and visual effects.
+</Accordion>
+
+<Accordion title="Physics Servers">
+  Separate physics servers for 2D (`physics_2d`) and 3D (`physics_3d`) handle collision detection, rigid body dynamics, and physics queries.
+</Accordion>
+
+<Accordion title="Audio Server">
+  Manages audio playback, mixing, effects, and spatial audio for immersive sound.
+</Accordion>
+
+<Accordion title="Navigation Servers">
+  Provide pathfinding and navigation mesh functionality for both 2D (`navigation_2d`) and 3D (`navigation_3d`) games.
+</Accordion>
+
+<Accordion title="XR Server">
+  Supports virtual reality (VR) and augmented reality (AR) experiences.
+</Accordion>
+
+## Scene System
+
+Godot organizes games using a scene system. Scenes are composed of nodes arranged in a tree hierarchy:
+
+- **Node2D**: Base for all 2D game objects (sprites, animated sprites, cameras, particles)
+- **Node3D**: Base for all 3D game objects (meshes, lights, cameras, skeletons)
+- **Control**: Base for all UI elements
+- **Node**: Base class for all nodes in the scene tree
+
+<Tip>
+You can save any branch of the scene tree as its own scene file and reuse it across your project. This makes Godot's scene system incredibly flexible and modular.
+</Tip>
+
+## Scripting with GDScript
+
+GDScript is Godot's built-in scripting language, designed specifically for game development. It features:
+
+- Python-like syntax that's easy to learn
+- Tight integration with the engine
+- Optional static typing for better performance and error checking
+- Built-in support for common game development patterns
+
+Here's a simple example from the engine source:
+
+```gdscript
+extends Node
+
+# Called when the node enters the scene tree for the first time.
+func _ready() -> void:
+	pass # Replace with function body.
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(delta: float) -> void:
+	pass
+```
+
+## Development & Community
+
+<Note>
+Godot's development is fully independent and community-driven, empowering users to help shape their engine to match their expectations. It is supported by the **Godot Foundation** not-for-profit.
+</Note>
+
+The engine was created by Juan Linietsky and Ariel Manzur and was open sourced in February 2014. Since then, it has grown into a thriving open-source project with thousands of contributors.
+
+## Version Information
+
+This documentation covers **Godot Engine 4.7**, the latest version featuring:
+
+- Vulkan-based rendering (Forward+ and Mobile)
+- Improved GDScript performance with optional typing
+- Enhanced 3D physics and navigation
+- Better 2D rendering and lighting
+- Expanded platform support
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Create your first Godot project and learn the basics.
+  </Card>
+
+  <Card title="Installation" icon="download" href="/installation">
+    Download and install Godot on your platform.
+  </Card>
+
+  <Card title="Editor Basics" icon="window" href="/editor/interface">
+    Learn how to use the Godot editor interface.
+  </Card>
+
+  <Card title="GDScript Guide" icon="code" href="/scripting/gdscript">
+    Master GDScript programming for game development.
+  </Card>
+</CardGroup>

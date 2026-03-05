@@ -1,0 +1,86 @@
+---
+title: "InputEvent"
+---
+
+# InputEvent
+
+**Inherits:** Resource < RefCounted < Object
+
+## Description
+
+Abstract base class for input events. All types of input events inherit from this class.
+
+## Properties
+
+<ResponseField name="device" type="int" default="0">
+  The event's device ID.
+</ResponseField>
+
+## Methods
+
+### is_action_pressed
+
+```gdscript
+bool is_action_pressed(action: StringName, allow_echo: bool = false, exact_match: bool = false)
+```
+
+Returns true if the given action matches this event and is being pressed.
+
+### is_action_released
+
+```gdscript
+bool is_action_released(action: StringName, exact_match: bool = false)
+```
+
+Returns true if the given action matches this event and is released.
+
+### is_pressed
+
+```gdscript
+bool is_pressed()
+```
+
+Returns true if this input event is pressed.
+
+### is_echo
+
+```gdscript
+bool is_echo()
+```
+
+Returns true if this input event is an echo event (for key events).
+
+### as_text
+
+```gdscript
+String as_text()
+```
+
+Returns a String representation of the event.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+func _input(event):
+    if event.is_action_pressed("ui_accept"):
+        print("Accept pressed")
+    
+    if event is InputEventKey:
+        if event.is_pressed() and not event.is_echo():
+            print("Key pressed: ", event.as_text())
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+public override void _Input(InputEvent @event)
+{
+    if (@event.IsActionPressed("ui_accept"))
+    {
+        GD.Print("Accept pressed");
+    }
+}
+```
+  </Tab>
+</Tabs>

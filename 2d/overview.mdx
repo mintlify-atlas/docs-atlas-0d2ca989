@@ -1,0 +1,281 @@
+---
+title: 2D Overview
+description: Introduction to Godot's 2D system, coordinate system, Node2D transformations, and cameras
+---
+
+## Introduction
+
+Godot provides a comprehensive 2D engine for creating games and applications. All 2D nodes inherit from `Node2D`, which provides a transform system for position, rotation, scale, and skew.
+
+## The 2D Coordinate System
+
+Godot uses a right-handed 2D coordinate system:
+
+- **X-axis**: Points to the right (positive values)
+- **Y-axis**: Points downward (positive values)
+- **Origin**: Top-left corner at `(0, 0)`
+
+<Note>
+Unlike some engines where Y points upward, Godot's Y-axis points **down**. This matches screen coordinate conventions.
+</Note>
+
+## Node2D Base Class
+
+The `Node2D` class is the foundation for all 2D objects. It provides transformation properties and methods for positioning and orienting nodes in 2D space.
+
+### Transform Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `position` | `Vector2` | Position relative to parent node |
+| `rotation` | `float` | Rotation in radians |
+| `rotation_degrees` | `float` | Rotation in degrees (helper property) |
+| `scale` | `Vector2` | Scale relative to parent |
+| `skew` | `float` | Skew transformation in radians |
+
+### Global Transform Properties
+
+Every transform property has a global equivalent:
+
+- `global_position`
+- `global_rotation` / `global_rotation_degrees`
+- `global_scale`
+- `global_skew`
+- `global_transform`
+
+### Basic Movement
+
+```gdscript
+extends Node2D
+
+func _ready():
+    # Set position
+    position = Vector2(100, 200)
+    
+    # Rotate 45 degrees
+    rotation_degrees = 45
+    
+    # Scale to double size
+    scale = Vector2(2.0, 2.0)
+
+func _process(delta):
+    # Move right at 100 pixels per second
+    position.x += 100 * delta
+    
+    # Rotate continuously
+    rotate(delta * 2.0)
+```
+
+### Transform Methods
+
+<CodeGroup>
+
+```gdscript translate()
+# Move in local coordinates
+translate(Vector2(10, 0))  # Move 10 pixels right in local space
+```
+
+```gdscript global_translate()
+# Move in global coordinates
+global_translate(Vector2(0, -50))  # Move 50 pixels up globally
+```
+
+```gdscript rotate()
+# Rotate by radians
+rotate(PI / 4)  # Rotate 45 degrees
+```
+
+```gdscript look_at()
+# Point toward a position
+look_at(get_global_mouse_position())
+```
+
+</CodeGroup>
+
+### Coordinate Conversion
+
+Convert between local and global coordinates:
+
+```gdscript
+# Convert global position to local
+var local_pos = to_local(global_position)
+
+# Convert local position to global
+var global_pos = to_global(Vector2(10, 10))
+
+# Get angle to a point
+var angle = get_angle_to(target.global_position)
+```
+
+## Z-Index and Draw Order
+
+The `z_index` property (inherited from `CanvasItem`) controls draw order:
+
+```gdscript
+# Draw this node above others
+z_index = 10
+
+# Draw behind
+z_index = -5
+```
+
+<Note>
+Nodes with higher `z_index` values are drawn on top. Within the same `z_index`, nodes are drawn in tree order.
+</Note>
+
+### Y-Sorting
+
+For top-down games, enable Y-sorting to automatically order nodes by their Y position:
+
+```gdscript
+# Enable Y-sorting on parent node
+y_sort_enabled = true
+```
+
+## 2D Cameras
+
+The `Camera2D` node controls what portion of the 2D scene is visible.
+
+### Basic Camera Setup
+
+```gdscript
+extends Camera2D
+
+func _ready():
+    # Make this the active camera
+    enabled = true
+    
+    # Set zoom (2.0 = zoomed in 2x)
+    zoom = Vector2(2.0, 2.0)
+```
+
+### Camera Following
+
+Attach a `Camera2D` as a child of the player node to follow them:
+
+```
+Player (CharacterBody2D)
+└── Camera2D
+```
+
+### Camera Limits
+
+Constrain camera movement to level boundaries:
+
+```gdscript
+extends Camera2D
+
+func _ready():
+    limit_left = 0
+    limit_top = 0
+    limit_right = 1920
+    limit_bottom = 1080
+```
+
+### Camera Smoothing
+
+Add smooth camera movement:
+
+```gdscript
+position_smoothing_enabled = true
+position_smoothing_speed = 5.0
+
+# Rotation smoothing
+rotation_smoothing_enabled = true
+rotation_smoothing_speed = 5.0
+```
+
+### Drag Margins
+
+Create a dead-zone where the player can move without moving the camera:
+
+```gdscript
+drag_horizontal_enabled = true
+drag_vertical_enabled = true
+
+drag_left_margin = 0.2
+drag_right_margin = 0.2
+drag_top_margin = 0.2
+drag_bottom_margin = 0.2
+```
+
+### Camera Shake
+
+```gdscript
+extends Camera2D
+
+var shake_amount = 0.0
+var shake_decay = 5.0
+
+func _process(delta):
+    if shake_amount > 0:
+        offset = Vector2(
+            randf_range(-shake_amount, shake_amount),
+            randf_range(-shake_amount, shake_amount)
+        )
+        shake_amount = max(shake_amount - shake_decay * delta, 0)
+    else:
+        offset = Vector2.ZERO
+
+func shake(amount: float):
+    shake_amount = amount
+```
+
+## Transform Hierarchy
+
+Transforms are hierarchical. A child node's transform is relative to its parent:
+
+```gdscript
+# Parent at (100, 100)
+parent.position = Vector2(100, 100)
+
+# Child at (50, 50) relative to parent
+child.position = Vector2(50, 50)
+
+# Child's global position is (150, 150)
+print(child.global_position)  # Vector2(150, 150)
+```
+
+## Best Practices
+
+<AccordionGroup>
+
+<Accordion title="Use local transforms for relative movement">
+When moving nodes relative to their parent, use local transform properties like `position` and `rotate()`.
+</Accordion>
+
+<Accordion title="Use global transforms for absolute positioning">
+For world-space positioning (like spawning projectiles), use `global_position`.
+</Accordion>
+
+<Accordion title="Camera on player vs separate">
+Attach the camera to the player for simple following. Use a separate camera node with scripting for more complex behavior.
+</Accordion>
+
+<Accordion title="Negative Y for upward movement">
+Remember that negative Y values move upward: `velocity.y = -500` for jumping.
+</Accordion>
+
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Sprites and Textures" icon="image" href="/2d/sprites-and-textures">
+Learn how to display and animate sprites
+</Card>
+
+<Card title="Physics" icon="atom" href="/2d/physics">
+Add physics simulation to your 2D game
+</Card>
+
+<Card title="TileMaps" icon="grid" href="/2d/tilemaps">
+Create tile-based levels and environments
+</Card>
+
+<Card title="Canvas Layers" icon="layer-group" href="/2d/canvas-layers">
+Organize UI and parallax backgrounds
+</Card>
+
+</CardGroup>

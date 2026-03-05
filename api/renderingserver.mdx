@@ -1,0 +1,65 @@
+---
+title: "RenderingServer"
+---
+
+# RenderingServer
+
+**Inherits:** Object
+
+## Description
+
+Server for anything visible. The rendering server is the API backend for everything visible. The whole scene system mounts on it to display.
+
+## Methods
+
+### camera_create
+
+```gdscript
+RID camera_create()
+```
+
+Creates a 3D camera and adds it to the RenderingServer. Returns the RID.
+
+### viewport_create
+
+```gdscript
+RID viewport_create()
+```
+
+Creates a viewport and returns the assigned RID.
+
+### canvas_create
+
+```gdscript
+RID canvas_create()
+```
+
+Creates a canvas and returns the assigned RID.
+
+### mesh_create
+
+```gdscript
+RID mesh_create()
+```
+
+Creates a mesh and returns its RID.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+# Create a camera
+var camera_rid = RenderingServer.camera_create()
+
+# Create a viewport
+var viewport_rid = RenderingServer.viewport_create()
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+// Create a camera
+var cameraRid = RenderingServer.CameraCreate();
+```
+  </Tab>
+</Tabs>

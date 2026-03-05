@@ -1,0 +1,367 @@
+---
+title: Nodes and Scenes
+description: Understanding Godot's fundamental building blocks - nodes and scenes
+---
+
+Nodes are Godot's fundamental building blocks. Everything in your game is built from nodes organized into scene hierarchies. Understanding how nodes and scenes work is essential to mastering Godot.
+
+## What is a Node?
+
+A **Node** is the base class for all scene objects in Godot. Nodes can be assigned as children of other nodes, creating a tree structure. Each node can contain any number of child nodes, with the requirement that all siblings (direct children of a node) have unique names.
+
+<Info>
+Nodes inherit from the `Object` class, giving them access to signals, properties, and methods that form the foundation of Godot's object system.
+</Info>
+
+### Node Hierarchy
+
+Nodes are organized in a parent-child relationship:
+
+```gdscript
+# Creating a simple node hierarchy
+var parent = Node2D.new()
+var child = Sprite2D.new()
+var grandchild = Area2D.new()
+
+# Build the hierarchy
+child.add_child(grandchild)
+parent.add_child(child)
+
+# Access nodes in the hierarchy
+var my_child = parent.get_child(0)  # Returns child
+var child_count = parent.get_child_count()  # Returns 1
+```
+
+<Warning>
+Every child must have a unique name among its siblings. If you add a node with a duplicate name, Godot will automatically rename it by appending a number.
+</Warning>
+
+## What is a Scene?
+
+A **scene** is a tree of nodes saved together. Scenes can be saved to disk and then instantiated into other scenes, allowing for highly flexible and modular game architecture.
+
+### Creating Scenes Programmatically
+
+```gdscript
+# Create a player scene programmatically
+var player = CharacterBody2D.new()
+var sprite = Sprite2D.new()
+var collision = CollisionShape2D.new()
+
+# Build the scene hierarchy
+player.add_child(sprite)
+player.add_child(collision)
+
+# Set ownership for saving (important!)
+sprite.owner = player
+collision.owner = player
+
+# Pack and save the scene
+var scene = PackedScene.new()
+var result = scene.pack(player)
+if result == OK:
+    ResourceSaver.save(scene, "res://player.tscn")
+```
+
+<Note>
+The `owner` property determines which nodes get saved when packing a scene. Only nodes with their owner set will be included in the saved scene file.
+</Note>
+
+### Instancing Scenes
+
+One of the most powerful features of scenes is the ability to instance them multiple times:
+
+```gdscript
+func _ready():
+    # Load a scene
+    var enemy_scene = preload("res://enemy.tscn")
+    
+    # Create multiple instances
+    for i in range(5):
+        var enemy = enemy_scene.instantiate()
+        enemy.position = Vector2(i * 100, 0)
+        add_child(enemy)
+```
+
+## Node Lifecycle
+
+Nodes go through a specific lifecycle when added to or removed from the scene tree.
+
+<Steps>
+
+<Step title="Entering the Tree">
+When a node is added to the scene tree:
+
+1. The parent's `_enter_tree()` is called first
+2. Then children's `_enter_tree()` methods are called in order
+3. The node receives `NOTIFICATION_ENTER_TREE`
+
+```gdscript
+func _enter_tree():
+    print("Node entering the scene tree")
+    # The node is now part of the tree but not fully initialized
+```
+</Step>
+
+<Step title="Ready Notification">
+After all nodes have entered the tree:
+
+1. Children's `_ready()` methods are called first (bottom-up)
+2. Then the parent's `_ready()` is called
+3. The node receives `NOTIFICATION_READY`
+
+```gdscript
+func _ready():
+    print("Node is ready and fully initialized")
+    # All children are guaranteed to be ready
+    # This is the best place for initialization
+```
+</Step>
+
+<Step title="Exiting the Tree">
+When a node is removed:
+
+1. The parent's `_exit_tree()` is called last
+2. Children's `_exit_tree()` methods are called first
+3. The node receives `NOTIFICATION_EXIT_TREE`
+
+```gdscript
+func _exit_tree():
+    print("Node leaving the scene tree")
+    # Clean up resources here
+```
+</Step>
+
+</Steps>
+
+<Warning>
+The `_ready()` method is called only once for each node. If you remove a node and add it back to the tree, `_ready()` will not be called again unless you use `request_ready()`.
+</Warning>
+
+## Processing Callbacks
+
+Nodes can receive processing callbacks on each frame to update their state.
+
+### Process Callback
+
+The `_process()` callback runs on every frame and is ideal for game logic, animations, and visual updates:
+
+```gdscript
+func _process(delta):
+    # delta is the time elapsed since last frame (in seconds)
+    # Rotate the node smoothly
+    rotation += 1.0 * delta
+    
+    # Move based on input
+    var velocity = Vector2.ZERO
+    if Input.is_action_pressed("ui_right"):
+        velocity.x += 1
+    if Input.is_action_pressed("ui_left"):
+        velocity.x -= 1
+    
+    position += velocity * 200 * delta
+```
+
+<Tip>
+The `delta` parameter represents elapsed time in seconds. Multiply movement and animations by delta to make them framerate-independent.
+</Tip>
+
+### Physics Process Callback
+
+The `_physics_process()` callback runs at a fixed rate (60 Hz by default) and should be used for physics-related code:
+
+```gdscript
+func _physics_process(delta):
+    # Called at a fixed rate (default: 60 times per second)
+    # Perfect for physics calculations
+    
+    # Apply physics-based movement
+    var velocity = Vector2(100, 0)
+    position += velocity * delta
+    
+    # Check collisions
+    if is_on_floor():
+        apply_jump()
+```
+
+<Info>
+By default, `_physics_process()` is called 60 times per second, regardless of the visual framerate. This ensures consistent physics behavior.
+</Info>
+
+## Managing Nodes
+
+### Adding and Removing Children
+
+```gdscript
+# Add a child node
+var child = Node2D.new()
+add_child(child)
+
+# Add a child at a specific position in the sibling list
+var sibling = Node2D.new()
+child.add_sibling(sibling)
+
+# Remove a child
+remove_child(child)
+
+# Free a node (deletes it and all children)
+child.queue_free()  # Safe - waits until end of frame
+# child.free()      # Immediate - use with caution
+```
+
+<Warning>
+When you free a node with `free()` or `queue_free()`, all its children are automatically freed as well. Use `queue_free()` instead of `free()` to avoid errors when freeing nodes during processing.
+</Warning>
+
+### Finding Nodes
+
+```gdscript
+# Get a child by index
+var first_child = get_child(0)
+var last_child = get_child(-1)
+
+# Get a node by path
+var player = get_node("Player")
+var weapon = get_node("Player/Weapon")
+var root = get_node("/root")  # Absolute path
+
+# Using the $ shorthand (only works with literal strings)
+var sprite = $Sprite2D
+var health_bar = $UI/HealthBar
+
+# Find child by pattern
+var enemy = find_child("Enemy*", true, false)  # Recursive search
+
+# Find all children of a specific type
+var all_sprites = find_children("*", "Sprite2D", true, false)
+```
+
+### Node Paths
+
+Node paths are used to reference nodes in the scene tree:
+
+```gdscript
+# Relative paths
+get_node("Child")              # Direct child
+get_node("Child/GrandChild")   # Nested child
+get_node("../Sibling")         # Sibling node
+
+# Absolute paths
+get_node("/root/Main/Player")  # From root
+
+# NodePath type
+var path: NodePath = ^"Player/Sprite2D"
+var node = get_node(path)
+```
+
+## Parent-Child Relationships
+
+```gdscript
+# Access parent
+var parent = get_parent()
+
+# Check if node is ancestor
+if player.is_ancestor_of(weapon):
+    print("Player is an ancestor of weapon")
+
+# Get all children
+var children = get_children()
+for child in children:
+    print(child.name)
+
+# Get sibling index
+var index = get_index()
+print("This node is child number ", index)
+```
+
+## Practical Example: Building a Game Object
+
+Here's a complete example of creating a player character scene:
+
+```gdscript
+extends CharacterBody2D
+
+const SPEED = 200.0
+const JUMP_VELOCITY = -400.0
+
+# References to child nodes
+@onready var sprite = $Sprite2D
+@onready var animation = $AnimationPlayer
+@onready var collision = $CollisionShape2D
+
+func _ready():
+    # Initialize when all children are ready
+    print("Player ready with ", get_child_count(), " children")
+    
+func _physics_process(delta):
+    # Add gravity
+    if not is_on_floor():
+        velocity.y += get_gravity().y * delta
+    
+    # Handle jump
+    if Input.is_action_just_pressed("jump") and is_on_floor():
+        velocity.y = JUMP_VELOCITY
+    
+    # Handle movement
+    var direction = Input.get_axis("move_left", "move_right")
+    if direction:
+        velocity.x = direction * SPEED
+    else:
+        velocity.x = move_toward(velocity.x, 0, SPEED)
+    
+    move_and_slide()
+
+func _process(delta):
+    # Update sprite based on movement
+    if velocity.x != 0:
+        sprite.flip_h = velocity.x < 0
+```
+
+<Accordion title="Understanding @onready">
+The `@onready` annotation defers variable initialization until `_ready()` is called. This ensures that child nodes are available when you try to access them:
+
+```gdscript
+# This will fail - children aren't ready yet
+var sprite = $Sprite2D  
+
+# This works - children are ready when _ready() is called
+@onready var sprite = $Sprite2D
+```
+</Accordion>
+
+## Best Practices
+
+<Steps>
+
+<Step title="Use Scenes for Reusable Components">
+Create separate scene files for game objects you'll use multiple times (enemies, bullets, UI elements, etc.).
+</Step>
+
+<Step title="Keep Hierarchies Organized">
+Use descriptive names and organize nodes logically. Group related nodes under parent nodes.
+</Step>
+
+<Step title="Set Owner When Creating Nodes">
+When creating nodes programmatically that you want to save, always set the `owner` property.
+</Step>
+
+<Step title="Use queue_free() Over free()">
+Prefer `queue_free()` to safely delete nodes at the end of the current frame, avoiding potential errors.
+</Step>
+
+<Step title="Leverage @onready for Node References">
+Use `@onready` to safely reference child nodes without worrying about initialization order.
+</Step>
+
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Signals" icon="signal" href="/concepts/signals">
+    Learn how nodes communicate using Godot's signal system
+  </Card>
+  <Card title="Scene Tree" icon="tree" href="/concepts/scene-tree">
+    Understand how the SceneTree manages your game
+  </Card>
+</CardGroup>

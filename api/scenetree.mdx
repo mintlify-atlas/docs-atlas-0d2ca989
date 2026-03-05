@@ -1,0 +1,118 @@
+---
+title: "SceneTree"
+---
+
+# SceneTree
+
+**Inherits:** MainLoop < Object
+
+## Description
+
+Manages the game loop via a hierarchy of nodes. The SceneTree manages the hierarchy of nodes in a scene, as well as scenes themselves. It's in charge of the game loop.
+
+## Properties
+
+<ResponseField name="current_scene" type="Node">
+  The root node of the currently loaded main scene.
+</ResponseField>
+
+<ResponseField name="paused" type="bool" default="false">
+  If true, the scene tree is considered paused. Physics and processing stop.
+</ResponseField>
+
+<ResponseField name="root" type="Window">
+  The tree's root Window. This is the top-most Node of the scene tree.
+</ResponseField>
+
+## Methods
+
+### change_scene_to_file
+
+```gdscript
+Error change_scene_to_file(path: String)
+```
+
+Changes the running scene to the one at the given path.
+
+<ParamField path="path" type="String">
+  Path to the scene file to load
+</ParamField>
+
+### change_scene_to_packed
+
+```gdscript
+Error change_scene_to_packed(packed_scene: PackedScene)
+```
+
+Changes the running scene to a new instance of the given PackedScene.
+
+### create_timer
+
+```gdscript
+SceneTreeTimer create_timer(time_sec: float, process_always: bool = true)
+```
+
+Returns a new SceneTreeTimer. After time_sec seconds, the timer will emit timeout.
+
+### reload_current_scene
+
+```gdscript
+Error reload_current_scene()
+```
+
+Reloads the currently active scene.
+
+### quit
+
+```gdscript
+void quit(exit_code: int = 0)
+```
+
+Quits the application at the end of the current iteration.
+
+## Signals
+
+### tree_changed()
+
+Emitted any time the tree's hierarchy changes.
+
+### process_frame()
+
+Emitted immediately before Node._process is called on every node in this tree.
+
+### physics_frame()
+
+Emitted immediately before Node._physics_process is called on every node.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+# Access the scene tree
+var tree = get_tree()
+
+# Change scene
+tree.change_scene_to_file("res://scenes/main_menu.tscn")
+
+# Create a timer
+var timer = tree.create_timer(2.0)
+timer.timeout.connect(func(): print("Timer finished"))
+
+# Pause the game
+tree.paused = true
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+// Access the scene tree
+var tree = GetTree();
+
+// Change scene
+tree.ChangeSceneToFile("res://scenes/main_menu.tscn");
+
+// Pause the game
+tree.Paused = true;
+```
+  </Tab>
+</Tabs>

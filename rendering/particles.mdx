@@ -1,0 +1,531 @@
+---
+title: 'Particle systems'
+description: 'Create visual effects with CPU and GPU particle systems in 2D and 3D'
+keywords: ['particles', 'gpu particles', 'cpu particles', 'emitters', 'attractors', 'collisions']
+---
+
+## Overview
+
+Godot provides powerful particle systems for creating visual effects like fire, smoke, sparks, magic effects, and more. Particles can be processed on the CPU or GPU, each with different capabilities and performance characteristics.
+
+## Particle types
+
+### GPUParticles2D
+
+GPU-accelerated 2D particles:
+
+```gdscript
+var particles = GPUParticles2D.new()
+particles.amount = 100
+particles.lifetime = 2.0
+particles.one_shot = false
+particles.explosiveness = 0.0
+particles.randomness = 0.0
+particles.emitting = true
+
+# Set process material
+var material = ParticleProcessMaterial.new()
+particles.process_material = material
+
+add_child(particles)
+```
+
+### GPUParticles3D
+
+GPU-accelerated 3D particles:
+
+```gdscript
+var particles = GPUParticles3D.new()
+particles.amount = 500
+particles.lifetime = 3.0
+particles.one_shot = false
+particles.explosiveness = 0.0
+particles.emitting = true
+
+# Set process material
+var material = ParticleProcessMaterial.new()
+particles.process_material = material
+
+# Set draw passes
+var quad_mesh = QuadMesh.new()
+particles.draw_pass_1 = quad_mesh
+
+add_child(particles)
+```
+
+<Info>
+GPUParticles are processed on the GPU and can handle thousands of particles efficiently. They're only available with Forward+ and Mobile renderers.
+</Info>
+
+### CPUParticles2D
+
+CPU-processed 2D particles:
+
+```gdscript
+var particles = CPUParticles2D.new()
+particles.amount = 50
+particles.lifetime = 2.0
+particles.one_shot = false
+particles.emitting = true
+
+# Configure emission
+particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+particles.emission_sphere_radius = 10.0
+
+# Particle properties
+particles.direction = Vector2(0, -1)
+particles.spread = 45.0
+particles.initial_velocity_min = 50.0
+particles.initial_velocity_max = 100.0
+
+add_child(particles)
+```
+
+### CPUParticles3D
+
+CPU-processed 3D particles:
+
+```gdscript
+var particles = CPUParticles3D.new()
+particles.amount = 100
+particles.lifetime = 3.0
+particles.emitting = true
+
+# Configure emission
+particles.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+particles.emission_box_extents = Vector3(2, 2, 2)
+
+# Particle properties
+particles.direction = Vector3(0, 1, 0)
+particles.spread = 45.0
+particles.gravity = Vector3(0, -9.8, 0)
+
+add_child(particles)
+```
+
+<Tip>
+Use CPUParticles for compatibility with all rendering backends, including the Compatibility renderer and web exports.
+</Tip>
+
+## ParticleProcessMaterial
+
+Configure particle behavior for GPU particles:
+
+### Emission settings
+
+```gdscript
+var material = ParticleProcessMaterial.new()
+
+# Emission shape
+material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+material.emission_sphere_radius = 5.0
+
+# Direction and spread
+material.direction = Vector3(0, 1, 0)
+material.spread = 45.0
+material.flatness = 0.0
+
+# Initial velocity
+material.initial_velocity_min = 10.0
+material.initial_velocity_max = 20.0
+```
+
+### Emission shapes
+
+<AccordionGroup>
+  <Accordion title="Point">
+    All particles emit from a single point.
+  </Accordion>
+  
+  <Accordion title="Sphere">
+    Particles emit from within or on the surface of a sphere.
+  </Accordion>
+  
+  <Accordion title="Sphere surface">
+    Particles emit only from the sphere's surface.
+  </Accordion>
+  
+  <Accordion title="Box">
+    Particles emit from within a box volume.
+  </Accordion>
+  
+  <Accordion title="Points">
+    Particles emit from an array of specified points.
+  </Accordion>
+  
+  <Accordion title="Directed points">
+    Emit from points with specific directions.
+  </Accordion>
+  
+  <Accordion title="Ring">
+    Emit from a ring shape (3D only).
+  </Accordion>
+</AccordionGroup>
+
+### Gravity and forces
+
+```gdscript
+# Gravity
+material.gravity = Vector3(0, -9.8, 0)
+
+# Radial acceleration
+material.radial_accel_min = 0.0
+material.radial_accel_max = 0.0
+
+# Tangential acceleration
+material.tangential_accel_min = 0.0
+material.tangential_accel_max = 0.0
+
+# Damping
+material.damping_min = 0.0
+material.damping_max = 0.0
+```
+
+### Color and scale over lifetime
+
+```gdscript
+# Color gradient
+var gradient = Gradient.new()
+gradient.add_point(0.0, Color.WHITE)
+gradient.add_point(0.5, Color.YELLOW)
+gradient.add_point(1.0, Color.RED)
+
+var gradient_texture = GradientTexture1D.new()
+gradient_texture.gradient = gradient
+
+material.color_ramp = gradient_texture
+
+# Scale curve
+var curve = Curve.new()
+curve.add_point(Vector2(0.0, 1.0))
+curve.add_point(Vector2(0.5, 1.5))
+curve.add_point(Vector2(1.0, 0.0))
+
+var curve_texture = CurveTexture.new()
+curve_texture.curve = curve
+
+material.scale_curve = curve_texture
+```
+
+### Rotation and angular velocity
+
+```gdscript
+# Initial angle
+material.angle_min = 0.0
+material.angle_max = 360.0
+
+# Angular velocity
+material.angular_velocity_min = 0.0
+material.angular_velocity_max = 180.0
+
+# Orbital velocity (3D)
+material.orbit_velocity_min = 0.0
+material.orbit_velocity_max = 0.0
+```
+
+### Animation
+
+```gdscript
+# For sprite sheet animations
+material.anim_speed_min = 1.0
+material.anim_speed_max = 1.0
+material.anim_offset_min = 0.0
+material.anim_offset_max = 1.0
+```
+
+## Particle attractors (3D)
+
+Create forces that attract or repel particles:
+
+### GPUParticlesAttractorSphere3D
+
+```gdscript
+var attractor = GPUParticlesAttractorSphere3D.new()
+attractor.radius = 5.0
+attractor.strength = 10.0
+attractor.attenuation = 1.0
+attractor.directionality = 0.0  # 0 = radial, 1 = directional
+add_child(attractor)
+```
+
+### GPUParticlesAttractorBox3D
+
+```gdscript
+var attractor = GPUParticlesAttractorBox3D.new()
+attractor.size = Vector3(10, 10, 10)
+attractor.strength = 5.0
+attractor.attenuation = 2.0
+add_child(attractor)
+```
+
+### GPUParticlesAttractorVectorField3D
+
+```gdscript
+var attractor = GPUParticlesAttractorVectorField3D.new()
+attractor.size = Vector3(10, 10, 10)
+attractor.texture = preload("res://vector_field.bmp")  # 3D texture
+attractor.strength = 1.0
+add_child(attractor)
+```
+
+## Particle collisions (3D)
+
+Make particles collide with objects:
+
+### GPUParticlesCollisionSphere3D
+
+```gdscript
+var collision = GPUParticlesCollisionSphere3D.new()
+collision.radius = 5.0
+add_child(collision)
+
+# Enable collision in particle material
+material.collision_mode = ParticleProcessMaterial.COLLISION_RIGID
+material.collision_friction = 0.5
+material.collision_bounce = 0.5
+```
+
+### GPUParticlesCollisionBox3D
+
+```gdscript
+var collision = GPUParticlesCollisionBox3D.new()
+collision.size = Vector3(10, 1, 10)
+add_child(collision)
+```
+
+### GPUParticlesCollisionHeightField3D
+
+```gdscript
+var collision = GPUParticlesCollisionHeightField3D.new()
+collision.size = Vector3(100, 10, 100)
+collision.resolution = GPUParticlesCollisionHeightField3D.RESOLUTION_1024
+collision.update_mode = GPUParticlesCollisionHeightField3D.UPDATE_MODE_WHEN_MOVED
+add_child(collision)
+```
+
+### GPUParticlesCollisionSDF3D
+
+```gdscript
+var collision = GPUParticlesCollisionSDF3D.new()
+collision.size = Vector3(20, 20, 20)
+collision.resolution = GPUParticlesCollisionSDF3D.RESOLUTION_256
+collision.texture = signed_distance_field_texture
+collision.thickness = 1.0
+add_child(collision)
+```
+
+<Warning>
+Particle collisions are GPU-intensive. Use them sparingly and with appropriate resolution settings.
+</Warning>
+
+## Common particle effects
+
+### Fire effect
+
+```gdscript
+var fire = GPUParticles3D.new()
+fire.amount = 200
+fire.lifetime = 1.5
+fire.emitting = true
+
+var material = ParticleProcessMaterial.new()
+material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+material.emission_sphere_radius = 0.5
+material.direction = Vector3(0, 1, 0)
+material.spread = 25.0
+material.initial_velocity_min = 2.0
+material.initial_velocity_max = 4.0
+material.gravity = Vector3(0, 0, 0)
+material.scale_min = 0.5
+material.scale_max = 1.0
+
+# Fire colors
+var gradient = Gradient.new()
+gradient.add_point(0.0, Color(1.0, 1.0, 0.8, 1.0))  # White-yellow
+gradient.add_point(0.3, Color(1.0, 0.8, 0.0, 1.0))  # Orange
+gradient.add_point(0.7, Color(1.0, 0.2, 0.0, 0.5))  # Red
+gradient.add_point(1.0, Color(0.1, 0.0, 0.0, 0.0))  # Dark transparent
+
+var gradient_texture = GradientTexture1D.new()
+gradient_texture.gradient = gradient
+material.color_ramp = gradient_texture
+
+fire.process_material = material
+fire.draw_pass_1 = QuadMesh.new()
+```
+
+### Smoke effect
+
+```gdscript
+var smoke = CPUParticles3D.new()
+smoke.amount = 50
+smoke.lifetime = 3.0
+smoke.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+smoke.emission_sphere_radius = 0.3
+smoke.direction = Vector3(0, 1, 0)
+smoke.spread = 15.0
+smoke.initial_velocity_min = 1.0
+smoke.initial_velocity_max = 2.0
+smoke.gravity = Vector3(0, 0.5, 0)  # Slight upward drift
+smoke.scale_amount_min = 1.0
+smoke.scale_amount_max = 2.0
+smoke.scale_amount_curve = create_growth_curve()
+smoke.color_ramp = create_smoke_gradient()
+```
+
+### Rain effect
+
+```gdscript
+var rain = GPUParticles3D.new()
+rain.amount = 1000
+rain.lifetime = 5.0
+rain.emitting = true
+
+var material = ParticleProcessMaterial.new()
+material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+material.emission_box_extents = Vector3(20, 0, 20)
+material.direction = Vector3(0, -1, 0)
+material.spread = 0.0
+material.initial_velocity_min = 10.0
+material.initial_velocity_max = 15.0
+material.gravity = Vector3(0, -20, 0)
+
+rain.process_material = material
+```
+
+### Explosion effect
+
+```gdscript
+var explosion = GPUParticles3D.new()
+explosion.amount = 500
+explosion.lifetime = 2.0
+explosion.one_shot = true
+explosion.explosiveness = 1.0  # All particles spawn at once
+explosion.emitting = true
+
+var material = ParticleProcessMaterial.new()
+material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+material.emission_sphere_radius = 0.1
+material.direction = Vector3(0, 0, 0)
+material.spread = 180.0
+material.initial_velocity_min = 5.0
+material.initial_velocity_max = 15.0
+material.gravity = Vector3(0, -9.8, 0)
+material.damping_min = 2.0
+material.damping_max = 4.0
+
+explosion.process_material = material
+```
+
+### Magic sparkles
+
+```gdscript
+var sparkles = GPUParticles2D.new()
+sparkles.amount = 100
+sparkles.lifetime = 1.0
+sparkles.emitting = true
+
+var material = ParticleProcessMaterial.new()
+material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+material.emission_sphere_radius = 20.0
+material.direction = Vector3(0, -1, 0)
+material.spread = 180.0
+material.initial_velocity_min = 20.0
+material.initial_velocity_max = 50.0
+material.gravity = Vector3(0, 30, 0)  # Float upward
+material.angular_velocity_min = -360.0
+material.angular_velocity_max = 360.0
+
+# Twinkling effect
+var scale_curve = Curve.new()
+scale_curve.add_point(Vector2(0.0, 0.0))
+scale_curve.add_point(Vector2(0.5, 1.0))
+scale_curve.add_point(Vector2(1.0, 0.0))
+material.scale_curve = create_curve_texture(scale_curve)
+
+sparkles.process_material = material
+```
+
+## Custom particle shaders
+
+Create advanced particle behavior with custom shaders:
+
+```glsl
+shader_type particles;
+
+uniform float orbit_speed = 1.0;
+
+void process() {
+    // Orbital motion
+    float angle = TIME * orbit_speed + float(INDEX) * 0.1;
+    float radius = 5.0;
+    
+    TRANSFORM[3].x = cos(angle) * radius;
+    TRANSFORM[3].z = sin(angle) * radius;
+    TRANSFORM[3].y = sin(TIME + float(INDEX)) * 2.0;
+    
+    // Custom color
+    COLOR = vec4(1.0, float(INDEX) / float(NUMBER), 0.5, 1.0);
+}
+```
+
+## Particle sub-emitters
+
+Create particles that spawn other particles:
+
+```gdscript
+# Main particle system
+var main_particles = GPUParticles3D.new()
+
+# Sub-emitter
+var sub_emitter = GPUParticles3D.new()
+sub_emitter.amount = 10
+sub_emitter.lifetime = 0.5
+
+# Configure sub-emitter trigger
+main_particles.sub_emitter = sub_emitter.get_path()
+main_particles.sub_emitter_mode = GPUParticles3D.SUB_EMITTER_AT_END
+# Options: AT_END, AT_COLLISION, CONSTANT
+```
+
+## Performance optimization
+
+<CardGroup cols={2}>
+  <Card title="Use appropriate particle count" icon="hashtag">
+    Start with fewer particles and increase until you achieve the desired effect.
+  </Card>
+  
+  <Card title="Choose CPU vs GPU wisely" icon="microchip">
+    Use GPU particles for large amounts, CPU particles for fewer particles or compatibility.
+  </Card>
+  
+  <Card title="Optimize draw calls" icon="layer-group">
+    Batch similar particle systems and reuse materials.
+  </Card>
+  
+  <Card title="Use visibility ranges" icon="eye">
+    Disable distant particle systems using visibility ranges.
+  </Card>
+</CardGroup>
+
+## Converting between CPU and GPU
+
+```gdscript
+# Convert GPU to CPU
+var cpu_particles = CPUParticles3D.new()
+cpu_particles.convert_from_particles(gpu_particles)
+
+# Note: Conversion from CPU to GPU is not supported
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Shaders" icon="code" href="/rendering/shaders">
+    Create custom particle shaders
+  </Card>
+  
+  <Card title="Environment" icon="sun" href="/rendering/environment">
+    Configure world environment
+  </Card>
+</CardGroup>

@@ -1,0 +1,343 @@
+---
+title: 'Input Handling'
+description: 'Handle mouse, touch, and keyboard input in Godot UI elements'
+---
+
+## Overview
+
+Godot's Control nodes provide a comprehensive system for handling user input. Input events are automatically propagated through the scene tree, allowing UI elements to respond to mouse clicks, touch events, keyboard input, and more.
+
+<Info>
+Input events are filtered by z-order, focus state, and the `mouse_filter` property before reaching a control.
+</Info>
+
+## GUI Input Events
+
+### The `_gui_input()` Method
+
+Override `_gui_input()` to handle input events on UI elements:
+
+```gdscript
+extends Control
+
+func _gui_input(event: InputEvent):
+    if event is InputEventMouseButton:
+        if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+            print("Left mouse button clicked!")
+            accept_event()  # Prevent event from propagating
+```
+
+```csharp
+public override void _GuiInput(InputEvent @event)
+{
+    if (@event is InputEventMouseButton mb)
+    {
+        if (mb.ButtonIndex == MouseButton.Left && mb.Pressed)
+        {
+            GD.Print("Left mouse button clicked!");
+            AcceptEvent();  // Prevent event from propagating
+        }
+    }
+}
+```
+
+<Tip>
+Call `accept_event()` to mark an input as handled and prevent it from propagating to nodes below.
+</Tip>
+
+### Input Event Types
+
+| Event Type | Description |
+|------------|-------------|
+| `InputEventMouseButton` | Mouse button press/release |
+| `InputEventMouseMotion` | Mouse movement |
+| `InputEventKey` | Keyboard key press/release |
+| `InputEventScreenTouch` | Touch screen contact |
+| `InputEventScreenDrag` | Touch screen drag |
+
+## Mouse Filtering
+
+Control how a control responds to mouse events using `mouse_filter`:
+
+```gdscript
+var panel = Panel.new()
+# Allow mouse events to pass through
+panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+```
+
+```csharp
+var panel = new Panel();
+// Allow mouse events to pass through
+panel.MouseFilter = Control.MouseFilterEnum.Ignore;
+```
+
+### Mouse Filter Modes
+
+| Mode | Description |
+|------|-------------|
+| `MOUSE_FILTER_STOP` | Block mouse events (default for most controls) |
+| `MOUSE_FILTER_PASS` | Receive events but allow propagation (default for containers) |
+| `MOUSE_FILTER_IGNORE` | Ignore all mouse events |
+
+<Warning>
+If you place an icon on top of a button, set the icon's `mouse_filter` to `MOUSE_FILTER_IGNORE` so clicks reach the button.
+</Warning>
+
+## Focus System
+
+Only one Control can have focus at a time. The focused control receives keyboard input:
+
+```gdscript
+var line_edit = LineEdit.new()
+add_child(line_edit)
+
+# Grab focus programmatically
+line_edit.grab_focus()
+
+# Check if control has focus
+if line_edit.has_focus():
+    print("LineEdit is focused")
+```
+
+```csharp
+var lineEdit = new LineEdit();
+AddChild(lineEdit);
+
+// Grab focus programmatically
+lineEdit.GrabFocus();
+
+// Check if control has focus
+if (lineEdit.HasFocus())
+{
+    GD.Print("LineEdit is focused");
+}
+```
+
+### Focus Navigation
+
+Configure focus navigation between controls:
+
+```gdscript
+var button1 = Button.new()
+var button2 = Button.new()
+var button3 = Button.new()
+
+# Set up focus chain
+button1.focus_neighbor_right = button1.get_path_to(button2)
+button2.focus_neighbor_left = button2.get_path_to(button1)
+button2.focus_neighbor_right = button2.get_path_to(button3)
+button3.focus_neighbor_left = button3.get_path_to(button2)
+```
+
+### Focus Modes
+
+| Mode | Description |
+|------|-------------|
+| `FOCUS_NONE` | Cannot receive keyboard focus |
+| `FOCUS_CLICK` | Can be focused by clicking |
+| `FOCUS_ALL` | Can be focused by clicking or keyboard navigation |
+
+```gdscript
+var button = Button.new()
+button.focus_mode = Control.FOCUS_ALL  # Enable full focus support
+```
+
+## Handling Different Input Types
+
+### Mouse Input
+
+```gdscript
+func _gui_input(event: InputEvent):
+    if event is InputEventMouseButton:
+        var mb = event as InputEventMouseButton
+        if mb.button_index == MOUSE_BUTTON_LEFT:
+            if mb.pressed:
+                print("Mouse pressed at: ", mb.position)
+            else:
+                print("Mouse released at: ", mb.position)
+    
+    elif event is InputEventMouseMotion:
+        var mm = event as InputEventMouseMotion
+        print("Mouse moved to: ", mm.position)
+        print("Mouse relative motion: ", mm.relative)
+```
+
+### Keyboard Input
+
+```gdscript
+func _gui_input(event: InputEvent):
+    if event is InputEventKey:
+        var key = event as InputEventKey
+        if key.pressed and key.keycode == KEY_ENTER:
+            print("Enter key pressed!")
+            accept_event()
+```
+
+```csharp
+public override void _GuiInput(InputEvent @event)
+{
+    if (@event is InputEventKey key)
+    {
+        if (key.Pressed && key.Keycode == Key.Enter)
+        {
+            GD.Print("Enter key pressed!");
+            AcceptEvent();
+        }
+    }
+}
+```
+
+### Touch Input
+
+```gdscript
+func _gui_input(event: InputEvent):
+    if event is InputEventScreenTouch:
+        var touch = event as InputEventScreenTouch
+        if touch.pressed:
+            print("Touch started at: ", touch.position)
+        else:
+            print("Touch ended")
+    
+    elif event is InputEventScreenDrag:
+        var drag = event as InputEventScreenDrag
+        print("Dragging with velocity: ", drag.velocity)
+```
+
+## Drag and Drop
+
+### Basic Drag and Drop
+
+Implement drag and drop functionality using virtual methods:
+
+```gdscript
+extends Control
+
+# Start dragging
+func _get_drag_data(position: Vector2):
+    var data = {"type": "custom_item", "value": 42}
+    
+    # Set drag preview
+    var preview = ColorRect.new()
+    preview.color = Color.BLUE
+    preview.size = Vector2(50, 50)
+    set_drag_preview(preview)
+    
+    return data
+
+# Check if we can accept the drop
+func _can_drop_data(position: Vector2, data) -> bool:
+    return typeof(data) == TYPE_DICTIONARY and data.has("type")
+
+# Handle the dropped data
+func _drop_data(position: Vector2, data):
+    print("Dropped data: ", data)
+```
+
+```csharp
+public override Variant _GetDragData(Vector2 atPosition)
+{
+    var data = new Godot.Collections.Dictionary
+    {
+        { "type", "custom_item" },
+        { "value", 42 }
+    };
+    
+    // Set drag preview
+    var preview = new ColorRect();
+    preview.Color = Colors.Blue;
+    preview.Size = new Vector2(50, 50);
+    SetDragPreview(preview);
+    
+    return data;
+}
+
+public override bool _CanDropData(Vector2 atPosition, Variant data)
+{
+    return data.VariantType == Variant.Type.Dictionary && 
+           data.AsGodotDictionary().ContainsKey("type");
+}
+
+public override void _DropData(Vector2 atPosition, Variant data)
+{
+    GD.Print("Dropped data: ", data);
+}
+```
+
+<Tip>
+Use `set_drag_preview()` in `_get_drag_data()` to create a visual representation that follows the cursor during drag.
+</Tip>
+
+## Cursor Shapes
+
+Change the mouse cursor appearance when hovering over controls:
+
+```gdscript
+var button = Button.new()
+button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+```
+
+```csharp
+var button = new Button();
+button.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
+```
+
+### Available Cursor Shapes
+
+- `CURSOR_ARROW` - Standard arrow
+- `CURSOR_IBEAM` - Text edit cursor
+- `CURSOR_POINTING_HAND` - Pointing hand (for clickable items)
+- `CURSOR_CROSS` - Crosshair
+- `CURSOR_WAIT` - Busy/waiting cursor
+- `CURSOR_BUSY` - Busy cursor (animated)
+- And more...
+
+## Tooltips
+
+Display tooltips on hover:
+
+```gdscript
+var button = Button.new()
+button.tooltip_text = "Click me to perform an action"
+```
+
+Custom tooltips with `_make_custom_tooltip()`:
+
+```gdscript
+func _make_custom_tooltip(for_text: String) -> Object:
+    var tooltip = PanelContainer.new()
+    var label = Label.new()
+    label.text = for_text
+    tooltip.add_child(label)
+    return tooltip
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always call accept_event()">
+    When you handle an input event completely, call `accept_event()` to prevent it from propagating to other nodes or being processed as unhandled input.
+  </Accordion>
+
+  <Accordion title="Use signals over _gui_input() when possible">
+    Many controls provide high-level signals (like `pressed` for Button) that are cleaner than handling raw input events.
+  </Accordion>
+
+  <Accordion title="Test with multiple input devices">
+    Test your UI with mouse, keyboard, touch, and gamepad to ensure accessibility.
+  </Accordion>
+
+  <Accordion title="Handle focus properly">
+    Ensure keyboard navigation works correctly by setting up proper focus modes and neighbors.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Control Nodes" icon="square" href="/ui/control-nodes">
+    Learn about the UI elements that receive input
+  </Card>
+  <Card title="Themes" icon="palette" href="/ui/themes">
+    Customize the visual feedback for input states
+  </Card>
+</CardGroup>

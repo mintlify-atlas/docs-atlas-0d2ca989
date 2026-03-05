@@ -1,0 +1,80 @@
+---
+title: "AudioEffect"
+---
+
+# AudioEffect
+
+**Inherits:** Resource < RefCounted < Object
+
+## Description
+
+Base class for audio effect resources. The base Resource for every audio effect. In the editor, an audio effect can be added to the current bus layout through the Audio panel.
+
+## Methods
+
+### _instantiate (virtual)
+
+```gdscript
+AudioEffectInstance _instantiate()
+```
+
+Override this method to customize the AudioEffectInstance created when this effect is applied on a bus.
+
+## Common Audio Effects
+
+### AudioEffectReverb
+
+Adds reverb to audio.
+
+### AudioEffectDelay
+
+Adds delay/echo effect.
+
+### AudioEffectDistortion
+
+Adds distortion to audio.
+
+### AudioEffectFilter
+
+Filters audio frequencies.
+
+### AudioEffectCompressor
+
+Compresses audio dynamic range.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+# Create a custom audio effect
+class_name MyAudioEffect
+extends AudioEffect
+
+@export var strength = 4.0
+
+func _instantiate():
+    var effect = MyAudioEffectInstance.new()
+    effect.base = self
+    return effect
+
+# Use built-in effects
+var reverb = AudioEffectReverb.new()
+reverb.room_size = 0.8
+reverb.damping = 0.5
+
+var bus_idx = AudioServer.get_bus_index("Master")
+AudioServer.add_bus_effect(bus_idx, reverb)
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+// Use built-in effects
+var reverb = new AudioEffectReverb();
+reverb.RoomSize = 0.8f;
+
+int busIdx = AudioServer.GetBusIndex("Master");
+AudioServer.AddBusEffect(busIdx, reverb);
+```
+  </Tab>
+</Tabs>

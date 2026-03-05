@@ -1,0 +1,349 @@
+---
+title: 'Interactive Music'
+description: 'Create dynamic, adaptive music systems with AudioStreamInteractive'
+---
+
+## Overview
+
+Godot's Interactive Music system allows you to create dynamic, adaptive music that responds to gameplay. The `AudioStreamInteractive` module provides tools for seamless transitions, layering, and synchronized playback of multiple music tracks.
+
+<Info>
+Interactive music is part of the `modules/interactive_music/` module and provides advanced features for game music implementation.
+</Info>
+
+## AudioStreamInteractive
+
+The `AudioStreamInteractive` class enables complex music systems with multiple clips that can transition between each other based on game state.
+
+### Basic Setup
+
+```gdscript
+var interactive_music = AudioStreamInteractive.new()
+
+# Add music clips
+var intro_clip = load("res://music/intro.ogg")
+var loop_clip = load("res://music/loop.ogg")
+var combat_clip = load("res://music/combat.ogg")
+
+interactive_music.add_clip(0, intro_clip, "intro")
+interactive_music.add_clip(1, loop_clip, "loop")
+interactive_music.add_clip(2, combat_clip, "combat")
+
+# Set up transitions
+interactive_music.add_transition("intro", "loop", 
+    AudioStreamInteractive.TRANSITION_FROM_END)
+interactive_music.add_transition("loop", "combat", 
+    AudioStreamInteractive.TRANSITION_FROM_BAR)
+interactive_music.add_transition("combat", "loop", 
+    AudioStreamInteractive.TRANSITION_FROM_BAR)
+
+var player = AudioStreamPlayer.new()
+player.stream = interactive_music
+add_child(player)
+player.play()
+```
+
+```csharp
+var interactiveMusic = new AudioStreamInteractive();
+
+// Add music clips
+var introClip = ResourceLoader.Load<AudioStream>("res://music/intro.ogg");
+var loopClip = ResourceLoader.Load<AudioStream>("res://music/loop.ogg");
+var combatClip = ResourceLoader.Load<AudioStream>("res://music/combat.ogg");
+
+interactiveMusic.AddClip(0, introClip, "intro");
+interactiveMusic.AddClip(1, loopClip, "loop");
+interactiveMusic.AddClip(2, combatClip, "combat");
+
+// Set up transitions
+interactiveMusic.AddTransition("intro", "loop", 
+    AudioStreamInteractive.TransitionMode.FromEnd);
+interactiveMusic.AddTransition("loop", "combat", 
+    AudioStreamInteractive.TransitionMode.FromBar);
+interactiveMusic.AddTransition("combat", "loop", 
+    AudioStreamInteractive.TransitionMode.FromBar);
+
+var player = new AudioStreamPlayer();
+player.Stream = interactiveMusic;
+AddChild(player);
+player.Play();
+```
+
+## Transition Modes
+
+Control how and when music transitions occur:
+
+### Immediate Transitions
+
+```gdscript
+# Transition immediately (may cause audio pop)
+interactive_music.add_transition("explore", "combat", 
+    AudioStreamInteractive.TRANSITION_IMMEDIATE)
+```
+
+### Beat-Synchronized Transitions
+
+```gdscript
+# Transition on the next beat
+interactive_music.add_transition("explore", "combat", 
+    AudioStreamInteractive.TRANSITION_FROM_BEAT)
+```
+
+### Bar-Synchronized Transitions
+
+```gdscript
+# Transition on the next bar (most common)
+interactive_music.add_transition("explore", "combat", 
+    AudioStreamInteractive.TRANSITION_FROM_BAR)
+```
+
+### End-of-Clip Transitions
+
+```gdscript
+# Transition when current clip finishes
+interactive_music.add_transition("intro", "main_theme", 
+    AudioStreamInteractive.TRANSITION_FROM_END)
+```
+
+<Tip>
+Bar-synchronized transitions are ideal for maintaining musical timing and avoiding jarring changes.
+</Tip>
+
+## Music Layering
+
+Create layered music that adds or removes instruments based on intensity:
+
+```gdscript
+var layered_music = AudioStreamInteractive.new()
+
+# Base layer (always playing)
+var base = load("res://music/base.ogg")
+layered_music.add_clip(0, base, "base")
+
+# Percussion layer
+var drums = load("res://music/drums.ogg")
+layered_music.add_clip(1, drums, "drums")
+
+# Melody layer
+var melody = load("res://music/melody.ogg")
+layered_music.add_clip(2, melody, "melody")
+
+# Set initial state
+layered_music.set_clip_enabled("base", true)
+layered_music.set_clip_enabled("drums", false)
+layered_music.set_clip_enabled("melody", false)
+
+var player = AudioStreamPlayer.new()
+player.stream = layered_music
+add_child(player)
+player.play()
+
+# Enable layers based on game state
+func increase_music_intensity():
+    layered_music.set_clip_enabled("drums", true)
+    await get_tree().create_timer(8.0).timeout  # Wait for musical phrase
+    layered_music.set_clip_enabled("melody", true)
+```
+
+## Triggering Transitions
+
+Change music based on gameplay events:
+
+```gdscript
+extends Node
+
+var music_player: AudioStreamPlayer
+var interactive_music: AudioStreamInteractive
+var current_state = "explore"
+
+func _ready():
+    setup_music()
+    music_player.play()
+
+func setup_music():
+    interactive_music = AudioStreamInteractive.new()
+    
+    # Add clips
+    interactive_music.add_clip(0, load("res://music/explore.ogg"), "explore")
+    interactive_music.add_clip(1, load("res://music/combat.ogg"), "combat")
+    interactive_music.add_clip(2, load("res://music/victory.ogg"), "victory")
+    
+    # Set up transitions
+    interactive_music.add_transition("explore", "combat", 
+        AudioStreamInteractive.TRANSITION_FROM_BAR)
+    interactive_music.add_transition("combat", "explore", 
+        AudioStreamInteractive.TRANSITION_FROM_BAR)
+    interactive_music.add_transition("combat", "victory", 
+        AudioStreamInteractive.TRANSITION_FROM_END)
+    
+    music_player = AudioStreamPlayer.new()
+    music_player.stream = interactive_music
+    music_player.bus = "Music"
+    add_child(music_player)
+
+func enter_combat():
+    if current_state != "combat":
+        interactive_music.transition_to("combat")
+        current_state = "combat"
+
+func exit_combat():
+    if current_state == "combat":
+        interactive_music.transition_to("explore")
+        current_state = "explore"
+
+func player_won():
+    interactive_music.transition_to("victory")
+    current_state = "victory"
+```
+
+## AudioStreamPlaylist
+
+For simpler sequential playback:
+
+```gdscript
+var playlist = AudioStreamPlaylist.new()
+
+# Add tracks
+playlist.add_stream(load("res://music/track1.ogg"))
+playlist.add_stream(load("res://music/track2.ogg"))
+playlist.add_stream(load("res://music/track3.ogg"))
+
+# Configure playback
+playlist.shuffle = true
+playlist.loop = true
+playlist.fade_time = 2.0  # 2 second crossfade
+
+var player = AudioStreamPlayer.new()
+player.stream = playlist
+add_child(player)
+player.play()
+```
+
+## AudioStreamSynchronized
+
+Synchronize multiple audio streams to play together:
+
+```gdscript
+var synchronized = AudioStreamSynchronized.new()
+
+# Add synchronized streams
+synchronized.add_stream(load("res://music/percussion.ogg"))
+synchronized.add_stream(load("res://music/bass.ogg"))
+synchronized.add_stream(load("res://music/melody.ogg"))
+
+# Set volume for each stream
+synchronized.set_stream_volume(0, 0.0)   # Percussion at 0 dB
+synchronized.set_stream_volume(1, -3.0)  # Bass at -3 dB
+synchronized.set_stream_volume(2, -6.0)  # Melody at -6 dB
+
+var player = AudioStreamPlayer.new()
+player.stream = synchronized
+add_child(player)
+player.play()
+```
+
+## BPM and Bar Synchronization
+
+Set timing information for proper synchronization:
+
+```gdscript
+var interactive_music = AudioStreamInteractive.new()
+
+# Set musical timing
+interactive_music.set_bpm(120.0)      # 120 beats per minute
+interactive_music.set_bar_beats(4)    # 4 beats per bar
+
+# Clips will automatically sync to this timing
+var clip1 = load("res://music/loop1.ogg")
+var clip2 = load("res://music/loop2.ogg")
+
+interactive_music.add_clip(0, clip1, "loop1")
+interactive_music.add_clip(1, clip2, "loop2")
+```
+
+<Info>
+Ensure your audio files are properly trimmed to exact bar/beat lengths for seamless looping and transitions.
+</Info>
+
+## Advanced Techniques
+
+### Vertical Remixing
+
+Dynamically enable/disable layers based on game intensity:
+
+```gdscript
+var intensity = 0  # 0-3 intensity levels
+
+func update_music_intensity(new_intensity: int):
+    intensity = clamp(new_intensity, 0, 3)
+    
+    interactive_music.set_clip_enabled("base", intensity >= 0)
+    interactive_music.set_clip_enabled("drums", intensity >= 1)
+    interactive_music.set_clip_enabled("melody", intensity >= 2)
+    interactive_music.set_clip_enabled("choir", intensity >= 3)
+
+# Increase intensity as enemies approach
+func _on_enemy_nearby():
+    update_music_intensity(intensity + 1)
+
+# Decrease when safe
+func _on_area_clear():
+    update_music_intensity(intensity - 1)
+```
+
+### Horizontal Re-sequencing
+
+Change sections based on player progress:
+
+```gdscript
+func update_music_for_level_section(section: String):
+    match section:
+        "start":
+            interactive_music.transition_to("calm_exploration")
+        "mid_level":
+            interactive_music.transition_to("moderate_tension")
+        "boss_approach":
+            interactive_music.transition_to("high_tension")
+        "boss_fight":
+            interactive_music.transition_to("intense_combat")
+        "victory":
+            interactive_music.transition_to("triumph")
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Prepare music in your DAW">
+    Export stems/layers at the same BPM with exact bar lengths for perfect synchronization.
+  </Accordion>
+
+  <Accordion title="Use appropriate transition modes">
+    Choose `TRANSITION_FROM_BAR` for musical transitions, `TRANSITION_FROM_END` for intros, and `TRANSITION_IMMEDIATE` only when necessary.
+  </Accordion>
+
+  <Accordion title="Test transitions extensively">
+    Play through all possible transition combinations to ensure they sound good.
+  </Accordion>
+
+  <Accordion title="Consider memory usage">
+    Interactive music loads multiple clips. Use compressed formats (OGG) for longer tracks.
+  </Accordion>
+
+  <Accordion title="Provide smooth fallbacks">
+    Always have a graceful musical state to return to if unexpected events occur.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Audio Overview" icon="volume" href="/audio/overview">
+    Learn about AudioServer and basic playback
+  </Card>
+  <Card title="Audio Streams" icon="wave-square" href="/audio/audio-streams">
+    Understand audio formats and stream types
+  </Card>
+  <Card title="Audio Effects" icon="sliders" href="/audio/audio-effects">
+    Apply effects to enhance your music
+  </Card>
+</CardGroup>

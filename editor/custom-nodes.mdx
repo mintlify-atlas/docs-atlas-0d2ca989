@@ -1,0 +1,479 @@
+---
+title: Custom Nodes
+description: Create custom node types with tool scripts and editor gizmos
+---
+
+Godot allows you to create custom node types that extend the engine's functionality. With the `@tool` annotation and editor gizmos, you can provide a seamless editing experience for your custom nodes.
+
+## Creating Custom Node Types
+
+### Basic Custom Node
+
+Create a custom node by extending an existing node type:
+
+```gdscript
+class_name MyCustomNode
+extends Node2D
+
+@export var radius: float = 50.0
+@export var color: Color = Color.WHITE
+
+func _draw():
+    draw_circle(Vector2.ZERO, radius, color)
+
+func _process(delta):
+    # Your game logic here
+    pass
+```
+
+Register it as a custom type in an EditorPlugin:
+
+```gdscript
+@tool
+extends EditorPlugin
+
+func _enter_tree():
+    add_custom_type(
+        "MyCustomNode",
+        "Node2D",
+        preload("res://addons/my_addon/my_custom_node.gd"),
+        preload("res://addons/my_addon/icon.svg")
+    )
+
+func _exit_tree():
+    remove_custom_type("MyCustomNode")
+```
+
+## Tool Scripts with @tool Annotation
+
+The `@tool` annotation makes scripts run in the editor, enabling real-time visualization and editing:
+
+```gdscript
+@tool
+class_name CustomShape
+extends Node2D
+
+@export var points: PackedVector2Array = []:
+    set(value):
+        points = value
+        queue_redraw()  # Update in editor
+
+@export var line_color: Color = Color.WHITE:
+    set(value):
+        line_color = value
+        queue_redraw()
+
+@export var line_width: float = 2.0:
+    set(value):
+        line_width = value
+        queue_redraw()
+
+func _draw():
+    if points.size() < 2:
+        return
+    
+    for i in range(points.size() - 1):
+        draw_line(points[i], points[i + 1], line_color, line_width)
+
+func _ready():
+    if Engine.is_editor_hint():
+        # Editor-only initialization
+        print("Running in editor")
+    else:
+        # Game-only initialization
+        print("Running in game")
+```
+
+<Warning>
+Always use `Engine.is_editor_hint()` to separate editor-only code from runtime code. Tool scripts run in both editor and game.
+</Warning>
+
+### Updating in the Editor
+
+Use property setters to trigger updates when values change:
+
+```gdscript
+@tool
+extends Sprite2D
+
+@export var auto_scale: bool = false:
+    set(value):
+        auto_scale = value
+        if value and Engine.is_editor_hint():
+            _update_scale()
+
+@export var target_size: Vector2 = Vector2(100, 100):
+    set(value):
+        target_size = value
+        if auto_scale and Engine.is_editor_hint():
+            _update_scale()
+
+func _update_scale():
+    if texture == null:
+        return
+    
+    var tex_size = texture.get_size()
+    scale = target_size / tex_size
+```
+
+## Adding Custom Editor Gizmos
+
+Gizmos provide visual handles and overlays for editing 3D nodes. Create a gizmo plugin by extending `EditorNode3DGizmoPlugin`:
+
+```gdscript
+@tool
+extends EditorNode3DGizmoPlugin
+
+func _init():
+    create_material("main", Color.RED)
+    create_handle_material("handles")
+
+func _get_gizmo_name():
+    return "MyCustomGizmo"
+
+func _has_gizmo(node):
+    return node is MyCustomNode3D
+
+func _redraw(gizmo):
+    gizmo.clear()
+    
+    var node = gizmo.get_node_3d()
+    if not node is MyCustomNode3D:
+        return
+    
+    # Draw sphere outline
+    var material = get_material("main", gizmo)
+    var mesh = SphereMesh.new()
+    mesh.radius = node.radius
+    mesh.height = node.radius * 2
+    gizmo.add_mesh(mesh, material)
+    
+    # Add handles for radius control
+    var handles = PackedVector3Array([
+        Vector3(node.radius, 0, 0),
+        Vector3(-node.radius, 0, 0),
+        Vector3(0, node.radius, 0),
+        Vector3(0, -node.radius, 0),
+        Vector3(0, 0, node.radius),
+        Vector3(0, 0, -node.radius)
+    ])
+    gizmo.add_handles(handles, get_material("handles", gizmo), [])
+
+func _get_handle_name(gizmo, handle_id, secondary):
+    return "Radius"
+
+func _get_handle_value(gizmo, handle_id, secondary):
+    var node = gizmo.get_node_3d()
+    return node.radius
+
+func _set_handle(gizmo, handle_id, secondary, camera, screen_pos):
+    var node = gizmo.get_node_3d()
+    var node_transform = node.global_transform
+    
+    # Raycast from camera
+    var ray_from = camera.project_ray_origin(screen_pos)
+    var ray_dir = camera.project_ray_normal(screen_pos)
+    
+    # Project onto plane perpendicular to handle direction
+    var handle_axis = Vector3.ZERO
+    if handle_id < 2:
+        handle_axis = Vector3.RIGHT
+    elif handle_id < 4:
+        handle_axis = Vector3.UP
+    else:
+        handle_axis = Vector3.BACK
+    
+    var plane = Plane(handle_axis, 0)
+    var intersection = plane.intersects_ray(ray_from, ray_dir)
+    
+    if intersection:
+        node.radius = abs(intersection.length())
+
+func _commit_handle(gizmo, handle_id, secondary, restore, cancel):
+    var node = gizmo.get_node_3d()
+    var undo_redo = get_undo_redo()
+    
+    if cancel:
+        node.radius = restore
+        return
+    
+    undo_redo.create_action("Change Radius")
+    undo_redo.add_do_property(node, "radius", node.radius)
+    undo_redo.add_undo_property(node, "radius", restore)
+    undo_redo.commit_action()
+```
+
+### Register the Gizmo Plugin
+
+```gdscript
+@tool
+extends EditorPlugin
+
+var gizmo_plugin
+
+func _enter_tree():
+    gizmo_plugin = preload("res://addons/my_addon/gizmo_plugin.gd").new()
+    add_node_3d_gizmo_plugin(gizmo_plugin)
+
+func _exit_tree():
+    remove_node_3d_gizmo_plugin(gizmo_plugin)
+```
+
+### Gizmo Materials
+
+Create different material types for your gizmo:
+
+```gdscript
+func _init():
+    # Basic material
+    create_material("lines", Color.CYAN, false, true, false)
+    
+    # Billboard material
+    create_material("billboard", Color.YELLOW, true, false, false)
+    
+    # Handle material (automatically creates selected/editable variants)
+    create_handle_material("handles", false)
+    
+    # Icon material
+    var icon_texture = preload("res://icon.svg")
+    create_icon_material("icon", icon_texture, true, Color.WHITE)
+```
+
+### Advanced Gizmo Features
+
+#### Subgizmos
+
+Allow selecting and editing sub-parts of your node:
+
+```gdscript
+func _subgizmos_intersect_ray(gizmo, camera, screen_pos):
+    var node = gizmo.get_node_3d()
+    
+    # Return ID of clicked subgizmo, or -1 if none
+    for i in range(node.control_points.size()):
+        var point = node.control_points[i]
+        var screen_point = camera.unproject_position(node.global_transform * point)
+        if screen_point.distance_to(screen_pos) < 10:
+            return i
+    
+    return -1
+
+func _subgizmos_intersect_frustum(gizmo, camera, frustum_planes):
+    var node = gizmo.get_node_3d()
+    var selected = PackedInt32Array()
+    
+    for i in range(node.control_points.size()):
+        var point = node.global_transform * node.control_points[i]
+        var inside = true
+        
+        for plane in frustum_planes:
+            if plane.distance_to(point) > 0:
+                inside = false
+                break
+        
+        if inside:
+            selected.append(i)
+    
+    return selected
+
+func _get_subgizmo_transform(gizmo, subgizmo_id):
+    var node = gizmo.get_node_3d()
+    return Transform3D(Basis(), node.control_points[subgizmo_id])
+
+func _set_subgizmo_transform(gizmo, subgizmo_id, transform):
+    var node = gizmo.get_node_3d()
+    node.control_points[subgizmo_id] = transform.origin
+
+func _commit_subgizmos(gizmo, ids, restores, cancel):
+    var node = gizmo.get_node_3d()
+    var undo_redo = get_undo_redo()
+    
+    if cancel:
+        for i in range(ids.size()):
+            node.control_points[ids[i]] = restores[i].origin
+        return
+    
+    undo_redo.create_action("Move Control Points")
+    for i in range(ids.size()):
+        undo_redo.add_do_property(node, "control_points", node.control_points.duplicate())
+        undo_redo.add_undo_method(node, "set", "control_points", restores)
+    undo_redo.commit_action()
+```
+
+## Custom Property Editors
+
+Create custom inspectors for your node's properties:
+
+```gdscript
+@tool
+extends EditorInspectorPlugin
+
+func _can_handle(object):
+    return object is MyCustomNode
+
+func _parse_property(object, type, name, hint_type, hint_string, usage_flags, wide):
+    if name == "gradient_data":
+        # Add custom gradient editor
+        var editor = preload("res://addons/my_addon/gradient_editor.gd").new()
+        add_property_editor(name, editor)
+        return true
+    
+    return false
+
+func _parse_begin(object):
+    # Add custom section at top of inspector
+    var button = Button.new()
+    button.text = "Regenerate"
+    button.pressed.connect(func(): object.regenerate())
+    add_custom_control(button)
+```
+
+### Custom Property Editor Control
+
+```gdscript
+@tool
+extends EditorProperty
+
+var spin_box = SpinBox.new()
+var updating = false
+
+func _init():
+    spin_box.min_value = 0
+    spin_box.max_value = 100
+    spin_box.step = 0.1
+    spin_box.value_changed.connect(_on_value_changed)
+    add_child(spin_box)
+    add_focusable(spin_box)
+
+func _update_property():
+    updating = true
+    spin_box.value = get_edited_object()[get_edited_property()]
+    updating = false
+
+func _on_value_changed(value):
+    if updating:
+        return
+    emit_changed(get_edited_property(), value)
+```
+
+## Example: Complete Custom Node
+
+Here's a complete example combining all concepts:
+
+```gdscript
+@tool
+class_name WaypointPath
+extends Path3D
+
+@export var waypoint_count: int = 3:
+    set(value):
+        waypoint_count = max(2, value)
+        _update_waypoints()
+
+@export var spacing: float = 5.0:
+    set(value):
+        spacing = value
+        _update_waypoints()
+
+@export var auto_generate: bool = false:
+    set(value):
+        auto_generate = value
+        if value and Engine.is_editor_hint():
+            _update_waypoints()
+
+func _ready():
+    if Engine.is_editor_hint():
+        _update_waypoints()
+
+func _update_waypoints():
+    if not Engine.is_editor_hint():
+        return
+    
+    if curve == null:
+        curve = Curve3D.new()
+    
+    curve.clear_points()
+    
+    for i in range(waypoint_count):
+        var point = Vector3(i * spacing, 0, 0)
+        curve.add_point(point)
+
+func regenerate():
+    _update_waypoints()
+```
+
+With corresponding gizmo:
+
+```gdscript
+@tool
+extends EditorNode3DGizmoPlugin
+
+func _init():
+    create_material("path", Color.GREEN)
+    create_handle_material("handles")
+
+func _get_gizmo_name():
+    return "WaypointPath"
+
+func _has_gizmo(node):
+    return node is WaypointPath
+
+func _redraw(gizmo):
+    gizmo.clear()
+    
+    var node = gizmo.get_node_3d()
+    var curve = node.curve
+    
+    if curve == null or curve.point_count < 2:
+        return
+    
+    # Draw path lines
+    var lines = PackedVector3Array()
+    for i in range(curve.point_count - 1):
+        lines.append(curve.get_point_position(i))
+        lines.append(curve.get_point_position(i + 1))
+    
+    gizmo.add_lines(lines, get_material("path", gizmo), false)
+    
+    # Add handles for waypoints
+    var handles = PackedVector3Array()
+    for i in range(curve.point_count):
+        handles.append(curve.get_point_position(i))
+    
+    gizmo.add_handles(handles, get_material("handles", gizmo), [])
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always check Engine.is_editor_hint()">
+    Separate editor-only code from runtime code to prevent performance issues and unexpected behavior.
+  </Accordion>
+  
+  <Accordion title="Use queue_redraw() for visual updates">
+    Call `queue_redraw()` in property setters to update the node's appearance in the editor.
+  </Accordion>
+  
+  <Accordion title="Implement proper undo/redo">
+    Always use `EditorUndoRedoManager` in gizmo commit methods to make changes undoable.
+  </Accordion>
+  
+  <Accordion title="Clean up resources">
+    Remove custom types, gizmos, and inspector plugins in `_exit_tree()` to prevent memory leaks.
+  </Accordion>
+  
+  <Accordion title="Provide helpful gizmo names">
+    Return descriptive names from `_get_gizmo_name()` and `_get_handle_name()` for better UX.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Editor Plugins" icon="puzzle-piece" href="/editor/plugins">
+    Learn how to create editor plugins
+  </Card>
+  <Card title="Editor Interface" icon="desktop" href="/editor/interface">
+    Access editor interface components
+  </Card>
+</CardGroup>

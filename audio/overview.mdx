@@ -1,0 +1,308 @@
+---
+title: 'Audio Overview'
+description: "Introduction to Godot's audio system, AudioServer, and audio playback"
+---
+
+## Overview
+
+Godot provides a powerful and flexible audio system built around the `AudioServer`, which handles all audio processing, mixing, and output. The system supports multiple audio formats, real-time effects, and spatial audio for 2D and 3D games.
+
+<Info>
+The AudioServer uses a bus-based architecture similar to professional audio software, allowing complex audio routing and effects chains.
+</Info>
+
+## AudioServer
+
+The `AudioServer` is a singleton that manages all audio in your game. It provides low-level audio access and controls the audio bus system.
+
+### Key Features
+
+- **Audio buses** - Route audio through different channels with independent volume and effects
+- **Real-time effects** - Apply effects like reverb, delay, EQ, and compression
+- **Flexible routing** - Send audio from one bus to another
+- **Sample rate control** - Access to mix rate and output latency
+- **Device selection** - Choose input/output audio devices
+
+### Getting Audio Information
+
+```gdscript
+# Get the sample rate
+var mix_rate = AudioServer.get_mix_rate()
+print("Mix rate: ", mix_rate, " Hz")
+
+# Get output latency
+var latency = AudioServer.get_output_latency()
+print("Output latency: ", latency, " seconds")
+
+# Get available output devices
+var devices = AudioServer.get_output_device_list()
+print("Available audio devices: ", devices)
+```
+
+```csharp
+// Get the sample rate
+float mixRate = AudioServer.GetMixRate();
+GD.Print($"Mix rate: {mixRate} Hz");
+
+// Get output latency
+float latency = AudioServer.GetOutputLatency();
+GD.Print($"Output latency: {latency} seconds");
+
+// Get available output devices
+string[] devices = AudioServer.GetOutputDeviceList();
+GD.Print("Available audio devices: ", devices);
+```
+
+## Audio Buses
+
+Audio buses are channels that audio streams flow through. Each bus can have:
+
+- Independent volume control
+- Multiple audio effects
+- Routing to other buses
+- Solo/mute states
+
+### Working with Buses
+
+```gdscript
+# Get bus count
+var bus_count = AudioServer.bus_count
+print("Number of buses: ", bus_count)
+
+# Get bus by name
+var bus_idx = AudioServer.get_bus_index("Music")
+
+# Set bus volume (in dB)
+AudioServer.set_bus_volume_db(bus_idx, -10.0)
+
+# Mute a bus
+AudioServer.set_bus_mute(bus_idx, true)
+
+# Solo a bus
+AudioServer.set_bus_solo(bus_idx, true)
+```
+
+```csharp
+// Get bus count
+int busCount = AudioServer.BusCount;
+GD.Print($"Number of buses: {busCount}");
+
+// Get bus by name
+int busIdx = AudioServer.GetBusIndex("Music");
+
+// Set bus volume (in dB)
+AudioServer.SetBusVolumeDb(busIdx, -10.0f);
+
+// Mute a bus
+AudioServer.SetBusMute(busIdx, true);
+
+// Solo a bus
+AudioServer.SetBusSolo(busIdx, true);
+```
+
+### Volume Control
+
+AudioServer works with decibels (dB) for volume:
+
+```gdscript
+# Set volume in dB (-80 to 24)
+var bus_idx = AudioServer.get_bus_index("Master")
+AudioServer.set_bus_volume_db(bus_idx, 0.0)  # 0 dB = no change
+
+# Convert between linear and dB
+var linear_volume = 0.5  # 50%
+var db_volume = linear_to_db(linear_volume)
+AudioServer.set_bus_volume_db(bus_idx, db_volume)
+
+# Get volume as linear value
+var current_linear = AudioServer.get_bus_volume_linear(bus_idx)
+```
+
+<Tip>
+0 dB represents no change in volume. Negative values reduce volume, positive values amplify (but may cause clipping).
+</Tip>
+
+## AudioStreamPlayer
+
+The `AudioStreamPlayer` node plays audio streams without positional audio:
+
+```gdscript
+var player = AudioStreamPlayer.new()
+player.stream = load("res://sounds/music.ogg")
+player.bus = "Music"
+player.volume_db = -5.0
+add_child(player)
+player.play()
+```
+
+```csharp
+var player = new AudioStreamPlayer();
+player.Stream = ResourceLoader.Load<AudioStream>("res://sounds/music.ogg");
+player.Bus = "Music";
+player.VolumeDb = -5.0f;
+AddChild(player);
+player.Play();
+```
+
+**Key Properties:**
+- `stream` - The AudioStream resource to play
+- `volume_db` - Volume in decibels (offset from stream volume)
+- `pitch_scale` - Playback speed/pitch multiplier
+- `bus` - Target audio bus name
+- `autoplay` - Start playing when entering the tree
+- `max_polyphony` - Maximum simultaneous sounds
+
+**Key Methods:**
+- `play(from_position)` - Start playback
+- `stop()` - Stop playback
+- `seek(to_position)` - Jump to a position in seconds
+- `get_playback_position()` - Get current position in seconds
+
+## AudioStreamPlayer2D and AudioStreamPlayer3D
+
+For positional audio in 2D and 3D games:
+
+### AudioStreamPlayer2D
+
+```gdscript
+var player2d = AudioStreamPlayer2D.new()
+player2d.stream = load("res://sounds/explosion.wav")
+player2d.position = Vector2(100, 200)
+player2d.max_distance = 500.0  # Audio fades out at this distance
+add_child(player2d)
+player2d.play()
+```
+
+### AudioStreamPlayer3D
+
+```gdscript
+var player3d = AudioStreamPlayer3D.new()
+player3d.stream = load("res://sounds/ambient.ogg")
+player3d.transform.origin = Vector3(10, 0, 5)
+player3d.max_distance = 100.0
+player3d.unit_size = 10.0  # Distance at which volume is normal
+add_child(player3d)
+player3d.play()
+```
+
+<Info>
+3D audio automatically handles attenuation (volume falloff) based on distance and supports different attenuation models.
+</Info>
+
+## Playback Control
+
+### Basic Playback
+
+```gdscript
+var player = AudioStreamPlayer.new()
+player.stream = load("res://sounds/effect.wav")
+add_child(player)
+
+# Play from beginning
+player.play()
+
+# Play from specific position (in seconds)
+player.play(2.5)
+
+# Stop playback
+player.stop()
+
+# Pause/unpause
+player.stream_paused = true
+player.stream_paused = false
+```
+
+### Polyphony
+
+Play multiple sounds simultaneously from one player:
+
+```gdscript
+var player = AudioStreamPlayer.new()
+player.stream = load("res://sounds/gunshot.wav")
+player.max_polyphony = 8  # Allow up to 8 simultaneous plays
+add_child(player)
+
+# Each call to play() creates a new playback instance
+for i in range(3):
+    player.play()
+    await get_tree().create_timer(0.1).timeout
+```
+
+### Monitoring Playback
+
+```gdscript
+func _ready():
+    var player = AudioStreamPlayer.new()
+    player.stream = load("res://sounds/music.ogg")
+    player.finished.connect(_on_audio_finished)
+    add_child(player)
+    player.play()
+
+func _on_audio_finished():
+    print("Audio playback completed")
+```
+
+## Bus Routing
+
+Route audio from one bus to another:
+
+```gdscript
+# Send "SFX" bus to "Master" bus
+var sfx_bus = AudioServer.get_bus_index("SFX")
+AudioServer.set_bus_send(sfx_bus, "Master")
+
+# You can also route to custom buses
+AudioServer.set_bus_send(sfx_bus, "Reverb")
+```
+
+## Peak Volume Monitoring
+
+Monitor audio levels on buses:
+
+```gdscript
+func _process(delta):
+    var master_idx = AudioServer.get_bus_index("Master")
+    var peak_left = AudioServer.get_bus_peak_volume_left_db(master_idx, 0)
+    var peak_right = AudioServer.get_bus_peak_volume_right_db(master_idx, 0)
+    
+    # Convert to linear for visualization
+    var left_linear = db_to_linear(peak_left)
+    var right_linear = db_to_linear(peak_right)
+    
+    # Update volume meters
+    update_volume_meter(left_linear, right_linear)
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use appropriate buses">
+    Separate audio into different buses (Music, SFX, Voice) to allow independent volume control and effects.
+  </Accordion>
+
+  <Accordion title="Preload frequently used sounds">
+    Load short sound effects at startup to avoid loading delays during gameplay.
+  </Accordion>
+
+  <Accordion title="Use streaming for music">
+    Large audio files (music, voice) should use streaming formats like OGG Vorbis to reduce memory usage.
+  </Accordion>
+
+  <Accordion title="Consider polyphony limits">
+    Set appropriate `max_polyphony` values to prevent audio overload while allowing necessary overlaps.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Audio Streams" icon="wave-square" href="/audio/audio-streams">
+    Learn about audio formats and stream types
+  </Card>
+  <Card title="Audio Effects" icon="sliders" href="/audio/audio-effects">
+    Add effects like reverb, delay, and EQ to audio buses
+  </Card>
+  <Card title="Interactive Music" icon="music" href="/audio/interactive-music">
+    Create dynamic, adaptive music systems
+  </Card>
+</CardGroup>

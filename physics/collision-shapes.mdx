@@ -1,0 +1,376 @@
+---
+title: 'Collision shapes'
+description: 'Explore collision shape types, properties, and best practices for physics in Godot'
+keywords: ['collision', 'shapes', 'box', 'sphere', 'capsule', 'polygon', 'mesh']
+---
+
+## Overview
+
+Collision shapes define the physical boundaries of objects for collision detection. Godot provides various primitive shapes and complex polygon/mesh shapes for both 2D and 3D physics.
+
+## 2D collision shapes
+
+### CircleShape2D
+
+A circular collision shape, ideal for balls and circular objects.
+
+```gdscript
+var shape = CircleShape2D.new()
+shape.radius = 32.0
+
+var collision = CollisionShape2D.new()
+collision.shape = shape
+```
+
+<Info>
+Circle shapes are very efficient for collision detection due to their simple geometry.
+</Info>
+
+### RectangleShape2D
+
+A rectangular collision shape for boxes and rectangular objects.
+
+```gdscript
+var shape = RectangleShape2D.new()
+shape.size = Vector2(64, 32)
+
+var collision = CollisionShape2D.new()
+collision.shape = shape
+```
+
+### CapsuleShape2D
+
+A capsule shape (rectangle with rounded ends), perfect for characters.
+
+```gdscript
+var shape = CapsuleShape2D.new()
+shape.radius = 16.0
+shape.height = 64.0
+
+var collision = CollisionShape2D.new()
+collision.shape = shape
+```
+
+<Tip>
+Capsule shapes are excellent for character controllers because they prevent getting stuck on edges.
+</Tip>
+
+### SegmentShape2D
+
+A line segment shape, useful for one-way platforms or laser beams.
+
+```gdscript
+var shape = SegmentShape2D.new()
+shape.a = Vector2(-50, 0)
+shape.b = Vector2(50, 0)
+```
+
+### ConvexPolygonShape2D
+
+A convex polygon defined by a set of points.
+
+```gdscript
+var shape = ConvexPolygonShape2D.new()
+shape.points = PackedVector2Array([
+    Vector2(-20, -20),
+    Vector2(20, -20),
+    Vector2(20, 20),
+    Vector2(0, 30),
+    Vector2(-20, 20)
+])
+```
+
+### ConcavePolygonShape2D
+
+A concave polygon for complex static geometry like terrain.
+
+```gdscript
+var shape = ConcavePolygonShape2D.new()
+# Typically created from collision polygons in TileMaps
+```
+
+<Warning>
+Concave shapes are only supported for static bodies. They're more expensive to compute than convex shapes.
+</Warning>
+
+### WorldBoundaryShape2D
+
+An infinite plane, useful for ground or walls that extend infinitely.
+
+```gdscript
+var shape = WorldBoundaryShape2D.new()
+shape.normal = Vector2(0, -1)  # Points upward
+shape.distance = 0.0
+```
+
+## 3D collision shapes
+
+### BoxShape3D
+
+A box-shaped collision volume.
+
+```gdscript
+var shape = BoxShape3D.new()
+shape.size = Vector3(2, 1, 2)
+
+var collision = CollisionShape3D.new()
+collision.shape = shape
+```
+
+### SphereShape3D
+
+A spherical collision shape.
+
+```gdscript
+var shape = SphereShape3D.new()
+shape.radius = 1.0
+
+var collision = CollisionShape3D.new()
+collision.shape = shape
+```
+
+### CapsuleShape3D
+
+A capsule shape (cylinder with hemispherical ends).
+
+```gdscript
+var shape = CapsuleShape3D.new()
+shape.radius = 0.5
+shape.height = 2.0
+
+var collision = CollisionShape3D.new()
+collision.shape = shape
+```
+
+### CylinderShape3D
+
+A cylindrical collision shape.
+
+```gdscript
+var shape = CylinderShape3D.new()
+shape.radius = 1.0
+shape.height = 2.0
+```
+
+### ConvexPolygonShape3D
+
+A convex 3D mesh shape.
+
+```gdscript
+var shape = ConvexPolygonShape3D.new()
+shape.points = PackedVector3Array([
+    Vector3(-1, -1, -1),
+    Vector3(1, -1, -1),
+    Vector3(1, -1, 1),
+    Vector3(-1, -1, 1),
+    Vector3(0, 1, 0)
+])
+```
+
+### ConcavePolygonShape3D
+
+A triangle mesh shape for complex static geometry.
+
+```gdscript
+# Usually created from a mesh resource
+var mesh = preload("res://models/terrain.obj")
+var shape = mesh.create_trimesh_shape()
+
+var collision = CollisionShape3D.new()
+collision.shape = shape
+```
+
+### HeightMapShape3D
+
+An optimized shape for terrain based on height map data.
+
+```gdscript
+var shape = HeightMapShape3D.new()
+shape.map_width = 256
+shape.map_depth = 256
+shape.map_data = heightmap_data  # PackedFloat32Array
+```
+
+### WorldBoundaryShape3D
+
+An infinite plane in 3D space.
+
+```gdscript
+var shape = WorldBoundaryShape3D.new()
+shape.plane = Plane(Vector3.UP, 0)  # Horizontal plane at y=0
+```
+
+## Shape properties
+
+### Margins and safe margins
+
+Shapes have collision margins to improve stability:
+
+```gdscript
+# Most shapes have a default margin
+var box = BoxShape3D.new()
+box.margin = 0.04  # Default margin for stability
+```
+
+<Info>
+Margins help prevent tunneling and improve collision detection stability. Don't set them to zero unless necessary.
+</Info>
+
+### Shape transforms
+
+Collision shapes can be positioned and rotated relative to their parent body:
+
+```gdscript
+var collision = CollisionShape3D.new()
+collision.position = Vector3(0, 1, 0)
+collision.rotation_degrees = Vector3(0, 45, 0)
+```
+
+### One-way collision (2D)
+
+Enable one-way collision for platforms:
+
+```gdscript
+var collision = CollisionShape2D.new()
+collision.one_way_collision = true
+collision.one_way_collision_margin = 1.0
+```
+
+## Multiple shapes per body
+
+Bodies can have multiple collision shapes for complex geometry:
+
+```gdscript
+var body = RigidBody3D.new()
+
+# Add box for main body
+var box_collision = CollisionShape3D.new()
+box_collision.shape = BoxShape3D.new()
+body.add_child(box_collision)
+
+# Add sphere for head
+var sphere_collision = CollisionShape3D.new()
+sphere_collision.shape = SphereShape3D.new()
+sphere_collision.position = Vector3(0, 1.5, 0)
+body.add_child(sphere_collision)
+```
+
+## Disabling collision shapes
+
+Temporarily disable shapes without removing them:
+
+```gdscript
+collision_shape.disabled = true  # Disable collision
+
+# Re-enable with deferred call to avoid physics errors
+collision_shape.set_deferred("disabled", false)
+```
+
+<Warning>
+Always use `set_deferred()` when changing collision shape properties during physics callbacks to avoid errors.
+</Warning>
+
+## Debug visualization
+
+Enable collision shape visualization in the editor:
+
+1. Go to **Debug > Visible Collision Shapes**
+2. Shapes will be drawn with debug colors during gameplay
+
+```gdscript
+# Set custom debug color
+collision_shape.debug_color = Color.RED
+```
+
+## Shape creation from meshes
+
+Generate collision shapes from mesh resources:
+
+### Convex collision
+
+```gdscript
+var mesh_instance = MeshInstance3D.new()
+mesh_instance.mesh = preload("res://models/object.obj")
+
+# Create single convex hull
+mesh_instance.create_convex_collision()
+
+# Create multiple convex hulls for better accuracy
+mesh_instance.create_multiple_convex_collisions()
+```
+
+### Triangle mesh collision
+
+```gdscript
+var mesh_instance = MeshInstance3D.new()
+mesh_instance.mesh = preload("res://models/terrain.obj")
+
+# Create concave triangle mesh (static bodies only)
+mesh_instance.create_trimesh_collision()
+```
+
+## Performance best practices
+
+<CardGroup cols={2}>
+  <Card title="Use primitive shapes" icon="cube">
+    Primitive shapes (box, sphere, capsule) are much faster than polygon shapes.
+  </Card>
+  
+  <Card title="Keep vertex counts low" icon="chart-line">
+    For convex polygon shapes, use as few vertices as possible while maintaining accuracy.
+  </Card>
+  
+  <Card title="Reuse shapes" icon="recycle">
+    Share shape resources between multiple bodies to reduce memory usage.
+  </Card>
+  
+  <Card title="Use convex decomposition" icon="cut">
+    Break complex shapes into multiple convex hulls instead of using concave shapes.
+  </Card>
+</CardGroup>
+
+## Common patterns
+
+### Character collision
+
+```gdscript
+var character = CharacterBody3D.new()
+
+var collision = CollisionShape3D.new()
+var capsule = CapsuleShape3D.new()
+capsule.radius = 0.5
+capsule.height = 1.8
+collision.shape = capsule
+
+character.add_child(collision)
+```
+
+### Compound collision shapes
+
+```gdscript
+var vehicle = RigidBody3D.new()
+
+# Main body
+var body_shape = CollisionShape3D.new()
+body_shape.shape = BoxShape3D.new()
+vehicle.add_child(body_shape)
+
+# Four wheels
+for i in 4:
+    var wheel_shape = CollisionShape3D.new()
+    wheel_shape.shape = SphereShape3D.new()
+    wheel_shape.position = get_wheel_position(i)
+    vehicle.add_child(wheel_shape)
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Raycasting" icon="bullseye" href="/physics/raycasting">
+    Learn about raycasting and physics queries
+  </Card>
+  
+  <Card title="Joints" icon="link" href="/physics/joints">
+    Connect bodies with physics joints
+  </Card>
+</CardGroup>

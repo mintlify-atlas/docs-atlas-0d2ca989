@@ -1,0 +1,415 @@
+---
+title: 'Visual Scripting'
+description: 'Create game logic using visual, node-based programming'
+keywords: ['visual scripting', 'node-based', 'blueprint', 'visual programming']
+icon: 'diagram-project'
+---
+
+## Overview
+
+Visual scripting allows you to create game logic using a node-based, graph-driven interface instead of writing code. This approach is ideal for designers, artists, and programmers who prefer visual workflows.
+
+<Warning>
+As of Godot 4.0, the built-in VisualScript language has been removed from the core engine. The community is developing alternative solutions as plugins and extensions.
+</Warning>
+
+## Current State in Godot 4.x
+
+Godot 4.0+ does not include visual scripting in the core engine. However, there are several alternatives:
+
+### Community Solutions
+
+<CardGroup cols={2}>
+  <Card title="Orchestrator" icon="music">
+    A visual scripting plugin being developed for Godot 4.x with modern features and improved performance.
+  </Card>
+  
+  <Card title="VisualScript (Plugin)" icon="diagram-nodes">
+    Community-maintained port of Godot 3.x VisualScript as a plugin.
+  </Card>
+  
+  <Card title="Behavior Trees" icon="tree">
+    Node-based AI behavior systems, available through various plugins.
+  </Card>
+  
+  <Card title="Dialog Systems" icon="comments">
+    Visual node-based dialog and narrative tools like DialogueManager.
+  </Card>
+</CardGroup>
+
+## Visual Scripting Concepts
+
+While built-in visual scripting is not available in Godot 4.x, understanding the concepts is valuable for working with visual scripting plugins:
+
+### Node-Based Programming
+
+Visual scripts consist of nodes connected by execution and data flows:
+
+```
+┌─────────────┐
+│   _ready    │
+└──────┬──────┘
+       │ Execution Flow
+       ▼
+┌─────────────┐     ┌──────────────┐
+│  Set Speed  │◄────┤ Speed: 100.0 │ Data Flow
+└──────┬──────┘     └──────────────┘
+       │
+       ▼
+┌─────────────┐
+│    Print    │
+└─────────────┘
+```
+
+### Core Components
+
+<AccordionGroup>
+  <Accordion title="Function nodes">
+    Represent callable functions and methods. Entry points for execution:
+    
+    - `_ready()` - Called when node enters scene tree
+    - `_process(delta)` - Called every frame
+    - `_physics_process(delta)` - Called every physics frame
+    - Custom functions
+  </Accordion>
+  
+  <Accordion title="Data nodes">
+    Provide values and variables:
+    
+    - Constants (numbers, strings, vectors)
+    - Variables (get/set)
+    - Properties
+    - Resource references
+  </Accordion>
+  
+  <Accordion title="Control flow nodes">
+    Manage execution flow:
+    
+    - Conditions (if/else)
+    - Loops (for, while)
+    - Switches
+    - Sequence nodes
+  </Accordion>
+  
+  <Accordion title="Operator nodes">
+    Perform operations on data:
+    
+    - Math operators (add, subtract, multiply, divide)
+    - Comparison operators (equals, not equals, greater than, less than)
+    - Logic operators (and, or, not)
+    - Type conversions
+  </Accordion>
+</AccordionGroup>
+
+## Godot 3.x VisualScript (Legacy)
+
+For reference, here's how visual scripting worked in Godot 3.x:
+
+### Creating a VisualScript
+
+<Steps>
+  <Step title="Create a script">
+    Right-click a node → **Attach Script** → Choose **VisualScript** as the language.
+  </Step>
+  
+  <Step title="Open the editor">
+    The VisualScript editor opens, showing an empty graph with an entry point.
+  </Step>
+  
+  <Step title="Add nodes">
+    Right-click to open the node menu and add function calls, variables, or operators.
+  </Step>
+  
+  <Step title="Connect nodes">
+    Drag from output ports to input ports to create connections.
+  </Step>
+</Steps>
+
+### Example: Simple Movement
+
+A visual script for character movement would consist of:
+
+1. **_physics_process** entry node
+2. **Input.is_action_pressed** nodes for movement keys
+3. **Branch/Condition** nodes for direction
+4. **Set velocity** nodes
+5. **move_and_slide** call
+
+### Advantages of Visual Scripting
+
+<CardGroup cols={2}>
+  <Card title="No syntax errors" icon="circle-check">
+    Visual connections prevent many common programming syntax errors.
+  </Card>
+  
+  <Card title="Visual feedback" icon="eye">
+    See data flow and execution paths clearly in the graph.
+  </Card>
+  
+  <Card title="Faster prototyping" icon="rocket">
+    Quickly experiment with logic without writing code.
+  </Card>
+  
+  <Card title="Accessible to non-programmers" icon="users">
+    Designers and artists can implement logic without coding knowledge.
+  </Card>
+</CardGroup>
+
+### Limitations
+
+<CardGroup cols={2}>
+  <Card title="Performance overhead" icon="gauge">
+    Visual scripts can be slower than compiled code for complex logic.
+  </Card>
+  
+  <Card title="Scalability" icon="chart-line">
+    Large scripts become difficult to manage and navigate.
+  </Card>
+  
+  <Card title="Limited reusability" icon="copy">
+    Code sharing and reuse is more challenging than text-based scripts.
+  </Card>
+  
+  <Card title="Debugging complexity" icon="bug">
+    Tracing execution through large graphs can be difficult.
+  </Card>
+</CardGroup>
+
+## Use Cases
+
+Visual scripting works best for:
+
+### Recommended Scenarios
+
+<AccordionGroup>
+  <Accordion title="Prototyping and iteration">
+    Quickly test game mechanics and ideas without writing full scripts.
+  </Accordion>
+  
+  <Accordion title="Simple game logic">
+    Basic interactions, triggers, and simple behaviors:
+    
+    - Door opening/closing
+    - Collectible items
+    - Simple enemy AI
+    - UI interactions
+  </Accordion>
+  
+  <Accordion title="State machines">
+    Character states, animation transitions, and AI behaviors.
+  </Accordion>
+  
+  <Accordion title="Event responses">
+    Responding to signals and events:
+    
+    - Button clicks
+    - Area triggers
+    - Signal connections
+  </Accordion>
+  
+  <Accordion title="Dialog and narrative">
+    Conversation trees and branching storylines.
+  </Accordion>
+</AccordionGroup>
+
+### Not Recommended For
+
+<Warning>
+**Avoid visual scripting for:**
+
+- Complex algorithms and data processing
+- Performance-critical gameplay systems
+- Mathematical calculations
+- Large-scale game logic
+- Systems requiring extensive debugging
+
+Use GDScript or C# for these scenarios instead.
+</Warning>
+
+## Alternatives in Godot 4.x
+
+### 1. Animation Tree
+
+For animation logic and state machines:
+
+```
+AnimationTree node → State Machine
+├─ Idle
+├─ Walk
+├─ Jump
+└─ Attack
+```
+
+**Use for:** Character animation transitions, blend trees, state-based animations
+
+### 2. Behavior Trees (Plugin)
+
+For AI behaviors:
+
+```
+Sequence
+├─ Check if player visible
+├─ Move toward player
+└─ Attack
+```
+
+**Use for:** Enemy AI, NPC behaviors, complex decision-making
+
+### 3. Dialog Systems (Plugin)
+
+For conversations and narratives:
+
+**Examples:**
+- DialogueManager
+- Dialogue Nodes
+- Yarn Spinner
+
+**Use for:** NPC conversations, cutscenes, branching storylines
+
+### 4. Shader Visual Editor
+
+Godot includes a built-in visual shader editor:
+
+<Steps>
+  <Step title="Create a Shader Material">
+    Create a new ShaderMaterial resource.
+  </Step>
+  
+  <Step title="Select Visual Shader">
+    Choose **Visual Shader** as the shader type.
+  </Step>
+  
+  <Step title="Edit visually">
+    Use the visual shader editor to create shader effects without code.
+  </Step>
+</Steps>
+
+**Use for:** Custom visual effects, materials, post-processing
+
+## Hybrid Workflows
+
+Combine visual and code-based approaches:
+
+### Visual + Script Integration
+
+<Tabs>
+  <Tab title="Visual calls code">
+    Use visual scripting for high-level logic, call GDScript/C# functions for complex operations:
+    
+    ```gdscript utils.gd
+    extends Node
+    
+    static func calculate_damage(base_dmg: float, multiplier: float) -> float:
+        return base_dmg * multiplier * randf_range(0.9, 1.1)
+    
+    static func find_nearest_enemy(position: Vector2) -> Node2D:
+        # Complex pathfinding logic
+        pass
+    ```
+    
+    Visual script calls these utility functions for complex calculations.
+  </Tab>
+  
+  <Tab title="Code emits signals">
+    Code-based systems emit signals that drive visual event graphs:
+    
+    ```gdscript
+    signal player_entered_zone(zone_name: String)
+    signal puzzle_solved(puzzle_id: int)
+    
+    func _on_area_entered(area: Area2D):
+        player_entered_zone.emit(area.name)
+    ```
+    
+    Visual scripts respond to these signals for event-driven behavior.
+  </Tab>
+</Tabs>
+
+## Migration from Godot 3.x
+
+If you have VisualScript files from Godot 3.x:
+
+<Steps>
+  <Step title="Assess complexity">
+    Review your visual scripts and determine their complexity.
+  </Step>
+  
+  <Step title="Choose migration path">
+    **Option A:** Rewrite simple scripts in GDScript
+    
+    **Option B:** Use community VisualScript plugin
+    
+    **Option C:** Use specialized plugins (dialog, behavior trees)
+  </Step>
+  
+  <Step title="Test thoroughly">
+    Visual script behavior may differ between Godot 3.x and plugin implementations.
+  </Step>
+</Steps>
+
+<Info>
+Many simple visual scripts can be rewritten in GDScript in less time than setting up plugin alternatives.
+</Info>
+
+## Learning Resources
+
+<CardGroup cols={2}>
+  <Card title="Animation Tree" icon="play" href="/animation/overview">
+    Learn about Godot's built-in animation state machine
+  </Card>
+  
+  <Card title="Signals" icon="signal" href="/concepts/nodes-and-scenes">
+    Event-driven programming with signals
+  </Card>
+  
+  <Card title="GDScript Basics" icon="code" href="/scripting/gdscript">
+    Start with GDScript for full control
+  </Card>
+  
+  <Card title="Shader Visual Editor" icon="palette" href="/rendering/overview">
+    Create visual effects without code
+  </Card>
+</CardGroup>
+
+## Community Plugins
+
+Explore visual scripting alternatives:
+
+<Note>
+These are third-party plugins maintained by the community. Check compatibility with your Godot version before use.
+</Note>
+
+- **Orchestrator** - Modern visual scripting for Godot 4.x
+- **Dialogue Manager** - Visual dialog tree editor
+- **Behavior Tree** - AI behavior graph editor
+- **Beehave** - Behavior tree implementation
+- **Dialogic** - Visual dialog system
+
+## Best Practices
+
+<Tip>
+**When using any visual scripting solution:**
+
+1. Keep graphs simple and focused
+2. Use comments and organization
+3. Extract complex logic to code functions
+4. Use visual scripting for high-level flow
+5. Test performance early and often
+6. Document connections and data flow
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="GDScript" icon="code" href="/scripting/gdscript">
+    Learn text-based scripting for full control
+  </Card>
+  
+  <Card title="C# Scripting" icon="hashtag" href="/scripting/csharp">
+    Use C# for complex logic and .NET integration
+  </Card>
+  
+  <Card title="GDExtension" icon="plug" href="/scripting/gdextension">
+    Create high-performance native extensions
+  </Card>
+</CardGroup>

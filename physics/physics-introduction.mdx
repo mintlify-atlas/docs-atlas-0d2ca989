@@ -1,0 +1,229 @@
+---
+title: 'Physics introduction'
+description: 'Learn about Godot physics engines, physics spaces, and collision detection systems'
+keywords: ['physics', 'collision', 'physics server', 'godot physics', 'jolt physics']
+---
+
+## Overview
+
+Godot Engine provides a comprehensive physics system for both 2D and 3D games. The physics system handles collision detection, rigid body dynamics, kinematic bodies, and physics queries through dedicated physics servers.
+
+## Physics engines
+
+Godot supports multiple physics engine backends:
+
+### Godot Physics (default)
+
+The built-in physics engine that provides reliable physics simulation for most games. It's well-integrated with the engine and offers good performance for typical use cases.
+
+```gdscript
+# Physics is enabled by default
+var body = RigidBody3D.new()
+body.mass = 10.0
+add_child(body)
+```
+
+### Jolt Physics (optional)
+
+For advanced physics requirements, Godot supports Jolt Physics, a high-performance physics engine that excels at handling large numbers of physics objects.
+
+<Info>
+Jolt Physics can be enabled through project settings under **Physics > 3D > Physics Engine**.
+</Info>
+
+## Physics servers
+
+Godot uses a server-based architecture for physics:
+
+### PhysicsServer2D
+
+Handles all 2D physics operations. The server provides low-level access to create and manipulate physics objects directly without using scene nodes.
+
+```gdscript
+# Create a 2D physics space
+var space = PhysicsServer2D.space_create()
+PhysicsServer2D.space_set_active(space, true)
+
+# Create a 2D physics body
+var body = PhysicsServer2D.body_create()
+PhysicsServer2D.body_set_mode(body, PhysicsServer2D.BODY_MODE_RIGID)
+PhysicsServer2D.body_set_space(body, space)
+```
+
+### PhysicsServer3D
+
+Handles all 3D physics operations. It provides the same low-level control for 3D physics objects.
+
+```gdscript
+# Create a 3D physics space
+var space = PhysicsServer3D.space_create()
+PhysicsServer3D.space_set_active(space, true)
+
+# Create a 3D physics body
+var body = PhysicsServer3D.body_create()
+PhysicsServer3D.body_set_mode(body, PhysicsServer3D.BODY_MODE_RIGID)
+PhysicsServer3D.body_set_space(body, space)
+```
+
+## Physics spaces
+
+A physics space is a self-contained world for physics simulation. Each space maintains its own set of bodies, areas, and joints.
+
+### Space properties
+
+<AccordionGroup>
+  <Accordion title="Collision detection">
+    Spaces handle broad-phase and narrow-phase collision detection between all objects within the space.
+  </Accordion>
+  
+  <Accordion title="Gravity">
+    Each space can have its own gravity settings, independent of other spaces.
+  </Accordion>
+  
+  <Accordion title="Simulation parameters">
+    Customize solver iterations, contact recycle radius, and other simulation parameters per space.
+  </Accordion>
+</AccordionGroup>
+
+### World spaces
+
+When using the scene tree, physics spaces are automatically created:
+
+```gdscript
+# Access the 2D physics space from a Node2D
+var space_2d = get_world_2d().space
+var direct_state = PhysicsServer2D.space_get_direct_state(space_2d)
+
+# Access the 3D physics space from a Node3D
+var space_3d = get_world_3d().space
+var direct_state_3d = PhysicsServer3D.space_get_direct_state(space_3d)
+```
+
+## Body modes
+
+Physics bodies can operate in different modes:
+
+### Static bodies
+
+Static bodies don't move and are optimized for stationary objects like walls and floors.
+
+```gdscript
+var body = StaticBody3D.new()
+# Static bodies are great for level geometry
+```
+
+### Kinematic bodies
+
+Kinematic bodies are controlled by code rather than physics forces. They're ideal for player characters.
+
+```gdscript
+var character = CharacterBody3D.new()
+character.velocity = Vector3(0, 0, -5)
+character.move_and_slide()
+```
+
+### Rigid bodies
+
+Rigid bodies are fully simulated by the physics engine and respond to forces, gravity, and collisions.
+
+```gdscript
+var rigid = RigidBody3D.new()
+rigid.apply_central_impulse(Vector3(0, 10, 0))
+```
+
+### Animatable bodies
+
+Animatable bodies are static bodies that can be moved through animations without affecting other physics objects.
+
+```gdscript
+var anim_body = AnimatableBody3D.new()
+# Move via animation, other bodies will collide with it
+```
+
+## Areas
+
+Areas are regions in space used for detection rather than collision. They can detect bodies entering and exiting, and override physics properties like gravity.
+
+```gdscript
+var area = Area3D.new()
+area.gravity = 20.0
+area.gravity_direction = Vector3.DOWN
+
+# Connect to detection signals
+area.body_entered.connect(_on_body_entered)
+area.body_exited.connect(_on_body_exited)
+
+func _on_body_entered(body):
+    print("Body entered: ", body.name)
+```
+
+## Collision layers and masks
+
+Godot uses a layer and mask system to control which objects can collide with each other.
+
+```gdscript
+# Set collision layer (which layers this object is on)
+body.collision_layer = 0b0001  # Layer 1
+
+# Set collision mask (which layers this object can detect)
+body.collision_mask = 0b0010  # Can collide with layer 2
+
+# Use multiple layers
+body.collision_layer = 0b0101  # Layers 1 and 3
+body.collision_mask = 0b1010   # Can collide with layers 2 and 4
+```
+
+<Tip>
+Use meaningful names for your collision layers in **Project Settings > Layer Names > 2D Physics** or **3D Physics** to make layer management easier.
+</Tip>
+
+## Physics callbacks
+
+Customize physics behavior with callbacks:
+
+```gdscript
+func _integrate_forces(state: PhysicsDirectBodyState3D):
+    # Called during physics step
+    # Access and modify body state directly
+    var transform = state.transform
+    var velocity = state.linear_velocity
+    
+    # Apply custom forces
+    state.apply_central_force(Vector3.UP * 10)
+```
+
+## Performance considerations
+
+<CardGroup cols={2}>
+  <Card title="Use static bodies" icon="mountain">
+    Static bodies are highly optimized. Use them for non-moving geometry.
+  </Card>
+  
+  <Card title="Simplify collision shapes" icon="shapes">
+    Use primitive shapes (box, sphere, capsule) when possible instead of complex meshes.
+  </Card>
+  
+  <Card title="Manage active bodies" icon="bolt">
+    Bodies automatically sleep when stationary. Avoid waking sleeping bodies unnecessarily.
+  </Card>
+  
+  <Card title="Optimize layers" icon="layer-group">
+    Use collision layers effectively to reduce unnecessary collision checks.
+  </Card>
+</CardGroup>
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Collision shapes" icon="cube" href="/physics/collision-shapes">
+    Learn about different collision shape types
+  </Card>
+  
+  <Card title="Raycasting" icon="bullseye" href="/physics/raycasting">
+    Perform physics queries and raycasts
+  </Card>
+  
+  <Card title="Joints" icon="link" href="/physics/joints">
+    Connect bodies with physics joints
+  </Card>
+</CardGroup>

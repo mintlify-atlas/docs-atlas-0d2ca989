@@ -1,0 +1,507 @@
+---
+title: AnimationPlayer
+description: Playing and controlling animations with AnimationPlayer node
+---
+
+The `AnimationPlayer` node is the primary way to play and control animations in Godot. It manages animation playback, blending between animations, and provides extensive control over timing and playback.
+
+## Creating an AnimationPlayer
+
+Add an `AnimationPlayer` node to your scene:
+
+<Steps>
+  <Step title="Add the node">
+    In the Scene dock, right-click your node and select "Add Child Node", then search for `AnimationPlayer`.
+  </Step>
+  <Step title="Create animations">
+    With the AnimationPlayer selected, use the Animation panel at the bottom to create new animations.
+  </Step>
+  <Step title="Add tracks">
+    Click "Add Track" to animate properties of nodes in your scene.
+  </Step>
+</Steps>
+
+## Basic Playback
+
+The AnimationPlayer provides simple methods for controlling animation playback:
+
+<CodeGroup>
+```gdscript GDScript
+# Play an animation
+$AnimationPlayer.play("walk")
+
+# Play with custom speed (2x speed)
+$AnimationPlayer.play("walk", -1, 2.0)
+
+# Play backwards
+$AnimationPlayer.play_backwards("run")
+
+# Pause the current animation
+$AnimationPlayer.pause()
+
+# Stop and reset
+$AnimationPlayer.stop()
+```
+
+```csharp C#
+var player = GetNode<AnimationPlayer>("AnimationPlayer");
+
+// Play an animation
+player.Play("walk");
+
+// Play with custom speed (2x speed)
+player.Play("walk", customSpeed: 2.0f);
+
+// Play backwards
+player.PlayBackwards("run");
+
+// Pause the current animation
+player.Pause();
+
+// Stop and reset
+player.Stop();
+```
+</CodeGroup>
+
+### Play Method Parameters
+
+The `play()` method accepts several parameters:
+
+- **name**: Animation name to play (empty uses assigned animation)
+- **custom_blend**: Blend time in seconds (default uses `playback_default_blend_time`)
+- **custom_speed**: Speed multiplier (negative values play backwards)
+- **from_end**: Start from the end of the animation
+
+## Animation Properties
+
+### Current Animation
+
+<CodeGroup>
+```gdscript GDScript
+# Get currently playing animation
+var current = $AnimationPlayer.current_animation
+print("Playing: ", current)
+
+# Set current animation (doesn't auto-play)
+$AnimationPlayer.current_animation = "idle"
+
+# Get assigned animation
+var assigned = $AnimationPlayer.assigned_animation
+```
+
+```csharp C#
+var player = GetNode<AnimationPlayer>("AnimationPlayer");
+
+// Get currently playing animation
+var current = player.CurrentAnimation;
+GD.Print($"Playing: {current}");
+
+// Set current animation (doesn't auto-play)
+player.CurrentAnimation = "idle";
+
+// Get assigned animation
+var assigned = player.AssignedAnimation;
+```
+</CodeGroup>
+
+<Warning>
+`current_animation` changes the animation but doesn't play it unless already playing. Use `play()` to start playback.
+</Warning>
+
+### Playback State
+
+```gdscript
+# Check if playing
+if $AnimationPlayer.is_playing():
+    print("Animation is active")
+
+# Get playback position
+var position = $AnimationPlayer.current_animation_position
+print("Current time: ", position)
+
+# Get animation length
+var length = $AnimationPlayer.current_animation_length
+print("Total duration: ", length)
+
+# Get actual playing speed (speed_scale × custom_speed)
+var speed = $AnimationPlayer.get_playing_speed()
+```
+
+## Animation Blending
+
+One of AnimationPlayer's most powerful features is smooth blending between animations.
+
+### Default Blend Time
+
+```gdscript
+# Set default blend time for all transitions
+$AnimationPlayer.playback_default_blend_time = 0.2
+
+# Now all animations blend smoothly over 0.2 seconds
+$AnimationPlayer.play("walk")
+await get_tree().create_timer(1.0).timeout
+$AnimationPlayer.play("run")  # Blends from walk to run
+```
+
+### Custom Blend Times
+
+Set specific blend times between particular animations:
+
+<CodeGroup>
+```gdscript GDScript
+# Blend from "idle" to "walk" over 0.3 seconds
+$AnimationPlayer.set_blend_time("idle", "walk", 0.3)
+
+# Blend from "walk" to "run" over 0.1 seconds
+$AnimationPlayer.set_blend_time("walk", "run", 0.1)
+
+# Blend from "run" to "idle" over 0.5 seconds
+$AnimationPlayer.set_blend_time("run", "idle", 0.5)
+
+# Play with automatic blending
+$AnimationPlayer.play("walk")  # Uses custom blend time
+```
+
+```csharp C#
+var player = GetNode<AnimationPlayer>("AnimationPlayer");
+
+// Set specific blend times
+player.SetBlendTime("idle", "walk", 0.3f);
+player.SetBlendTime("walk", "run", 0.1f);
+player.SetBlendTime("run", "idle", 0.5f);
+
+// Play with automatic blending
+player.Play("walk");
+```
+</CodeGroup>
+
+### Manual Blend Override
+
+```gdscript
+# Override blend time for a specific play() call
+$AnimationPlayer.play("jump", 0.1)  # Blend over 0.1 seconds
+```
+
+## Speed Control
+
+Control animation playback speed globally or per-animation:
+
+<CodeGroup>
+```gdscript GDScript
+# Global speed multiplier
+$AnimationPlayer.speed_scale = 1.5  # 1.5x speed
+
+# Slow motion effect
+$AnimationPlayer.speed_scale = 0.5  # Half speed
+
+# Play specific animation at custom speed
+$AnimationPlayer.play("attack", -1, 2.0)  # 2x speed
+
+# Reverse playback
+$AnimationPlayer.speed_scale = -1.0  # Play backwards
+```
+
+```csharp C#
+var player = GetNode<AnimationPlayer>("AnimationPlayer");
+
+// Global speed multiplier
+player.SpeedScale = 1.5f;  // 1.5x speed
+
+// Slow motion effect
+player.SpeedScale = 0.5f;  // Half speed
+
+// Play specific animation at custom speed
+player.Play("attack", customSpeed: 2.0f);
+```
+</CodeGroup>
+
+<Note>
+The actual playing speed is `speed_scale × custom_speed`. Use `get_playing_speed()` to get the combined value.
+</Note>
+
+## Seeking and Sections
+
+### Seeking to a Position
+
+<CodeGroup>
+```gdscript GDScript
+# Seek to 1.5 seconds
+$AnimationPlayer.seek(1.5)
+
+# Seek and update immediately
+$AnimationPlayer.seek(1.5, true)
+
+# Seek without processing method/audio tracks
+$AnimationPlayer.seek(1.5, true, true)
+```
+
+```csharp C#
+var player = GetNode<AnimationPlayer>("AnimationPlayer");
+
+// Seek to 1.5 seconds
+player.Seek(1.5);
+
+// Seek and update immediately
+player.Seek(1.5, true);
+```
+</CodeGroup>
+
+### Playing Animation Sections
+
+Play only part of an animation:
+
+<CodeGroup>
+```gdscript GDScript
+# Play from 0.5 to 2.0 seconds
+$AnimationPlayer.play_section("walk", 0.5, 2.0)
+
+# Play section using markers
+$AnimationPlayer.play_section_with_markers("cutscene", "start", "end")
+
+# Update section boundaries while playing
+$AnimationPlayer.set_section(1.0, 3.0)
+
+# Reset to play full animation
+$AnimationPlayer.reset_section()
+```
+
+```csharp C#
+var player = GetNode<AnimationPlayer>("AnimationPlayer");
+
+// Play from 0.5 to 2.0 seconds
+player.PlaySection("walk", 0.5f, 2.0f);
+
+// Play section using markers
+player.PlaySectionWithMarkers("cutscene", "start", "end");
+
+// Update section boundaries
+player.SetSection(1.0f, 3.0f);
+```
+</CodeGroup>
+
+## Animation Queue
+
+Queue animations to play in sequence:
+
+<CodeGroup>
+```gdscript GDScript
+# Play current animation, then queue others
+$AnimationPlayer.play("attack")
+$AnimationPlayer.queue("idle")
+
+# Check the queue
+var queued = $AnimationPlayer.get_queue()
+print("Queued animations: ", queued)
+
+# Clear the queue
+$AnimationPlayer.clear_queue()
+```
+
+```csharp C#
+var player = GetNode<AnimationPlayer>("AnimationPlayer");
+
+// Queue animations
+player.Play("attack");
+player.Queue("idle");
+
+// Get queued animations
+var queued = player.GetQueue();
+GD.Print($"Queued: {queued}");
+
+// Clear queue
+player.ClearQueue();
+```
+</CodeGroup>
+
+### Auto-Advance
+
+Automatically play another animation when one finishes:
+
+```gdscript
+# When "attack" finishes, automatically play "idle"
+$AnimationPlayer.animation_set_next("attack", "idle")
+
+# Get the next animation
+var next = $AnimationPlayer.animation_get_next("attack")
+print("After attack, plays: ", next)
+```
+
+## Auto-Capture
+
+Auto-capture smoothly transitions from the current state to the animation:
+
+<CodeGroup>
+```gdscript GDScript
+# Enable auto-capture
+$AnimationPlayer.playback_auto_capture = true
+$AnimationPlayer.playback_auto_capture_duration = 0.3
+
+# Or use play_with_capture for manual control
+$AnimationPlayer.play_with_capture("jump", 0.2, -1, 1.0, false, 
+    Tween.TRANS_CUBIC, Tween.EASE_OUT)
+```
+
+```csharp C#
+var player = GetNode<AnimationPlayer>("AnimationPlayer");
+
+// Enable auto-capture
+player.PlaybackAutoCapture = true;
+player.PlaybackAutoCaptureDuration = 0.3f;
+
+// Manual capture
+player.PlayWithCapture("jump", 0.2);
+```
+</CodeGroup>
+
+<Tip>
+Auto-capture is useful when objects are procedurally animated or affected by physics, ensuring smooth transitions to keyframed animations.
+</Tip>
+
+## Autoplay
+
+Set an animation to play automatically when the scene starts:
+
+```gdscript
+# In the editor: Select AnimationPlayer → Autoplay property
+# Or in code:
+$AnimationPlayer.autoplay = "idle"
+```
+
+## Signals
+
+AnimationPlayer provides signals for animation events:
+
+<CodeGroup>
+```gdscript GDScript
+func _ready():
+    $AnimationPlayer.animation_finished.connect(_on_animation_finished)
+    $AnimationPlayer.animation_changed.connect(_on_animation_changed)
+
+func _on_animation_finished(anim_name):
+    print("Finished playing: ", anim_name)
+    
+func _on_animation_changed(old_name, new_name):
+    print("Changed from ", old_name, " to ", new_name)
+```
+
+```csharp C#
+public override void _Ready()
+{
+    var player = GetNode<AnimationPlayer>("AnimationPlayer");
+    player.AnimationFinished += OnAnimationFinished;
+    player.AnimationChanged += OnAnimationChanged;
+}
+
+private void OnAnimationFinished(StringName animName)
+{
+    GD.Print($"Finished: {animName}");
+}
+
+private void OnAnimationChanged(StringName oldName, StringName newName)
+{
+    GD.Print($"Changed from {oldName} to {newName}");
+}
+```
+</CodeGroup>
+
+## Advanced Features
+
+### Movie Quit on Finish
+
+Useful for rendering animations:
+
+```gdscript
+# Quit when animation finishes (for Movie Maker mode)
+$AnimationPlayer.movie_quit_on_finish = true
+```
+
+### Manual Advancement
+
+```gdscript
+# Manually advance animation by delta time
+$AnimationPlayer.advance(0.016)  # Advance by 1 frame at 60 FPS
+```
+
+## Complete Example
+
+Here's a complete character animation controller:
+
+<CodeGroup>
+```gdscript GDScript
+extends CharacterBody2D
+
+func _ready():
+    # Setup blend times
+    $AnimationPlayer.set_blend_time("idle", "walk", 0.2)
+    $AnimationPlayer.set_blend_time("walk", "run", 0.15)
+    $AnimationPlayer.set_blend_time("run", "idle", 0.3)
+    
+    # Auto-play idle
+    $AnimationPlayer.play("idle")
+
+func _physics_process(delta):
+    var velocity_length = velocity.length()
+    
+    if velocity_length > 200:
+        if $AnimationPlayer.current_animation != "run":
+            $AnimationPlayer.play("run")
+    elif velocity_length > 10:
+        if $AnimationPlayer.current_animation != "walk":
+            $AnimationPlayer.play("walk")
+    else:
+        if $AnimationPlayer.current_animation != "idle":
+            $AnimationPlayer.play("idle")
+```
+
+```csharp C#
+public partial class Character : CharacterBody2D
+{
+    private AnimationPlayer _animPlayer;
+    
+    public override void _Ready()
+    {
+        _animPlayer = GetNode<AnimationPlayer>("AnimationPlayer");
+        
+        // Setup blend times
+        _animPlayer.SetBlendTime("idle", "walk", 0.2f);
+        _animPlayer.SetBlendTime("walk", "run", 0.15f);
+        _animPlayer.SetBlendTime("run", "idle", 0.3f);
+        
+        // Auto-play idle
+        _animPlayer.Play("idle");
+    }
+    
+    public override void _PhysicsProcess(double delta)
+    {
+        float velocityLength = Velocity.Length();
+        
+        if (velocityLength > 200)
+        {
+            if (_animPlayer.CurrentAnimation != "run")
+                _animPlayer.Play("run");
+        }
+        else if (velocityLength > 10)
+        {
+        if (_animPlayer.CurrentAnimation != "walk")
+                _animPlayer.Play("walk");
+        }
+        else
+        {
+            if (_animPlayer.CurrentAnimation != "idle")
+                _animPlayer.Play("idle");
+        }
+    }
+}
+```
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="AnimationTree" icon="diagram-project" href="/animation/animationtree">
+    Create complex animation blending with state machines
+  </Card>
+  <Card title="Skeletal Animation" icon="person" href="/animation/skeletal-animation">
+    Animate 3D characters with bones and IK
+  </Card>
+</CardGroup>

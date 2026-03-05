@@ -1,0 +1,455 @@
+---
+title: 'High-Level Multiplayer'
+description: 'Advanced multiplayer features: spawning, synchronization, and scene replication'
+---
+
+## Overview
+
+Godot's high-level multiplayer system provides tools for automatic synchronization, networked object spawning, and scene replication. This simplifies creating multiplayer games by handling common networking patterns automatically.
+
+<Info>
+High-level multiplayer is implemented through `SceneMultiplayer`, the default `MultiplayerAPI` implementation.
+</Info>
+
+## Scene Replication
+
+The `MultiplayerSpawner` and `MultiplayerSynchronizer` nodes automate networked object management:
+
+### MultiplayerSpawner
+
+Automatically spawns and despawns objects across the network:
+
+```gdscript
+# Setup spawner in server scene
+extends Node2D
+
+func _ready():
+    if multiplayer.is_server():
+        # Create spawner
+        var spawner = MultiplayerSpawner.new()
+        spawner.spawn_path = get_path()  # Where to spawn children
+        
+        # Register spawnable scenes
+        spawner.add_spawnable_scene("res://player.tscn")
+        spawner.add_spawnable_scene("res://enemy.tscn")
+        
+        add_child(spawner)
+        
+        # Connect to peer events
+        multiplayer.peer_connected.connect(_on_peer_connected)
+
+func _on_peer_connected(id: int):
+    # Spawn a player for the new peer
+    var player = preload("res://player.tscn").instantiate()
+    player.name = str(id)  # Use peer ID as name
+    player.set_multiplayer_authority(id)
+    add_child(player)
+```
+
+```csharp
+public partial class GameWorld : Node2D
+{
+    public override void _Ready()
+    {
+        if (Multiplayer.IsServer())
+        {
+            // Create spawner
+            var spawner = new MultiplayerSpawner();
+            spawner.SpawnPath = GetPath();  // Where to spawn children
+            
+            // Register spawnable scenes
+            spawner.AddSpawnableScene("res://player.tscn");
+            spawner.AddSpawnableScene("res://enemy.tscn");
+            
+            AddChild(spawner);
+            
+            // Connect to peer events
+            Multiplayer.PeerConnected += OnPeerConnected;
+        }
+    }
+
+    private void OnPeerConnected(long id)
+    {
+        // Spawn a player for the new peer
+        var player = GD.Load<PackedScene>("res://player.tscn").Instantiate<Node>();
+        player.Name = id.ToString();  // Use peer ID as name
+        player.SetMultiplayerAuthority((int)id);
+        AddChild(player);
+    }
+}
+```
+
+<Tip>
+Use the peer ID as the node name for easy identification and authority management.
+</Tip>
+
+### MultiplayerSynchronizer
+
+Automatically synchronizes node properties across the network:
+
+```gdscript
+# Player scene
+extends CharacterBody2D
+
+func _ready():
+    # Only add synchronizer on server
+    if multiplayer.is_server():
+        var synchronizer = MultiplayerSynchronizer.new()
+        
+        # Synchronize these properties
+        synchronizer.add_property("position")
+        synchronizer.add_property("velocity")
+        synchronizer.add_property("rotation")
+        
+        # Set update interval (in seconds)
+        synchronizer.replication_interval = 0.05  # 20 updates per second
+        
+        add_child(synchronizer)
+
+func _process(delta):
+    # Only authority moves the player
+    if is_multiplayer_authority():
+        handle_input()
+        move_and_slide()
+    # Properties auto-sync to other peers
+```
+
+```csharp
+public partial class Player : CharacterBody2D
+{
+    public override void _Ready()
+    {
+        // Only add synchronizer on server
+        if (Multiplayer.IsServer())
+        {
+            var synchronizer = new MultiplayerSynchronizer();
+            
+            // Synchronize these properties
+            synchronizer.AddProperty("position");
+            synchronizer.AddProperty("velocity");
+            synchronizer.AddProperty("rotation");
+            
+            // Set update interval (in seconds)
+            synchronizer.ReplicationInterval = 0.05f;  // 20 updates per second
+            
+            AddChild(synchronizer);
+        }
+    }
+
+    public override void _Process(double delta)
+    {
+        // Only authority moves the player
+        if (IsMultiplayerAuthority())
+        {
+            HandleInput();
+            MoveAndSlide();
+        }
+        // Properties auto-sync to other peers
+    }
+}
+```
+
+## Custom Spawn Function
+
+Control how objects are spawned:
+
+```gdscript
+var spawner: MultiplayerSpawner
+
+func _ready():
+    spawner = MultiplayerSpawner.new()
+    spawner.spawn_path = get_path()
+    spawner.spawn_function = _custom_spawn
+    add_child(spawner)
+
+func _custom_spawn(data: Variant):
+    var scene_path = data["scene"]
+    var spawn_position = data["position"]
+    var peer_id = data["peer_id"]
+    
+    var instance = load(scene_path).instantiate()
+    instance.position = spawn_position
+    instance.name = str(peer_id)
+    instance.set_multiplayer_authority(peer_id)
+    
+    return instance
+
+# Spawn with custom data
+func spawn_player(peer_id: int, pos: Vector2):
+    var data = {
+        "scene": "res://player.tscn",
+        "position": pos,
+        "peer_id": peer_id
+    }
+    spawner.spawn(data)
+```
+
+## Synchronized Properties
+
+### Property Replication
+
+Configure which properties sync and how:
+
+```gdscript
+extends Node2D
+
+# Properties to synchronize
+var health: int = 100
+var max_health: int = 100
+var team: int = 0
+var player_name: String = ""
+
+func _ready():
+    if multiplayer.is_server():
+        var sync = MultiplayerSynchronizer.new()
+        
+        # Add properties with different sync modes
+        sync.add_property("health")  # Always sync
+        sync.add_property("max_health")  # Sync once at spawn
+        sync.add_property("team")
+        sync.add_property("player_name")
+        
+        # Configure sync behavior
+        sync.replication_interval = 0.1  # 10 times per second
+        sync.delta_interval = 0.0  # Send every update (no delta compression)
+        
+        add_child(sync)
+```
+
+### Visibility Filters
+
+Control which peers see which objects:
+
+```gdscript
+var sync: MultiplayerSynchronizer
+
+func _ready():
+    sync = MultiplayerSynchronizer.new()
+    sync.add_property("position")
+    
+    # Set visibility filter
+    sync.visibility_update_mode = MultiplayerSynchronizer.VISIBILITY_PROCESS_IDLE
+    sync.set_visibility_for(1, true)   # Visible to peer 1
+    sync.set_visibility_for(2, false)  # Hidden from peer 2
+    
+    add_child(sync)
+
+# Dynamic visibility (e.g., fog of war)
+func update_visibility():
+    var peers = multiplayer.get_peers()
+    for peer_id in peers:
+        var distance = position.distance_to(get_peer_position(peer_id))
+        var visible = distance < 500.0  # Visible within 500 units
+        sync.set_visibility_for(peer_id, visible)
+```
+
+## Authority Transfer
+
+Transfer authority of nodes between peers:
+
+```gdscript
+# Transfer vehicle authority when player enters
+extends Vehicle
+
+func _on_player_entered(player: Node):
+    # Get the player's authority
+    var player_id = player.get_multiplayer_authority()
+    
+    # Transfer vehicle authority to that player
+    set_multiplayer_authority(player_id)
+    print("Vehicle now controlled by peer ", player_id)
+
+func _on_player_exited(player: Node):
+    # Return authority to server
+    set_multiplayer_authority(1)
+    print("Vehicle returned to server control")
+```
+
+## Spawn Limits and Pooling
+
+```gdscript
+extends Node2D
+
+var spawner: MultiplayerSpawner
+const MAX_ENEMIES = 50
+var active_enemies = 0
+
+func _ready():
+    if multiplayer.is_server():
+        spawner = MultiplayerSpawner.new()
+        spawner.spawn_path = get_path()
+        spawner.add_spawnable_scene("res://enemy.tscn")
+        spawner.spawn_limit = MAX_ENEMIES
+        add_child(spawner)
+
+func spawn_enemy(pos: Vector2) -> bool:
+    if active_enemies >= MAX_ENEMIES:
+        return false
+    
+    var enemy = preload("res://enemy.tscn").instantiate()
+    enemy.position = pos
+    enemy.tree_exited.connect(_on_enemy_died)
+    add_child(enemy)
+    active_enemies += 1
+    return true
+
+func _on_enemy_died():
+    active_enemies -= 1
+```
+
+## Client-Side Prediction
+
+Improve responsiveness with prediction:
+
+```gdscript
+extends CharacterBody2D
+
+var server_position: Vector2
+var server_velocity: Vector2
+
+func _ready():
+    if not is_multiplayer_authority():
+        # Setup interpolation for non-authority
+        server_position = position
+        server_velocity = velocity
+
+func _process(delta):
+    if is_multiplayer_authority():
+        # Authority: normal movement
+        handle_input()
+        move_and_slide()
+        
+        # Send updates to server
+        update_server.rpc(position, velocity)
+    else:
+        # Non-authority: interpolate to server position
+        position = position.lerp(server_position, delta * 10.0)
+        velocity = velocity.lerp(server_velocity, delta * 10.0)
+
+@rpc("any_peer", "unreliable")
+func update_server(pos: Vector2, vel: Vector2):
+    if multiplayer.is_server():
+        # Server receives and validates
+        server_position = pos
+        server_velocity = vel
+        
+        # Broadcast to other clients
+        update_clients.rpc(pos, vel)
+
+@rpc("authority", "unreliable")
+func update_clients(pos: Vector2, vel: Vector2):
+    if not is_multiplayer_authority():
+        server_position = pos
+        server_velocity = vel
+```
+
+<Info>
+Client-side prediction makes movement feel responsive even with network latency.
+</Info>
+
+## State Synchronization Patterns
+
+### Server-Authoritative Movement
+
+```gdscript
+extends CharacterBody2D
+
+func _process(delta):
+    if is_multiplayer_authority():
+        # Client sends input to server
+        var input = get_input_vector()
+        request_move.rpc_id(1, input)
+    
+    # All clients update based on server state
+    move_and_slide()
+
+@rpc("any_peer", "unreliable_ordered")
+func request_move(input: Vector2):
+    if not multiplayer.is_server():
+        return
+    
+    # Server validates and applies movement
+    velocity = input.normalized() * 300
+    
+    # Synchronizer broadcasts position automatically
+```
+
+### Snapshot Interpolation
+
+```gdscript
+var snapshots = []
+var snapshot_rate = 0.05  # 20 snapshots per second
+
+func _ready():
+    if not is_multiplayer_authority():
+        set_process(false)
+        set_physics_process(false)
+
+func _process(delta):
+    if is_multiplayer_authority():
+        # Authority updates normally
+        handle_movement()
+        
+        # Send snapshots
+        if Time.get_ticks_msec() % int(snapshot_rate * 1000) == 0:
+            send_snapshot.rpc(position, rotation, velocity)
+    else:
+        # Interpolate between snapshots
+        interpolate_snapshots(delta)
+
+@rpc("authority", "unreliable")
+func send_snapshot(pos: Vector2, rot: float, vel: Vector2):
+    snapshots.append({
+        "time": Time.get_ticks_msec(),
+        "position": pos,
+        "rotation": rot,
+        "velocity": vel
+    })
+    
+    # Keep only last 2 snapshots
+    if snapshots.size() > 2:
+        snapshots.pop_front()
+
+func interpolate_snapshots(delta):
+    if snapshots.size() < 2:
+        return
+    
+    var alpha = 0.5  # Interpolation factor
+    position = snapshots[0].position.lerp(snapshots[1].position, alpha)
+    rotation = lerp_angle(snapshots[0].rotation, snapshots[1].rotation, alpha)
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use spawners for dynamic objects">
+    Let MultiplayerSpawner handle object creation and deletion across the network automatically.
+  </Accordion>
+
+  <Accordion title="Synchronize only what's needed">
+    Don't sync every property. Only synchronize data that other players need to see.
+  </Accordion>
+
+  <Accordion title="Implement authority properly">
+    Always check `is_multiplayer_authority()` before modifying synchronized objects.
+  </Accordion>
+
+  <Accordion title="Use appropriate update rates">
+    Balance network traffic and responsiveness. Position might need 20 Hz, health might only need updates on change.
+  </Accordion>
+
+  <Accordion title="Validate on server">
+    Always validate critical actions on the server to prevent cheating.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Networking Overview" icon="network-wired" href="/networking/overview">
+    Learn networking fundamentals and RPC system
+  </Card>
+  <Card title="Low-Level Networking" icon="code" href="/networking/low-level-networking">
+    Understand underlying network implementations
+  </Card>
+</CardGroup>

@@ -1,0 +1,468 @@
+---
+title: 'Low-Level Networking'
+description: 'ENet and WebSocket for low-level network communication'
+---
+
+## Overview
+
+Godot provides low-level networking implementations through ENet for reliable UDP communication and WebSocket for web-based networking. These form the foundation of the high-level multiplayer system.
+
+<Info>
+Most games should use the high-level multiplayer API, but understanding the low-level implementations helps optimize network performance.
+</Info>
+
+## ENetMultiplayerPeer
+
+ENet provides reliable UDP communication with low latency, making it ideal for real-time multiplayer games.
+
+### Creating a Server
+
+```gdscript
+var peer = ENetMultiplayerPeer.new()
+
+# Create server on port 8080, allow up to 32 clients
+var error = peer.create_server(8080, 32)
+if error != OK:
+    print("Failed to create server: ", error)
+    return
+
+# Configure server
+peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+
+# Assign to multiplayer
+multiplayer.multiplayer_peer = peer
+print("Server started on port 8080")
+```
+
+```csharp
+var peer = new ENetMultiplayerPeer();
+
+// Create server on port 8080, allow up to 32 clients
+Error error = peer.CreateServer(8080, 32);
+if (error != Error.Ok)
+{
+    GD.Print($"Failed to create server: {error}");
+    return;
+}
+
+// Configure server
+peer.GetHost().Compress(ENetConnection.CompressionMode.RangeCoder);
+
+// Assign to multiplayer
+Multiplayer.MultiplayerPeer = peer;
+GD.Print("Server started on port 8080");
+```
+
+### Creating a Client
+
+```gdscript
+var peer = ENetMultiplayerPeer.new()
+
+# Connect to server at IP address and port
+var error = peer.create_client("127.0.0.1", 8080)
+if error != OK:
+    print("Failed to create client: ", error)
+    return
+
+# Configure client
+peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+
+# Assign to multiplayer
+multiplayer.multiplayer_peer = peer
+print("Connecting to server...")
+```
+
+```csharp
+var peer = new ENetMultiplayerPeer();
+
+// Connect to server at IP address and port
+Error error = peer.CreateClient("127.0.0.1", 8080);
+if (error != Error.Ok)
+{
+    GD.Print($"Failed to create client: {error}");
+    return;
+}
+
+// Configure client
+peer.GetHost().Compress(ENetConnection.CompressionMode.RangeCoder);
+
+// Assign to multiplayer
+Multiplayer.MultiplayerPeer = peer;
+GD.Print("Connecting to server...");
+```
+
+<Tip>
+Use the same compression mode on both client and server for compatibility.
+</Tip>
+
+## ENet Configuration
+
+### Compression
+
+ENet supports packet compression to reduce bandwidth:
+
+```gdscript
+var peer = ENetMultiplayerPeer.new()
+peer.create_server(8080, 32)
+
+var host = peer.get_host()
+
+# Compression modes
+host.compress(ENetConnection.COMPRESS_NONE)         # No compression
+host.compress(ENetConnection.COMPRESS_RANGE_CODER)  # Range coder (default)
+host.compress(ENetConnection.COMPRESS_FASTLZ)       # FastLZ compression
+host.compress(ENetConnection.COMPRESS_ZLIB)         # ZLib compression
+host.compress(ENetConnection.COMPRESS_ZSTD)         # Zstandard compression
+```
+
+**Compression Comparison:**
+
+| Mode | Speed | Ratio | Use Case |
+|------|-------|-------|----------|
+| NONE | Fastest | 1:1 | Low latency, already compressed data |
+| FASTLZ | Fast | Good | General purpose |
+| RANGE_CODER | Medium | Better | Default, good balance |
+| ZLIB | Slow | Best | Text-heavy data |
+| ZSTD | Fast | Excellent | Modern, efficient compression |
+
+### Transfer Channels
+
+ENet supports multiple channels for organizing traffic:
+
+```gdscript
+# Set transfer channel and mode
+multiplayer.multiplayer_peer.transfer_channel = 0  # Default channel
+multiplayer.multiplayer_peer.transfer_mode = MultiplayerPeer.TRANSFER_MODE_RELIABLE
+
+# Send on specific channel
+my_function.rpc_id(peer_id, arg1, arg2)
+```
+
+**Channel Usage:**
+- Channel 0: Critical game state (reliable)
+- Channel 1: Position updates (unreliable ordered)
+- Channel 2: Chat messages (reliable)
+- Channel 3: Voice data (unreliable)
+
+### Bandwidth Throttling
+
+```gdscript
+var peer = ENetMultiplayerPeer.new()
+peer.create_server(8080, 32)
+
+var host = peer.get_host()
+
+# Limit bandwidth (bytes per second)
+host.bandwidth_limit(32000, 32000)  # 32 KB/s incoming and outgoing
+
+# For specific peer
+host.bandwidth_limit_peer(peer_id, 16000, 16000)  # 16 KB/s
+```
+
+## WebSocketMultiplayerPeer
+
+WebSocket enables multiplayer in web browsers and provides cross-platform compatibility.
+
+### WebSocket Server
+
+```gdscript
+var peer = WebSocketMultiplayerPeer.new()
+
+# Create WebSocket server
+var error = peer.create_server(8080)
+if error != OK:
+    print("Failed to create WebSocket server: ", error)
+    return
+
+# Configure TLS (optional, for secure WebSocket)
+var tls_options = TLSOptions.server(
+    load("res://server.key"),
+    load("res://server.crt")
+)
+peer.create_server(8080, "*", tls_options)
+
+multiplayer.multiplayer_peer = peer
+print("WebSocket server started on port 8080")
+```
+
+```csharp
+var peer = new WebSocketMultiplayerPeer();
+
+// Create WebSocket server
+Error error = peer.CreateServer(8080);
+if (error != Error.Ok)
+{
+    GD.Print($"Failed to create WebSocket server: {error}");
+    return;
+}
+
+Multiplayer.MultiplayerPeer = peer;
+GD.Print("WebSocket server started on port 8080");
+```
+
+### WebSocket Client
+
+```gdscript
+var peer = WebSocketMultiplayerPeer.new()
+
+# Connect to WebSocket server
+var url = "ws://127.0.0.1:8080"
+var error = peer.create_client(url)
+if error != OK:
+    print("Failed to connect: ", error)
+    return
+
+# For secure WebSocket (wss://)
+var tls_options = TLSOptions.client()
+var secure_url = "wss://example.com:8080"
+peer.create_client(secure_url, tls_options)
+
+multiplayer.multiplayer_peer = peer
+print("Connecting to WebSocket server...")
+```
+
+```csharp
+var peer = new WebSocketMultiplayerPeer();
+
+// Connect to WebSocket server
+string url = "ws://127.0.0.1:8080";
+Error error = peer.CreateClient(url);
+if (error != Error.Ok)
+{
+    GD.Print($"Failed to connect: {error}");
+    return;
+}
+
+Multiplayer.MultiplayerPeer = peer;
+GD.Print("Connecting to WebSocket server...");
+```
+
+<Info>
+WebSocket is required for HTML5 exports but has higher latency than ENet. Use ENet for native builds.
+</Info>
+
+## PacketPeer
+
+Both ENet and WebSocket implement the `PacketPeer` interface for raw packet sending:
+
+```gdscript
+var peer = ENetMultiplayerPeer.new()
+peer.create_server(8080, 4)
+
+# Get available packet count
+var packet_count = peer.get_available_packet_count()
+
+if packet_count > 0:
+    # Get packet data
+    var packet = peer.get_packet()
+    
+    # Get packet sender
+    var sender_id = peer.get_packet_peer()
+    
+    # Get transfer mode
+    var mode = peer.get_packet_mode()
+    
+    # Get channel
+    var channel = peer.get_packet_channel()
+    
+    print("Received ", packet.size(), " bytes from ", sender_id)
+
+# Send packet to specific peer
+peer.set_target_peer(2)  # Target peer 2
+peer.put_packet("Hello".to_utf8_buffer())
+
+# Broadcast to all
+peer.set_target_peer(0)  # 0 = broadcast
+peer.put_packet("Hello everyone".to_utf8_buffer())
+```
+
+## Low-Level ENet Connection
+
+For complete control, use `ENetConnection` directly:
+
+```gdscript
+var enet = ENetConnection.new()
+
+# Create host
+enet.create_host_bound("127.0.0.1", 8080, 32, 0, 0, 0)
+
+# Compress
+enet.compress(ENetConnection.COMPRESS_RANGE_CODER)
+
+# In _process():
+func _process(delta):
+    # Service the connection
+    var event = enet.service()
+    
+    while event[0] != ENetConnection.EVENT_NONE:
+        match event[0]:
+            ENetConnection.EVENT_CONNECT:
+                print("Peer connected: ", event[1])
+            
+            ENetConnection.EVENT_DISCONNECT:
+                print("Peer disconnected: ", event[1])
+            
+            ENetConnection.EVENT_RECEIVE:
+                var peer = event[1]
+                var channel = event[2]
+                var packet = event[3]
+                print("Received packet: ", packet.get_string_from_utf8())
+        
+        event = enet.service()
+```
+
+## Custom Protocol Implementation
+
+Implement custom protocols using `StreamPeer`:
+
+```gdscript
+extends Node
+
+var tcp_server = TCPServer.new()
+var clients = []
+
+func _ready():
+    # Start TCP server
+    tcp_server.listen(8080)
+    print("TCP server listening on port 8080")
+
+func _process(delta):
+    # Accept new connections
+    if tcp_server.is_connection_available():
+        var client = tcp_server.take_connection()
+        clients.append(client)
+        print("Client connected")
+    
+    # Process existing connections
+    for client in clients:
+        if client.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+            if client.get_available_bytes() > 0:
+                var data = client.get_data(client.get_available_bytes())
+                handle_message(client, data[1])
+        else:
+            clients.erase(client)
+            print("Client disconnected")
+
+func handle_message(client: StreamPeerTCP, data: PackedByteArray):
+    print("Received: ", data.get_string_from_utf8())
+    
+    # Send response
+    var response = "Acknowledged".to_utf8_buffer()
+    client.put_data(response)
+```
+
+## NAT Traversal
+
+For peer-to-peer connections through NAT:
+
+```gdscript
+# Using UPNP for port forwarding
+var upnp = UPNP.new()
+
+func setup_upnp():
+    # Discover gateway
+    var error = upnp.discover()
+    if error != OK:
+        print("UPNP discovery failed")
+        return
+    
+    # Map external port to internal port
+    upnp.add_port_mapping(8080, 8080, "MyGame", "UDP")
+    
+    # Get external IP
+    var external_ip = upnp.query_external_address()
+    print("External IP: ", external_ip)
+
+func cleanup_upnp():
+    upnp.delete_port_mapping(8080, "UDP")
+```
+
+<Warning>
+UPNP may not work on all routers. Consider using dedicated relay servers for reliable connectivity.
+</Warning>
+
+## Performance Optimization
+
+### Packet Batching
+
+```gdscript
+var packet_batch = []
+var batch_time = 0.0
+const BATCH_INTERVAL = 0.05  # 50ms
+
+func _process(delta):
+    batch_time += delta
+    
+    if batch_time >= BATCH_INTERVAL and packet_batch.size() > 0:
+        # Send batched packets
+        var batch_data = PackedByteArray()
+        for packet in packet_batch:
+            batch_data.append_array(packet)
+        
+        multiplayer.multiplayer_peer.put_packet(batch_data)
+        
+        packet_batch.clear()
+        batch_time = 0.0
+
+func queue_packet(data: PackedByteArray):
+    packet_batch.append(data)
+```
+
+### Connection Monitoring
+
+```gdscript
+func monitor_connection():
+    var peer = multiplayer.multiplayer_peer as ENetMultiplayerPeer
+    
+    if peer:
+        var host = peer.get_host()
+        
+        # Get statistics
+        var peers_count = host.get_peer_count()
+        print("Connected peers: ", peers_count)
+        
+        # Check peer health
+        for peer_id in multiplayer.get_peers():
+            var peer_info = host.get_peer(peer_id)
+            if peer_info:
+                var rtt = peer_info.get_statistic(ENetPacketPeer.PEER_ROUND_TRIP_TIME)
+                print("Peer ", peer_id, " RTT: ", rtt, "ms")
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Choose the right protocol">
+    Use ENet for native games (lower latency), WebSocket for web exports and cross-platform compatibility.
+  </Accordion>
+
+  <Accordion title="Enable compression wisely">
+    Use compression for text and repeated data, but disable for already compressed content (images, audio).
+  </Accordion>
+
+  <Accordion title="Monitor network performance">
+    Track RTT, packet loss, and bandwidth usage to identify network issues early.
+  </Accordion>
+
+  <Accordion title="Implement reconnection logic">
+    Handle temporary disconnections gracefully with automatic reconnection attempts.
+  </Accordion>
+
+  <Accordion title="Use channels effectively">
+    Separate traffic types into different channels to prevent head-of-line blocking.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Networking Overview" icon="network-wired" href="/networking/overview">
+    Learn networking fundamentals
+  </Card>
+  <Card title="High-Level Multiplayer" icon="users" href="/networking/high-level-multiplayer">
+    Use spawning and synchronization
+  </Card>
+  <Card title="HTTP Requests" icon="globe" href="/networking/http-requests">
+    Make web API calls
+  </Card>
+</CardGroup>

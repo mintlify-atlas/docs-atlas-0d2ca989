@@ -1,0 +1,531 @@
+---
+title: Import System
+description: Understanding Godot's asset import pipeline and creating custom importers
+---
+
+Godot's import system automatically processes external assets and converts them into engine-optimized formats. The system supports various file types and allows you to create custom importers for specialized formats.
+
+## Asset Import Pipeline
+
+When you add files to your project, Godot automatically:
+
+1. Detects the file type based on extension
+2. Selects an appropriate importer
+3. Processes the file with import settings
+4. Saves the imported resource to `.godot/imported/`
+5. Creates a `.import` file to track settings
+
+### How Imports Work
+
+```gdscript
+# When you load a resource, Godot uses the imported version
+var texture = load("res://icon.png")  # Actually loads from .godot/imported/
+
+# The original file remains untouched
+# All modifications are stored in the .import file
+```
+
+## ResourceImporter Base Class
+
+All importers inherit from `ResourceImporter`:
+
+```gdscript
+extends ResourceImporter
+
+# Check build dependencies for compilation profiles
+func _get_build_dependencies(path):
+    var resource = load(path)
+    var dependencies = PackedStringArray()
+    
+    if resource.has_advanced_features:
+        dependencies.push_back("module_advanced_enabled")
+    
+    return dependencies
+```
+
+### Import Order
+
+Importers run in a specific order to handle dependencies:
+
+- `IMPORT_ORDER_DEFAULT` (0) - Most importers
+- `IMPORT_ORDER_SCENE` (100) - Scene importers (run last)
+
+Scenes import last because they may reference other imported resources like textures and models.
+
+## Creating Custom Import Plugins
+
+Extend `EditorImportPlugin` to create custom importers:
+
+```gdscript
+@tool
+extends EditorImportPlugin
+
+func _get_importer_name():
+    return "my.custom.importer"
+
+func _get_visible_name():
+    return "Custom Data"
+
+func _get_recognized_extensions():
+    return ["mydata", "dat"]
+
+func _get_save_extension():
+    return "res"
+
+func _get_resource_type():
+    return "Resource"
+
+func _get_preset_count():
+    return 2
+
+func _get_preset_name(preset_index):
+    match preset_index:
+        0: return "Default"
+        1: return "Optimized"
+    return "Unknown"
+
+func _get_import_options(path, preset_index):
+    match preset_index:
+        0:  # Default
+            return [
+                {"name": "quality", "default_value": 1.0},
+                {"name": "compress", "default_value": false}
+            ]
+        1:  # Optimized
+            return [
+                {"name": "quality", "default_value": 0.8},
+                {"name": "compress", "default_value": true}
+            ]
+    return []
+
+func _get_priority():
+    return 1.0  # Higher priority than default importers
+
+func _get_import_order():
+    return ResourceImporter.IMPORT_ORDER_DEFAULT
+
+func _import(source_file, save_path, options, platform_variants, gen_files):
+    var file = FileAccess.open(source_file, FileAccess.READ)
+    if file == null:
+        return FileAccess.get_open_error()
+    
+    # Read and process file
+    var data = file.get_buffer(file.get_length())
+    file.close()
+    
+    # Create resource
+    var resource = MyCustomResource.new()
+    resource.data = data
+    resource.quality = options["quality"]
+    
+    if options["compress"]:
+        resource.compress_data()
+    
+    # Save imported resource
+    var filename = save_path + "." + _get_save_extension()
+    return ResourceSaver.save(resource, filename)
+```
+
+<Note>
+Return `OK` (or `@GlobalScope.OK`) for successful imports, other error codes for failures.
+</Note>
+
+### Register the Import Plugin
+
+```gdscript
+@tool
+extends EditorPlugin
+
+var import_plugin
+
+func _enter_tree():
+    import_plugin = preload("res://addons/my_importer/importer.gd").new()
+    # Set first_priority to true to run before built-in importers
+    add_import_plugin(import_plugin, false)
+
+func _exit_tree():
+    remove_import_plugin(import_plugin)
+```
+
+## Import Presets
+
+Presets provide predefined configurations for different use cases:
+
+```gdscript
+func _get_preset_count():
+    return 3
+
+func _get_preset_name(preset_index):
+    match preset_index:
+        0: return "Low Quality"
+        1: return "Medium Quality"
+        2: return "High Quality"
+    return ""
+
+func _get_import_options(path, preset_index):
+    var base_options = [
+        {
+            "name": "quality",
+            "default_value": 0.5,
+            "property_hint": PROPERTY_HINT_RANGE,
+            "hint_string": "0.0,1.0,0.1"
+        },
+        {
+            "name": "format",
+            "default_value": 0,
+            "property_hint": PROPERTY_HINT_ENUM,
+            "hint_string": "Compressed,Uncompressed,Lossy"
+        }
+    ]
+    
+    match preset_index:
+        0:  # Low Quality
+            base_options[0]["default_value"] = 0.3
+            base_options[1]["default_value"] = 2  # Lossy
+        1:  # Medium Quality
+            base_options[0]["default_value"] = 0.7
+            base_options[1]["default_value"] = 0  # Compressed
+        2:  # High Quality
+            base_options[0]["default_value"] = 1.0
+            base_options[1]["default_value"] = 1  # Uncompressed
+    
+    return base_options
+```
+
+### Conditional Options
+
+Show or hide options based on other settings:
+
+```gdscript
+func _get_option_visibility(path, option_name, options):
+    # Only show quality if format is "Lossy"
+    if option_name == "quality":
+        return options.get("format", 0) == 2
+    
+    # Show all other options
+    return true
+```
+
+## Importing 3D Models
+
+For 3D formats like GLTF and FBX, use `EditorSceneFormatImporter`:
+
+```gdscript
+@tool
+extends EditorSceneFormatImporter
+
+func _get_extensions():
+    return ["custom3d"]
+
+func _get_import_options(path):
+    # Only add options when path matches this importer
+    if path.is_empty() or path.get_extension() == "custom3d":
+        add_import_option("scale", 1.0)
+        add_import_option("generate_tangents", true)
+        add_import_option_advanced(
+            TYPE_INT,
+            "mesh_compression",
+            0,
+            PROPERTY_HINT_ENUM,
+            "Disabled,Low,High"
+        )
+
+func _get_option_visibility(path, for_animation, option):
+    # Hide mesh options when importing animations
+    if for_animation and option.begins_with("mesh_"):
+        return false
+    return true
+
+func _import_scene(path, flags, options):
+    var file = FileAccess.open(path, FileAccess.READ)
+    if file == null:
+        return null
+    
+    # Parse custom 3D format
+    var scene_data = _parse_custom_format(file)
+    file.close()
+    
+    # Build scene tree
+    var root = Node3D.new()
+    root.name = path.get_file().get_basename()
+    
+    for mesh_data in scene_data.meshes:
+        var mesh_instance = MeshInstance3D.new()
+        mesh_instance.mesh = _create_mesh(mesh_data)
+        
+        if options.get("generate_tangents", true):
+            mesh_instance.mesh = _generate_tangents(mesh_instance.mesh)
+        
+        root.add_child(mesh_instance)
+        mesh_instance.owner = root
+    
+    return root
+```
+
+### Import Flags
+
+Scene importers can check flags to determine what to import:
+
+- `IMPORT_SCENE` - Import as scene
+- `IMPORT_ANIMATION` - Import animations
+- `IMPORT_FAIL_ON_MISSING_DEPENDENCIES` - Fail if dependencies missing
+- `IMPORT_GENERATE_TANGENT_ARRAYS` - Generate tangent arrays
+- `IMPORT_USE_NAMED_SKIN_BINDS` - Use named skin bindings
+- `IMPORT_DISCARD_MESHES_AND_MATERIALS` - Import only structure
+- `IMPORT_FORCE_DISABLE_MESH_COMPRESSION` - Disable compression
+
+```gdscript
+func _import_scene(path, flags, options):
+    var import_meshes = flags & EditorSceneFormatImporter.IMPORT_SCENE
+    var import_animations = flags & EditorSceneFormatImporter.IMPORT_ANIMATION
+    
+    if not import_meshes:
+        # Skip mesh data
+        pass
+```
+
+## Importing Textures
+
+For custom texture formats:
+
+```gdscript
+@tool
+extends EditorImportPlugin
+
+func _get_importer_name():
+    return "custom.texture.importer"
+
+func _get_visible_name():
+    return "Custom Texture"
+
+func _get_recognized_extensions():
+    return ["ctex"]
+
+func _get_save_extension():
+    return "ctex"
+
+func _get_resource_type():
+    return "CompressedTexture2D"
+
+func _get_import_options(path, preset_index):
+    return [
+        {"name": "mipmaps", "default_value": true},
+        {"name": "filter", "default_value": true},
+        {
+            "name": "compression_mode",
+            "default_value": 0,
+            "property_hint": PROPERTY_HINT_ENUM,
+            "hint_string": "Lossless,Lossy,VRAM,Uncompressed"
+        },
+        {
+            "name": "lossy_quality",
+            "default_value": 0.7,
+            "property_hint": PROPERTY_HINT_RANGE,
+            "hint_string": "0.0,1.0,0.01"
+        }
+    ]
+
+func _get_option_visibility(path, option_name, options):
+    if option_name == "lossy_quality":
+        return options.get("compression_mode", 0) == 1  # Only for Lossy
+    return true
+
+func _import(source_file, save_path, options, platform_variants, gen_files):
+    # Load and decode custom texture format
+    var image = _load_custom_texture(source_file)
+    
+    if options["mipmaps"]:
+        image.generate_mipmaps()
+    
+    # Create and save compressed texture
+    var texture = ImageTexture.create_from_image(image)
+    
+    # Save for different platforms if needed
+    if platform_variants.size() > 0:
+        for tag in platform_variants:
+            var variant_path = save_path + "." + tag + "." + _get_save_extension()
+            ResourceSaver.save(texture, variant_path)
+    
+    return ResourceSaver.save(texture, save_path + "." + _get_save_extension())
+```
+
+## Importing Audio Files
+
+```gdscript
+@tool
+extends EditorImportPlugin
+
+func _get_importer_name():
+    return "custom.audio.importer"
+
+func _get_visible_name():
+    return "Custom Audio"
+
+func _get_recognized_extensions():
+    return ["caud"]
+
+func _get_save_extension():
+    return "sample"
+
+func _get_resource_type():
+    return "AudioStreamWAV"
+
+func _get_import_options(path, preset_index):
+    return [
+        {"name": "loop", "default_value": false},
+        {"name": "loop_offset", "default_value": 0.0},
+        {
+            "name": "format",
+            "default_value": 0,
+            "property_hint": PROPERTY_HINT_ENUM,
+            "hint_string": "8-bit,16-bit,IMA ADPCM,QOA"
+        }
+    ]
+
+func _import(source_file, save_path, options, platform_variants, gen_files):
+    var audio_data = _decode_custom_audio(source_file)
+    
+    var stream = AudioStreamWAV.new()
+    stream.data = audio_data
+    stream.format = options["format"]
+    stream.loop_mode = AudioStreamWAV.LOOP_FORWARD if options["loop"] else AudioStreamWAV.LOOP_DISABLED
+    stream.loop_begin = int(options["loop_offset"] * stream.mix_rate)
+    
+    return ResourceSaver.save(stream, save_path + "." + _get_save_extension())
+```
+
+## Thread Safety
+
+Indicate if your importer can run in parallel:
+
+```gdscript
+func _can_import_threaded():
+    # Return true if your importer is thread-safe
+    return true
+```
+
+<Warning>
+Only return `true` if your importer doesn't use any shared state or makes thread-safe API calls.
+</Warning>
+
+## Versioning Imports
+
+Increment the format version when making breaking changes:
+
+```gdscript
+func _get_format_version():
+    return 2  # Increment when format changes
+
+# When version changes, all files will be re-imported
+```
+
+## Appending External Resources
+
+Import additional dependencies during the import process:
+
+```gdscript
+func _import(source_file, save_path, options, platform_variants, gen_files):
+    # Your main import logic
+    var main_resource = MyResource.new()
+    
+    # Import an embedded texture
+    var texture_path = "res://.godot/imported/embedded_texture.png"
+    var result = append_import_external_resource(
+        texture_path,
+        {"mipmaps": true},  # Custom import options
+        "keep"  # Use "keep" importer or specify custom one
+    )
+    
+    if result == OK:
+        main_resource.texture = load(texture_path)
+        gen_files.append(texture_path)  # Track generated file
+    
+    return ResourceSaver.save(main_resource, save_path + "." + _get_save_extension())
+```
+
+## Common Import Patterns
+
+### Atlas/Sprite Sheet Importer
+
+```gdscript
+func _import(source_file, save_path, options, platform_variants, gen_files):
+    var image = Image.load_from_file(source_file)
+    var tile_width = options["tile_width"]
+    var tile_height = options["tile_height"]
+    
+    var atlas = SpriteFrames.new()
+    var cols = image.get_width() / tile_width
+    var rows = image.get_height() / tile_height
+    
+    for row in range(rows):
+        for col in range(cols):
+            var tile_image = Image.create(tile_width, tile_height, false, image.get_format())
+            tile_image.blit_rect(image, Rect2i(col * tile_width, row * tile_height, tile_width, tile_height), Vector2i.ZERO)
+            
+            var texture = ImageTexture.create_from_image(tile_image)
+            atlas.add_frame("default", texture)
+    
+    return ResourceSaver.save(atlas, save_path + ".res")
+```
+
+### CSV Data Importer
+
+```gdscript
+func _import(source_file, save_path, options, platform_variants, gen_files):
+    var file = FileAccess.open(source_file, FileAccess.READ)
+    if file == null:
+        return FAILED
+    
+    var data_resource = GameData.new()
+    var delimiter = options.get("delimiter", ",")
+    var skip_header = options.get("skip_first_row", true)
+    
+    if skip_header:
+        file.get_line()  # Skip header
+    
+    while not file.eof_reached():
+        var line = file.get_line()
+        if line.is_empty():
+            continue
+        
+        var fields = line.split(delimiter)
+        data_resource.add_entry(fields)
+    
+    file.close()
+    return ResourceSaver.save(data_resource, save_path + "." + _get_save_extension())
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Handle errors gracefully">
+    Always check file operations and return appropriate error codes. Provide helpful error messages.
+  </Accordion>
+  
+  <Accordion title="Use appropriate import order">
+    Set `_get_import_order()` correctly so resources import before scenes that use them.
+  </Accordion>
+  
+  <Accordion title="Implement proper presets">
+    Provide meaningful presets for common use cases (Low/Medium/High quality, etc.).
+  </Accordion>
+  
+  <Accordion title="Make options discoverable">
+    Use property hints to make options user-friendly with dropdowns, ranges, and clear labels.
+  </Accordion>
+  
+  <Accordion title="Document your importer">
+    Provide clear visible names and descriptions for your import options.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Editor Plugins" icon="puzzle-piece" href="/editor/plugins">
+    Learn how to create and register editor plugins
+  </Card>
+  <Card title="Custom Nodes" icon="cube" href="/editor/custom-nodes">
+    Create custom node types with tool scripts
+  </Card>
+</CardGroup>

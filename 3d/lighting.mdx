@@ -1,0 +1,603 @@
+---
+title: '3D Lighting'
+description: 'Comprehensive guide to lighting in Godot 3D scenes'
+---
+
+## Introduction to 3D Lighting
+
+Lighting is crucial for creating atmosphere and visual depth in 3D scenes. Godot provides three main light types and advanced global illumination techniques to achieve realistic and performant lighting.
+
+<Note>
+All light nodes inherit from the base `Light3D` class (doc/classes/Light3D.xml:2).
+</Note>
+
+## Light Types
+
+<CardGroup cols={3}>
+  <Card title="DirectionalLight3D" icon="sun">
+    Simulates distant light sources like the sun
+  </Card>
+  <Card title="OmniLight3D" icon="lightbulb">
+    Point light radiating in all directions
+  </Card>
+  <Card title="SpotLight3D" icon="flashlight">
+    Cone-shaped light like a flashlight
+  </Card>
+</CardGroup>
+
+## DirectionalLight3D
+
+Models infinite parallel rays from a distant source, typically used for sunlight or moonlight.
+
+### Basic Setup
+
+```gdscript
+var sun = DirectionalLight3D.new()
+add_child(sun)
+
+# Position doesn't matter - only rotation affects direction
+sun.rotation_degrees = Vector3(-45, 30, 0)
+
+# Configure light properties
+sun.light_color = Color(1.0, 0.95, 0.8)  # Warm sunlight
+sun.light_energy = 1.0
+```
+
+See doc/classes/DirectionalLight3D.xml:7-8
+
+<Info>
+Light is emitted in the **-Z direction** of the node's global basis. For an unrotated light, this means light travels forward.
+</Info>
+
+### Shadow Configuration
+
+```gdscript
+# Enable shadows
+sun.shadow_enabled = true
+
+# Shadow quality modes
+sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+
+# Shadow distance
+sun.directional_shadow_max_distance = 200.0
+sun.directional_shadow_fade_start = 0.8
+```
+
+See doc/classes/DirectionalLight3D.xml:24, 21-22
+
+### Shadow Split Configuration
+
+For better shadow quality, directional lights use cascaded shadow maps:
+
+<Tabs>
+  <Tab title="2 Splits">
+    ```gdscript
+    sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+    sun.directional_shadow_split_1 = 0.1  # 10% of max distance
+    ```
+    Good balance between quality and performance.
+  </Tab>
+  
+  <Tab title="4 Splits">
+    ```gdscript
+    sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+    sun.directional_shadow_split_1 = 0.05
+    sun.directional_shadow_split_2 = 0.15
+    sun.directional_shadow_split_3 = 0.5
+    ```
+    Best quality but higher performance cost.
+  </Tab>
+  
+  <Tab title="Orthogonal">
+    ```gdscript
+    sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+    ```
+    Fastest but may produce blurrier shadows.
+  </Tab>
+</Tabs>
+
+See doc/classes/DirectionalLight3D.xml:30-37
+
+### Sky Mode
+
+```gdscript
+# Control if light affects scene, sky, or both
+sun.sky_mode = DirectionalLight3D.SKY_MODE_LIGHT_AND_SKY
+```
+
+<Accordion title="Sky Mode Options">
+- `SKY_MODE_LIGHT_AND_SKY`: Affects both scene and sky (default)
+- `SKY_MODE_LIGHT_ONLY`: Only lights the scene
+- `SKY_MODE_SKY_ONLY`: Only affects sky shader
+</Accordion>
+
+See doc/classes/DirectionalLight3D.xml:39-40
+
+## OmniLight3D
+
+Emits light in all directions from a point, like a light bulb or candle.
+
+### Basic Setup
+
+```gdscript
+var bulb = OmniLight3D.new()
+add_child(bulb)
+bulb.position = Vector3(0, 3, 0)
+
+# Configure range and attenuation
+bulb.omni_range = 10.0
+bulb.omni_attenuation = 2.0  # Physically accurate inverse square
+
+# Light properties
+bulb.light_color = Color(1.0, 0.8, 0.6)  # Warm white
+bulb.light_energy = 1.5
+```
+
+See doc/classes/OmniLight3D.xml:23-25
+
+<Warning>
+Only 8 omni lights can affect each mesh in Mobile/Compatibility rendering methods. Exceeding this limit causes flickering.
+</Warning>
+
+### Attenuation
+
+Controls how light fades with distance:
+
+```gdscript
+# Linear falloff (constant brightness, smooth edge)
+bulb.omni_attenuation = 0.0
+
+# Realistic inverse square (physically accurate)
+bulb.omni_attenuation = 2.0
+
+# Custom curve
+bulb.omni_attenuation = 1.5
+```
+
+See doc/classes/OmniLight3D.xml:17-21
+
+### Shadow Modes
+
+```gdscript
+# Enable shadows
+bulb.shadow_enabled = true
+
+# Shadow quality
+bulb.omni_shadow_mode = OmniLight3D.SHADOW_CUBE  # Higher quality
+# or
+bulb.omni_shadow_mode = OmniLight3D.SHADOW_DUAL_PARABOLOID  # Faster
+```
+
+See doc/classes/OmniLight3D.xml:27-28, 32-37
+
+## SpotLight3D
+
+Cone-shaped light emission, useful for flashlights, car headlights, or stage lights.
+
+### Basic Setup
+
+```gdscript
+var spotlight = SpotLight3D.new()
+add_child(spotlight)
+spotlight.position = Vector3(0, 5, 0)
+spotlight.rotation_degrees = Vector3(-90, 0, 0)  # Point down
+
+# Cone configuration
+spotlight.spot_angle = 45.0  # Angular radius in degrees
+spotlight.spot_range = 15.0
+spotlight.spot_attenuation = 1.0
+spotlight.spot_angle_attenuation = 1.0
+```
+
+See doc/classes/SpotLight3D.xml:21-23, 34-36
+
+<Info>
+Light is emitted in the **-Z direction**. The `spot_angle` is the angular radius (from center to edge), so a 45° angle creates a 90° cone.
+</Info>
+
+### Angle and Range
+
+```gdscript
+# Wide cone (like a lantern)
+spotlight.spot_angle = 60.0
+
+# Narrow cone (like a laser pointer)
+spotlight.spot_angle = 15.0
+
+# Adjust range
+spotlight.spot_range = 20.0
+```
+
+### Attenuation Curves
+
+```gdscript
+# Distance attenuation (how light fades with distance)
+spotlight.spot_attenuation = 2.0  # Inverse square
+
+# Angular attenuation (how light fades toward cone edge)
+spotlight.spot_angle_attenuation = 1.0  # Linear falloff
+```
+
+See doc/classes/SpotLight3D.xml:25-26, 28-32
+
+## Common Light Parameters
+
+All light types share these properties from the `Light3D` base class:
+
+### Energy and Color
+
+```gdscript
+# Light intensity multiplier
+light.light_energy = 1.0
+
+# Light color in sRGB
+light.light_color = Color(1.0, 1.0, 1.0)
+
+# Specular contribution (shiny highlights)
+light.light_specular = 1.0
+```
+
+See doc/classes/Light3D.xml:66-67, 73-74, 102-103
+
+### Physical Light Units
+
+For realistic lighting, enable physical units in Project Settings:
+
+```gdscript
+# For DirectionalLight3D (Lux)
+sun.light_intensity_lux = 100000  # Clear sunny day
+
+# For OmniLight3D and SpotLight3D (Lumens)
+bulb.light_intensity_lumens = 800  # ~60W light bulb
+```
+
+See doc/classes/Light3D.xml:85-87, 80-83
+
+### Color Temperature
+
+```gdscript
+# Simulate real-world light temperatures (Kelvin)
+light.light_temperature = 6500  # Daylight
+light.light_temperature = 2700  # Warm incandescent
+light.light_temperature = 5500  # Camera flash
+```
+
+See doc/classes/Light3D.xml:105-107
+
+### Negative Lights
+
+Create areas of darkness:
+
+```gdscript
+light.light_negative = true
+light.light_energy = 0.5  # Darkness intensity
+```
+
+See doc/classes/Light3D.xml:89-90
+
+### Indirect Lighting
+
+Control contribution to global illumination:
+
+```gdscript
+# Secondary multiplier for GI
+light.light_indirect_energy = 1.0
+
+# Volumetric fog contribution
+light.light_volumetric_fog_energy = 1.0
+```
+
+See doc/classes/Light3D.xml:76-78, 109-111
+
+## Shadows
+
+### Enabling Shadows
+
+```gdscript
+light.shadow_enabled = true
+```
+
+See doc/classes/Light3D.xml:122-123
+
+<Warning>
+Shadows have significant performance cost. Use them judiciously and enable `distance_fade_enabled` for distant lights.
+</Warning>
+
+### Shadow Quality Parameters
+
+```gdscript
+# Reduce shadow acne (self-shadowing artifacts)
+light.shadow_bias = 0.1
+
+# Reduce peter-panning (shadows separated from casters)
+light.shadow_normal_bias = 2.0
+
+# Shadow softness
+light.shadow_blur = 1.0
+
+# Shadow opacity
+light.shadow_opacity = 1.0
+```
+
+See doc/classes/Light3D.xml:113-114, 125-126, 116-117, 128-129
+
+### Percentage-Closer Soft Shadows (PCSS)
+
+Create realistic soft shadows:
+
+```gdscript
+# For DirectionalLight3D
+sun.light_angular_distance = 0.5  # Sun's angular size
+
+# For OmniLight3D and SpotLight3D
+bulb.light_size = 0.2  # Light source size in Godot units
+```
+
+See doc/classes/Light3D.xml:57-60, 97-100
+
+<Note>
+PCSS is only supported in Forward+ rendering (not Mobile or Compatibility).
+</Note>
+
+### Shadow Cull Mask
+
+```gdscript
+# Only cast shadows from specific layers
+light.shadow_caster_mask = 0b00000001  # Only layer 1
+```
+
+See doc/classes/Light3D.xml:119-120
+
+## Distance Fade (LOD)
+
+Optimize performance by fading distant lights:
+
+```gdscript
+light.distance_fade_enabled = true
+light.distance_fade_begin = 40.0
+light.distance_fade_length = 10.0
+light.distance_fade_shadow = 50.0
+```
+
+See doc/classes/Light3D.xml:38-53
+
+## Light Projectors (Cookies/Gobos)
+
+Project textures through lights:
+
+```gdscript
+light.light_projector = preload("res://textures/window_gobo.png")
+light.shadow_enabled = true  # Required for projectors
+```
+
+See doc/classes/Light3D.xml:92-95
+
+<Info>
+Light projectors are only supported in Forward+ and Mobile rendering methods.
+</Info>
+
+## Global Illumination (GI)
+
+Godot offers multiple GI techniques:
+
+### Bake Modes
+
+```gdscript
+# Light doesn't affect GI (fastest)
+light.light_bake_mode = Light3D.BAKE_DISABLED
+
+# Static GI (baked, no real-time updates)
+light.light_bake_mode = Light3D.BAKE_STATIC
+
+# Dynamic GI (real-time updates)
+light.light_bake_mode = Light3D.BAKE_DYNAMIC
+```
+
+See doc/classes/Light3D.xml:62-64, 204-214
+
+### LightmapGI
+
+Bake static lighting for best performance:
+
+<Steps>
+  <Step title="Add LightmapGI Node">
+    Add a `LightmapGI` node to your scene.
+  </Step>
+  
+  <Step title="Configure Lights">
+    Set lights to `BAKE_STATIC` mode:
+    ```gdscript
+    sun.light_bake_mode = Light3D.BAKE_STATIC
+    ```
+  </Step>
+  
+  <Step title="Bake Lightmaps">
+    Select the LightmapGI node and click "Bake Lightmaps" in the toolbar.
+  </Step>
+  
+  <Step title="Use Baked Result">
+    Lightmaps are automatically applied to static meshes.
+  </Step>
+</Steps>
+
+### VoxelGI
+
+Real-time voxel-based global illumination:
+
+```gdscript
+var voxel_gi = VoxelGI.new()
+add_child(voxel_gi)
+voxel_gi.extents = Vector3(20, 10, 20)
+
+# Bake the GI volume
+voxel_gi.bake()
+
+# Set light to dynamic mode for real-time updates
+sun.light_bake_mode = Light3D.BAKE_DYNAMIC
+```
+
+### SDFGI (Signed Distance Field GI)
+
+Enable in WorldEnvironment for large open worlds:
+
+```gdscript
+var env = Environment.new()
+env.sdfgi_enabled = true
+world_environment.environment = env
+
+# Lights contribute automatically if bake mode allows
+sun.light_bake_mode = Light3D.BAKE_DYNAMIC
+```
+
+## Lighting Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Directional Light for Sun">
+    Always use `DirectionalLight3D` for primary outdoor lighting:
+    ```gdscript
+    var sun = DirectionalLight3D.new()
+    sun.light_energy = 1.0
+    sun.light_color = Color(1.0, 0.95, 0.8)
+    sun.rotation_degrees = Vector3(-45, 30, 0)
+    ```
+  </Accordion>
+  
+  <Accordion title="Limit Active Lights">
+    Too many lights hurt performance. Use distance fade:
+    ```gdscript
+    light.distance_fade_enabled = true
+    light.distance_fade_begin = 30.0
+    light.distance_fade_length = 10.0
+    ```
+  </Accordion>
+  
+  <Accordion title="Bake Static Lighting">
+    For static scenes, use LightmapGI:
+    ```gdscript
+    light.light_bake_mode = Light3D.BAKE_STATIC
+    ```
+  </Accordion>
+  
+  <Accordion title="Optimize Shadow Distance">
+    Don't render shadows too far away:
+    ```gdscript
+    sun.directional_shadow_max_distance = 100.0
+    sun.directional_shadow_fade_start = 0.8
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Cull Masks Wisely">
+    Exclude unnecessary objects from lighting:
+    ```gdscript
+    light.light_cull_mask = 0b00000011  # Only layers 1 and 2
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Common Lighting Scenarios
+
+### Outdoor Daytime
+
+```gdscript
+var sun = DirectionalLight3D.new()
+sun.light_color = Color(1.0, 0.98, 0.95)
+sun.light_energy = 1.0
+sun.rotation_degrees = Vector3(-50, 20, 0)
+sun.shadow_enabled = true
+sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+```
+
+### Indoor Room with Window
+
+```gdscript
+# Sunlight through window
+var sun = DirectionalLight3D.new()
+sun.light_energy = 0.3  # Dimmer indoors
+sun.light_color = Color(1.0, 0.95, 0.9)
+
+# Ceiling light
+var ceiling_light = OmniLight3D.new()
+ceiling_light.position = Vector3(0, 3, 0)
+ceiling_light.omni_range = 8.0
+ceiling_light.light_energy = 2.0
+ceiling_light.light_color = Color(1.0, 0.9, 0.8)
+```
+
+### Night Scene with Moonlight
+
+```gdscript
+var moon = DirectionalLight3D.new()
+moon.light_color = Color(0.7, 0.8, 1.0)  # Cool blue tint
+moon.light_energy = 0.2  # Dim
+moon.rotation_degrees = Vector3(-60, 0, 0)
+moon.shadow_enabled = true
+```
+
+### Torch/Flashlight
+
+```gdscript
+var torch = SpotLight3D.new()
+torch.spot_angle = 30.0
+torch.spot_range = 10.0
+torch.spot_attenuation = 2.0
+torch.light_color = Color(1.0, 0.7, 0.4)  # Warm fire glow
+torch.light_energy = 3.0
+```
+
+## Debugging Lights
+
+```gdscript
+# Check if light is in the tree
+if light.is_inside_tree():
+    print("Light active")
+
+# Print light properties
+print("Energy: ", light.light_energy)
+print("Color: ", light.light_color)
+print("Shadows: ", light.shadow_enabled)
+
+# Editor-only lights
+light.editor_only = true  # Not visible at runtime
+```
+
+See doc/classes/Light3D.xml:54-55
+
+## Performance Monitoring
+
+```gdscript
+# Disable lights that are too far
+func _process(_delta):
+    var camera_pos = get_viewport().get_camera_3d().global_position
+    var distance = global_position.distance_to(camera_pos)
+    
+    if distance > 50.0:
+        visible = false
+    else:
+        visible = true
+```
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="3D Overview" icon="cube" href="/3d/overview">
+    3D fundamentals and transforms
+  </Card>
+  <Card title="Meshes and Materials" icon="palette" href="/3d/meshes-and-materials">
+    How materials interact with lighting
+  </Card>
+  <Card title="Environment" icon="cloud-sun" href="/rendering/environment">
+    Sky, fog, and ambient lighting
+  </Card>
+  <Card title="Shaders" icon="code" href="/rendering/shaders">
+    Custom lighting in shaders
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [3D Lights and Shadows Tutorial](https://docs.godotengine.org/en/stable/tutorials/3d/lights_and_shadows.html)
+- [Faking Global Illumination](https://docs.godotengine.org/en/stable/tutorials/3d/global_illumination/faking_global_illumination.html)
+- Light3D Reference: doc/classes/Light3D.xml
+- DirectionalLight3D Reference: doc/classes/DirectionalLight3D.xml
+- OmniLight3D Reference: doc/classes/OmniLight3D.xml
+- SpotLight3D Reference: doc/classes/SpotLight3D.xml

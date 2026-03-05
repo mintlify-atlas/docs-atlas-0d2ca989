@@ -1,122 +1,212 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Godot Engine",
+  "theme": "maple",
+  "mode": "custom",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#448cbc",
+    "light": "#b9d4e7",
+    "dark": "#448cbc"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "https://media.brand.dev/0a371315-9d5b-450f-917f-81de9f642c7c.png",
+  "logo": {
+    "light": "https://media.brand.dev/d7435585-73eb-48a0-bc19-ce71f447f2f9.svg",
+    "dark": "https://media.brand.dev/d7435585-73eb-48a0-bc19-ce71f447f2f9.svg"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/godotengine/godot"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/godotengine/godot"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
+              "introduction",
               "quickstart",
-              "development"
+              "installation"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "concepts/nodes-and-scenes",
+              "concepts/signals",
+              "concepts/scene-tree",
+              "concepts/resource-system"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "2D Development",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "2d/overview",
+              "2d/sprites-and-textures",
+              "2d/physics",
+              "2d/tilemaps",
+              "2d/canvas-layers"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "3D Development",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "3d/overview",
+              "3d/meshes-and-materials",
+              "3d/lighting",
+              "3d/physics",
+              "3d/camera"
+            ]
+          },
+          {
+            "group": "Scripting",
+            "pages": [
+              "scripting/gdscript",
+              "scripting/csharp",
+              "scripting/visual-scripting",
+              "scripting/gdextension"
+            ]
+          },
+          {
+            "group": "Animation",
+            "pages": [
+              "animation/overview",
+              "animation/animationplayer",
+              "animation/animationtree",
+              "animation/skeletal-animation"
+            ]
+          },
+          {
+            "group": "UI System",
+            "pages": [
+              "ui/control-nodes",
+              "ui/containers",
+              "ui/themes",
+              "ui/input-handling"
+            ]
+          },
+          {
+            "group": "Audio",
+            "pages": [
+              "audio/overview",
+              "audio/audio-streams",
+              "audio/audio-effects",
+              "audio/interactive-music"
+            ]
+          },
+          {
+            "group": "Networking",
+            "pages": [
+              "networking/overview",
+              "networking/high-level-multiplayer",
+              "networking/low-level-networking",
+              "networking/http-requests"
+            ]
+          },
+          {
+            "group": "Physics",
+            "pages": [
+              "physics/physics-introduction",
+              "physics/collision-shapes",
+              "physics/raycasting",
+              "physics/joints"
+            ]
+          },
+          {
+            "group": "Rendering",
+            "pages": [
+              "rendering/overview",
+              "rendering/shaders",
+              "rendering/environment",
+              "rendering/particles"
+            ]
+          },
+          {
+            "group": "Platform Deployment",
+            "pages": [
+              "deployment/exporting",
+              "deployment/android",
+              "deployment/ios",
+              "deployment/web",
+              "deployment/desktop"
+            ]
+          },
+          {
+            "group": "Editor",
+            "pages": [
+              "editor/interface",
+              "editor/plugins",
+              "editor/custom-nodes",
+              "editor/import-system"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Core Classes",
             "pages": [
-              "api-reference/introduction"
+              "api/object",
+              "api/node",
+              "api/resource",
+              "api/refcounted"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Scene Management",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/scenetree",
+              "api/node2d",
+              "api/node3d",
+              "api/viewport"
+            ]
+          },
+          {
+            "group": "Input",
+            "pages": [
+              "api/input",
+              "api/inputevent",
+              "api/inputmap"
+            ]
+          },
+          {
+            "group": "Rendering",
+            "pages": [
+              "api/renderingserver",
+              "api/mesh",
+              "api/material",
+              "api/shader"
+            ]
+          },
+          {
+            "group": "Physics",
+            "pages": [
+              "api/rigidbody2d",
+              "api/rigidbody3d",
+              "api/characterbody2d",
+              "api/characterbody3d"
+            ]
+          },
+          {
+            "group": "Audio",
+            "pages": [
+              "api/audioserver",
+              "api/audiostreamplayer",
+              "api/audioeffect"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

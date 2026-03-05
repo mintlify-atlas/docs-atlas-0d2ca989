@@ -1,0 +1,402 @@
+---
+title: 'Raycasting'
+description: 'Perform raycasts, shape casts, and intersection queries for physics detection'
+keywords: ['raycast', 'physics query', 'intersection', 'shape cast', 'collision detection']
+---
+
+## Overview
+
+Raycasting allows you to detect collisions along a line or query the physics world for intersections. Godot provides several query types for different use cases.
+
+## Direct space state
+
+Physics queries are performed through the direct space state:
+
+```gdscript
+# Get 2D direct space state
+var space_state = get_world_2d().direct_space_state
+
+# Get 3D direct space state
+var space_state_3d = get_world_3d().direct_space_state
+```
+
+## Ray queries
+
+### Basic raycast (3D)
+
+Cast a ray from one point to another:
+
+```gdscript
+func raycast_example():
+    var space_state = get_world_3d().direct_space_state
+    
+    var origin = global_position
+    var target = global_position + Vector3(0, 0, -100)
+    
+    var query = PhysicsRayQueryParameters3D.create(origin, target)
+    var result = space_state.intersect_ray(query)
+    
+    if result:
+        print("Hit: ", result.collider)
+        print("Position: ", result.position)
+        print("Normal: ", result.normal)
+```
+
+### Basic raycast (2D)
+
+```gdscript
+func raycast_2d_example():
+    var space_state = get_world_2d().direct_space_state
+    
+    var from = global_position
+    var to = global_position + Vector2(0, 100)
+    
+    var query = PhysicsRayQueryParameters2D.create(from, to)
+    var result = space_state.intersect_ray(query)
+    
+    if result:
+        print("Hit: ", result.collider)
+        print("Position: ", result.position)
+        print("Normal: ", result.normal)
+```
+
+## Ray query parameters
+
+### Collision masks
+
+Filter which layers to detect:
+
+```gdscript
+var query = PhysicsRayQueryParameters3D.create(origin, target)
+query.collision_mask = 0b0010  # Only detect layer 2
+query.collide_with_areas = true  # Include areas
+query.collide_with_bodies = true  # Include bodies
+
+var result = space_state.intersect_ray(query)
+```
+
+### Excluding objects
+
+Exclude specific objects from detection:
+
+```gdscript
+var query = PhysicsRayQueryParameters3D.create(origin, target)
+
+# Exclude the casting object
+query.exclude = [self]
+
+# Exclude multiple objects
+query.exclude = [self, another_object]
+
+var result = space_state.intersect_ray(query)
+```
+
+### Hit from inside
+
+Detect collisions when the ray starts inside a shape:
+
+```gdscript
+var query = PhysicsRayQueryParameters3D.create(origin, target)
+query.hit_from_inside = true
+
+var result = space_state.intersect_ray(query)
+```
+
+<Info>
+When `hit_from_inside` is enabled and the ray starts inside a shape, the collision normal will be `Vector3(0, 0, 0)`.
+</Info>
+
+## RayCast nodes
+
+For continuous raycasting, use RayCast nodes:
+
+### RayCast3D
+
+```gdscript
+var raycast = RayCast3D.new()
+raycast.target_position = Vector3(0, 0, -10)
+raycast.enabled = true
+raycast.collision_mask = 0b0001
+add_child(raycast)
+
+# Check in _physics_process
+func _physics_process(delta):
+    if raycast.is_colliding():
+        var collider = raycast.get_collider()
+        var point = raycast.get_collision_point()
+        var normal = raycast.get_collision_normal()
+```
+
+### RayCast2D
+
+```gdscript
+var raycast = RayCast2D.new()
+raycast.target_position = Vector2(0, 100)
+raycast.enabled = true
+raycast.collision_mask = 0b0001
+add_child(raycast)
+
+func _physics_process(delta):
+    if raycast.is_colliding():
+        var collider = raycast.get_collider()
+        var point = raycast.get_collision_point()
+        var normal = raycast.get_collision_normal()
+```
+
+### Exclude parent
+
+Automatically exclude the parent body:
+
+```gdscript
+raycast.exclude_parent = true
+```
+
+### Add exceptions
+
+Exclude specific objects:
+
+```gdscript
+raycast.add_exception(object_to_ignore)
+raycast.add_exception_rid(physics_body_rid)
+
+# Clear all exceptions
+raycast.clear_exceptions()
+```
+
+## Shape casting
+
+Cast a shape along a direction to detect collisions:
+
+### ShapeCast3D
+
+```gdscript
+var shape_cast = ShapeCast3D.new()
+shape_cast.enabled = true
+shape_cast.shape = SphereShape3D.new()
+shape_cast.target_position = Vector3(0, -10, 0)
+add_child(shape_cast)
+
+func _physics_process(delta):
+    if shape_cast.is_colliding():
+        var collision_count = shape_cast.get_collision_count()
+        for i in collision_count:
+            var collider = shape_cast.get_collider(i)
+            var point = shape_cast.get_collision_point(i)
+            var normal = shape_cast.get_collision_normal(i)
+```
+
+<Tip>
+Shape casting is useful for character ground detection, allowing you to use a capsule or box instead of a ray.
+</Tip>
+
+### ShapeCast2D
+
+```gdscript
+var shape_cast = ShapeCast2D.new()
+shape_cast.enabled = true
+shape_cast.shape = CircleShape2D.new()
+shape_cast.target_position = Vector2(0, 100)
+add_child(shape_cast)
+```
+
+## Point intersection queries
+
+Check if a point intersects with any physics objects:
+
+### 3D point query
+
+```gdscript
+var space_state = get_world_3d().direct_space_state
+
+var params = PhysicsPointQueryParameters3D.new()
+params.position = Vector3(0, 0, 0)
+params.collision_mask = 0b0001
+
+var results = space_state.intersect_point(params)
+for result in results:
+    print("Collider at point: ", result.collider)
+```
+
+### 2D point query
+
+```gdscript
+var space_state = get_world_2d().direct_space_state
+
+var params = PhysicsPointQueryParameters2D.new()
+params.position = Vector2(100, 100)
+params.collision_mask = 0b0001
+
+var results = space_state.intersect_point(params)
+for result in results:
+    print("Collider at point: ", result.collider)
+```
+
+## Shape intersection queries
+
+Query for intersections with a specific shape:
+
+### 3D shape query
+
+```gdscript
+var space_state = get_world_3d().direct_space_state
+
+var params = PhysicsShapeQueryParameters3D.new()
+params.shape_rid = PhysicsServer3D.sphere_shape_create()
+PhysicsServer3D.shape_set_data(params.shape_rid, 1.0)  # radius
+
+var transform = Transform3D()
+transform.origin = Vector3(0, 5, 0)
+params.transform = transform
+params.collision_mask = 0b0001
+
+var results = space_state.intersect_shape(params)
+for result in results:
+    print("Overlapping: ", result.collider)
+```
+
+### 2D shape query
+
+```gdscript
+var space_state = get_world_2d().direct_space_state
+
+var params = PhysicsShapeQueryParameters2D.new()
+params.shape_rid = PhysicsServer2D.circle_shape_create()
+PhysicsServer2D.shape_set_data(params.shape_rid, 32.0)  # radius
+
+var transform = Transform2D()
+transform.origin = Vector2(100, 100)
+params.transform = transform
+params.collision_mask = 0b0001
+
+var results = space_state.intersect_shape(params)
+for result in results:
+    print("Overlapping: ", result.collider)
+```
+
+## Motion queries
+
+Test if a shape can move without collision:
+
+```gdscript
+var space_state = get_world_3d().direct_space_state
+
+var params = PhysicsShapeQueryParameters3D.new()
+params.shape_rid = shape_rid
+params.transform = current_transform
+params.motion = Vector3(0, -1, 0)  # Test downward motion
+
+var results = space_state.cast_motion(params)
+if results[0] < 1.0:
+    print("Collision would occur at: ", results[0])
+```
+
+## Common use cases
+
+### Line of sight check
+
+```gdscript
+func has_line_of_sight(from: Vector3, to: Vector3) -> bool:
+    var space_state = get_world_3d().direct_space_state
+    var query = PhysicsRayQueryParameters3D.create(from, to)
+    query.collision_mask = vision_layer_mask
+    
+    var result = space_state.intersect_ray(query)
+    return result.is_empty()  # True if no obstacles
+```
+
+### Ground detection
+
+```gdscript
+func is_on_ground() -> bool:
+    var space_state = get_world_3d().direct_space_state
+    
+    var origin = global_position
+    var target = origin + Vector3(0, -0.1, 0)
+    
+    var query = PhysicsRayQueryParameters3D.create(origin, target)
+    query.exclude = [self]
+    
+    var result = space_state.intersect_ray(query)
+    return not result.is_empty()
+```
+
+### Mouse picking (3D)
+
+```gdscript
+func get_object_at_mouse():
+    var camera = get_viewport().get_camera_3d()
+    var mouse_pos = get_viewport().get_mouse_position()
+    
+    var from = camera.project_ray_origin(mouse_pos)
+    var to = from + camera.project_ray_normal(mouse_pos) * 1000
+    
+    var space_state = get_world_3d().direct_space_state
+    var query = PhysicsRayQueryParameters3D.create(from, to)
+    
+    var result = space_state.intersect_ray(query)
+    if result:
+        return result.collider
+    return null
+```
+
+### Projectile path prediction
+
+```gdscript
+func predict_projectile_path(start: Vector3, velocity: Vector3, steps: int = 50):
+    var space_state = get_world_3d().direct_space_state
+    var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
+    var gravity_vec = Vector3(0, -gravity, 0)
+    
+    var pos = start
+    var vel = velocity
+    var delta = 0.1
+    
+    var path = []
+    for i in steps:
+        var next_pos = pos + vel * delta
+        
+        var query = PhysicsRayQueryParameters3D.create(pos, next_pos)
+        var result = space_state.intersect_ray(query)
+        
+        if result:
+            path.append(result.position)
+            break
+        
+        path.append(next_pos)
+        pos = next_pos
+        vel += gravity_vec * delta
+    
+    return path
+```
+
+## Performance tips
+
+<CardGroup cols={2}>
+  <Card title="Use collision masks" icon="filter">
+    Always set appropriate collision masks to avoid unnecessary collision checks.
+  </Card>
+  
+  <Card title="Limit query frequency" icon="clock">
+    Avoid performing complex queries every frame. Use timers for periodic checks.
+  </Card>
+  
+  <Card title="Prefer RayCast nodes" icon="node">
+    For continuous raycasting, RayCast nodes are more efficient than manual queries.
+  </Card>
+  
+  <Card title="Batch queries" icon="layer-group">
+    When possible, batch multiple queries together instead of spreading them across frames.
+  </Card>
+</CardGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Collision shapes" icon="cube" href="/physics/collision-shapes">
+    Learn about collision shape types
+  </Card>
+  
+  <Card title="Joints" icon="link" href="/physics/joints">
+    Connect bodies with physics joints
+  </Card>
+</CardGroup>

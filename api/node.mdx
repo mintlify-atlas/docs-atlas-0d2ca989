@@ -1,0 +1,126 @@
+---
+title: "Node"
+---
+
+# Node
+
+**Inherits:** Object
+
+## Description
+
+Base class for all scene objects. Nodes can be assigned as children of other nodes, resulting in a tree arrangement. A tree of nodes is called a scene.
+
+## Inheritance
+
+`Node` < `Object`
+
+## Properties
+
+<ResponseField name="name" type="StringName">
+  The name of the node. This name must be unique among the siblings.
+</ResponseField>
+
+<ResponseField name="owner" type="Node">
+  The node owner. A node can have any other node as owner.
+</ResponseField>
+
+<ResponseField name="process_mode" type="ProcessMode" default="PROCESS_MODE_INHERIT">
+  Can be used to pause or unpause the node, or make the node inherit process mode from its parent.
+</ResponseField>
+
+## Methods
+
+### add_child
+
+```gdscript
+void add_child(node: Node, force_readable_name: bool = false, internal: InternalMode = 0)
+```
+
+Adds a child node. Nodes can have any number of children, but every child must have a unique name.
+
+<ParamField path="node" type="Node">
+  The node to add as a child
+</ParamField>
+
+<ParamField path="force_readable_name" type="bool">
+  If true, improves readability of the added node (default: false)
+</ParamField>
+
+### remove_child
+
+```gdscript
+void remove_child(node: Node)
+```
+
+Removes a child node. The node is NOT deleted and must be freed manually.
+
+### get_child
+
+```gdscript
+Node get_child(idx: int, include_internal: bool = false)
+```
+
+Fetches a child node by its index. Returns null if no child exists at the given index.
+
+### get_parent
+
+```gdscript
+Node get_parent()
+```
+
+Returns this node's parent node, or null if the node doesn't have a parent.
+
+### get_tree
+
+```gdscript
+SceneTree get_tree()
+```
+
+Returns the SceneTree that contains this node.
+
+### is_inside_tree
+
+```gdscript
+bool is_inside_tree()
+```
+
+Returns true if this node is currently inside a SceneTree.
+
+## Signals
+
+### ready()
+
+Emitted when the node is ready, i.e., when both the node and its children have entered the scene tree.
+
+### tree_entered()
+
+Emitted when the node enters the SceneTree.
+
+### tree_exited()
+
+Emitted when the node exits the SceneTree.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+var parent = Node.new()
+var child = Node.new()
+child.name = "MyChild"
+parent.add_child(child)
+
+print(parent.get_child(0).name)  # Prints: MyChild
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+var parent = new Node();
+var child = new Node();
+child.Name = "MyChild";
+parent.AddChild(child);
+
+GD.Print(parent.GetChild(0).Name);  // Prints: MyChild
+```
+  </Tab>
+</Tabs>

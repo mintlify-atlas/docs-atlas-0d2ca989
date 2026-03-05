@@ -1,0 +1,122 @@
+---
+title: "RigidBody2D"
+---
+
+# RigidBody2D
+
+**Inherits:** PhysicsBody2D < CollisionObject2D < Node2D < CanvasItem < Node < Object
+
+## Description
+
+A 2D physics body that is moved by a physics simulation. RigidBody2D implements full 2D physics. It cannot be controlled directly; instead, you must apply forces to it (gravity, impulses, etc.).
+
+## Properties
+
+<ResponseField name="mass" type="float" default="1.0">
+  The body's mass.
+</ResponseField>
+
+<ResponseField name="linear_velocity" type="Vector2" default="Vector2(0, 0)">
+  The body's linear velocity in pixels per second.
+</ResponseField>
+
+<ResponseField name="angular_velocity" type="float" default="0.0">
+  The body's rotational velocity in radians per second.
+</ResponseField>
+
+<ResponseField name="gravity_scale" type="float" default="1.0">
+  Multiplies the gravity applied to the body.
+</ResponseField>
+
+<ResponseField name="freeze" type="bool" default="false">
+  If true, the body is frozen and forces are not applied.
+</ResponseField>
+
+## Methods
+
+### apply_central_impulse
+
+```gdscript
+void apply_central_impulse(impulse: Vector2 = Vector2(0, 0))
+```
+
+Applies a directional impulse without affecting rotation.
+
+<ParamField path="impulse" type="Vector2">
+  The impulse vector to apply
+</ParamField>
+
+### apply_impulse
+
+```gdscript
+void apply_impulse(impulse: Vector2, position: Vector2 = Vector2(0, 0))
+```
+
+Applies a positioned impulse to the body.
+
+### apply_force
+
+```gdscript
+void apply_force(force: Vector2, position: Vector2 = Vector2(0, 0))
+```
+
+Applies a positioned force to the body.
+
+### apply_torque
+
+```gdscript
+void apply_torque(torque: float)
+```
+
+Applies a rotational force without affecting position.
+
+## Signals
+
+### body_entered(body: Node)
+
+Emitted when a body enters into contact with this one.
+
+### body_exited(body: Node)
+
+Emitted when a body exits contact with this one.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+extends RigidBody2D
+
+func _ready():
+    # Set initial properties
+    mass = 10.0
+    gravity_scale = 1.5
+
+func _input(event):
+    if event.is_action_pressed("jump"):
+        # Apply upward impulse
+        apply_central_impulse(Vector2(0, -500))
+    
+    if event.is_action_pressed("push_right"):
+        # Apply force to the right
+        apply_force(Vector2(1000, 0))
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+public partial class MyRigidBody : RigidBody2D
+{
+    public override void _Ready()
+    {
+        Mass = 10.0f;
+        GravityScale = 1.5f;
+    }
+
+    public void Jump()
+    {
+        ApplyCentralImpulse(new Vector2(0, -500));
+    }
+}
+```
+  </Tab>
+</Tabs>

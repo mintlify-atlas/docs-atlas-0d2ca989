@@ -1,0 +1,138 @@
+---
+title: "CharacterBody2D"
+---
+
+# CharacterBody2D
+
+**Inherits:** PhysicsBody2D < CollisionObject2D < Node2D < CanvasItem < Node < Object
+
+## Description
+
+A 2D physics body specialized for characters moved by script. They are not affected by physics but affect other physics bodies in their path.
+
+## Properties
+
+<ResponseField name="velocity" type="Vector2" default="Vector2(0, 0)">
+  Current velocity vector in pixels per second, used and modified during calls to move_and_slide.
+</ResponseField>
+
+<ResponseField name="motion_mode" type="MotionMode" default="MOTION_MODE_GROUNDED">
+  Sets the motion mode which defines the behavior of move_and_slide.
+</ResponseField>
+
+<ResponseField name="up_direction" type="Vector2" default="Vector2(0, -1)">
+  Vector pointing upwards, used to determine what is a wall and what is a floor.
+</ResponseField>
+
+<ResponseField name="floor_max_angle" type="float" default="0.785398">
+  Maximum angle (in radians) where a slope is still considered a floor (45 degrees by default).
+</ResponseField>
+
+<ResponseField name="floor_snap_length" type="float" default="1.0">
+  Sets a snapping distance. When set to a value different from 0.0, the body is kept attached to slopes.
+</ResponseField>
+
+## Methods
+
+### move_and_slide
+
+```gdscript
+bool move_and_slide()
+```
+
+Moves the body based on velocity. Returns true if the body collided.
+
+### is_on_floor
+
+```gdscript
+bool is_on_floor()
+```
+
+Returns true if the body collided with the floor on the last call of move_and_slide.
+
+### is_on_wall
+
+```gdscript
+bool is_on_wall()
+```
+
+Returns true if the body collided with a wall on the last call of move_and_slide.
+
+### is_on_ceiling
+
+```gdscript
+bool is_on_ceiling()
+```
+
+Returns true if the body collided with the ceiling on the last call of move_and_slide.
+
+### get_floor_normal
+
+```gdscript
+Vector2 get_floor_normal()
+```
+
+Returns the collision normal of the floor at the last collision point.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+extends CharacterBody2D
+
+const SPEED = 300.0
+const JUMP_VELOCITY = -400.0
+
+func _physics_process(delta):
+    # Add gravity
+    if not is_on_floor():
+        velocity.y += ProjectSettings.get_setting("physics/2d/default_gravity") * delta
+    
+    # Handle jump
+    if Input.is_action_just_pressed("ui_accept") and is_on_floor():
+        velocity.y = JUMP_VELOCITY
+    
+    # Get input direction
+    var direction = Input.get_axis("ui_left", "ui_right")
+    if direction:
+        velocity.x = direction * SPEED
+    else:
+        velocity.x = move_toward(velocity.x, 0, SPEED)
+    
+    move_and_slide()
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+public partial class Player : CharacterBody2D
+{
+    public const float Speed = 300.0f;
+    public const float JumpVelocity = -400.0f;
+
+    public override void _PhysicsProcess(double delta)
+    {
+        Vector2 velocity = Velocity;
+
+        // Add gravity
+        if (!IsOnFloor())
+            velocity.Y += (float)ProjectSettings.GetSetting("physics/2d/default_gravity") * (float)delta;
+
+        // Handle jump
+        if (Input.IsActionJustPressed("ui_accept") && IsOnFloor())
+            velocity.Y = JumpVelocity;
+
+        // Get input direction
+        float direction = Input.GetAxis("ui_left", "ui_right");
+        if (direction != 0)
+            velocity.X = direction * Speed;
+        else
+            velocity.X = Mathf.MoveToward(Velocity.X, 0, Speed);
+
+        Velocity = velocity;
+        MoveAndSlide();
+    }
+}
+```
+  </Tab>
+</Tabs>

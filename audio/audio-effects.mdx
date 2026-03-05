@@ -1,0 +1,393 @@
+---
+title: 'Audio Effects'
+description: 'Apply real-time audio effects like reverb, delay, EQ, and compression to audio buses'
+---
+
+## Overview
+
+Godot's audio system supports real-time audio effects that can be added to audio buses. Effects are processed in order on each bus, allowing you to create complex audio processing chains similar to professional audio software.
+
+<Info>
+Effects are added to buses, not individual AudioStreamPlayer nodes. All audio routed through a bus will be processed by its effects.
+</Info>
+
+## Adding Effects to Buses
+
+### Programmatically Adding Effects
+
+```gdscript
+# Get bus index
+var bus_idx = AudioServer.get_bus_index("Music")
+
+# Create a reverb effect
+var reverb = AudioEffectReverb.new()
+reverb.room_size = 0.8
+reverb.damping = 0.5
+reverb.wet = 0.3
+
+# Add effect to bus
+AudioServer.add_bus_effect(bus_idx, reverb)
+```
+
+```csharp
+// Get bus index
+int busIdx = AudioServer.GetBusIndex("Music");
+
+// Create a reverb effect
+var reverb = new AudioEffectReverb();
+reverb.RoomSize = 0.8f;
+reverb.Damping = 0.5f;
+reverb.Wet = 0.3f;
+
+// Add effect to bus
+AudioServer.AddBusEffect(busIdx, reverb);
+```
+
+### Managing Effects
+
+```gdscript
+var bus_idx = AudioServer.get_bus_index("SFX")
+
+# Get effect count
+var effect_count = AudioServer.get_bus_effect_count(bus_idx)
+
+# Get specific effect
+var effect = AudioServer.get_bus_effect(bus_idx, 0)
+
+# Enable/disable effect
+AudioServer.set_bus_effect_enabled(bus_idx, 0, false)
+
+# Remove effect
+AudioServer.remove_bus_effect(bus_idx, 0)
+
+# Swap effect positions
+AudioServer.swap_bus_effects(bus_idx, 0, 1)
+```
+
+## Common Audio Effects
+
+### AudioEffectReverb
+
+Adds reverb (echo/room ambience) to audio:
+
+```gdscript
+var reverb = AudioEffectReverb.new()
+reverb.room_size = 0.8      # 0.0 to 1.0 (larger = bigger room)
+reverb.damping = 0.5        # 0.0 to 1.0 (higher = more absorption)
+reverb.spread = 1.0         # 0.0 to 1.0 (stereo spread)
+reverb.wet = 0.3            # Effect volume (0.0 to 1.0)
+reverb.dry = 1.0            # Original signal volume
+reverb.predelay_msec = 20.0 # Pre-delay in milliseconds
+
+var bus_idx = AudioServer.get_bus_index("Ambient")
+AudioServer.add_bus_effect(bus_idx, reverb)
+```
+
+**Use Cases:**
+- Simulating room acoustics
+- Adding depth to music
+- Environmental audio (caves, halls, outdoors)
+
+### AudioEffectDelay
+
+Creates echo/delay effects:
+
+```gdscript
+var delay = AudioEffectDelay.new()
+delay.dry = 1.0
+
+# Configure tap 1 (first echo)
+delay.tap1_active = true
+delay.tap1_delay_ms = 300.0  # 300ms delay
+delay.tap1_level_db = -6.0   # Volume of first echo
+delay.tap1_pan = -0.2        # Slight left pan
+
+# Configure tap 2 (second echo)
+delay.tap2_active = true
+delay.tap2_delay_ms = 600.0
+delay.tap2_level_db = -12.0
+delay.tap2_pan = 0.2         # Slight right pan
+
+# Feedback creates repeating echoes
+delay.feedback_active = true
+delay.feedback_delay_ms = 400.0
+delay.feedback_level_db = -6.0
+
+var bus_idx = AudioServer.get_bus_index("SFX")
+AudioServer.add_bus_effect(bus_idx, delay)
+```
+
+**Use Cases:**
+- Rhythmic delays
+- Space/sci-fi effects
+- Doubling instruments
+
+### AudioEffectEQ
+
+Equalizer for frequency control (6-band, 10-band, or 21-band):
+
+```gdscript
+# 10-band EQ
+var eq = AudioEffectEQ10.new()
+
+# Boost bass (31 Hz)
+eq.set_band_gain_db(0, 3.0)
+
+# Cut low-mids (125 Hz)
+eq.set_band_gain_db(2, -2.0)
+
+# Boost presence (4000 Hz)
+eq.set_band_gain_db(7, 2.0)
+
+var bus_idx = AudioServer.get_bus_index("Music")
+AudioServer.add_bus_effect(bus_idx, eq)
+```
+
+**Available EQ Types:**
+- `AudioEffectEQ6` - 6 bands (32, 100, 320, 1000, 3200, 10000 Hz)
+- `AudioEffectEQ10` - 10 bands
+- `AudioEffectEQ21` - 21 bands (most precise)
+
+**Use Cases:**
+- Shaping tone of music/SFX
+- Removing unwanted frequencies
+- Mixing multiple audio sources
+
+### AudioEffectCompressor
+
+Dynamic range compression:
+
+```gdscript
+var compressor = AudioEffectCompressor.new()
+compressor.threshold = -20.0     # dB threshold to start compression
+compressor.ratio = 4.0           # Compression ratio (4:1)
+compressor.gain = 0.0            # Makeup gain
+compressor.attack_us = 20.0      # Attack time in microseconds
+compressor.release_ms = 250.0    # Release time in milliseconds
+compressor.mix = 1.0             # Wet/dry mix
+
+var bus_idx = AudioServer.get_bus_index("Master")
+AudioServer.add_bus_effect(bus_idx, compressor)
+```
+
+**Use Cases:**
+- Controlling dynamic range
+- Preventing audio clipping
+- "Gluing" mix elements together
+- Making quiet sounds more audible
+
+### AudioEffectLimiter
+
+Prevents audio from exceeding a threshold:
+
+```gdscript
+var limiter = AudioEffectLimiter.new()
+limiter.ceiling_db = -0.3        # Maximum output level
+limiter.threshold_db = -10.0     # When limiting starts
+limiter.soft_clip_db = -1.0      # Soft clipping threshold
+limiter.soft_clip_ratio = 10.0   # Soft clipping ratio
+
+var bus_idx = AudioServer.get_bus_index("Master")
+AudioServer.add_bus_effect(bus_idx, limiter)
+```
+
+<Warning>
+Always add a limiter to the Master bus to prevent audio clipping and distortion.
+</Warning>
+
+### AudioEffectFilter
+
+Frequency filters (low-pass, high-pass, band-pass, notch):
+
+```gdscript
+# Low-pass filter (removes high frequencies)
+var lpf = AudioEffectLowPassFilter.new()
+lpf.cutoff_hz = 2000.0           # Frequency cutoff
+lpf.resonance = 0.5              # Resonance at cutoff
+
+# High-pass filter (removes low frequencies)
+var hpf = AudioEffectHighPassFilter.new()
+hpf.cutoff_hz = 200.0
+hpf.resonance = 0.7
+
+# Band-pass filter (allows only a frequency range)
+var bpf = AudioEffectBandPassFilter.new()
+bpf.cutoff_hz = 1000.0
+bpf.resonance = 0.8
+
+var bus_idx = AudioServer.get_bus_index("Radio")
+AudioServer.add_bus_effect(bus_idx, lpf)
+AudioServer.add_bus_effect(bus_idx, hpf)
+```
+
+**Use Cases:**
+- Radio/telephone effects
+- Underwater effects (low-pass)
+- Rumble removal (high-pass)
+- Creative sound design
+
+### AudioEffectDistortion
+
+Adds harmonic distortion:
+
+```gdscript
+var distortion = AudioEffectDistortion.new()
+distortion.mode = AudioEffectDistortion.MODE_OVERDRIVE
+distortion.drive = 0.8           # 0.0 to 1.0
+distortion.pre_gain = 0.0        # Pre-amplification in dB
+distortion.post_gain = 0.0       # Post-amplification in dB
+
+var bus_idx = AudioServer.get_bus_index("Guitar")
+AudioServer.add_bus_effect(bus_idx, distortion)
+```
+
+**Distortion Modes:**
+- `MODE_CLIP` - Hard clipping
+- `MODE_ATAN` - Soft saturation
+- `MODE_LOFI` - Lo-fi bit crushing
+- `MODE_OVERDRIVE` - Tube-like overdrive
+- `MODE_WAVESHAPE` - Wave shaping
+
+### AudioEffectChorus
+
+Thickens sound by creating multiple slightly detuned copies:
+
+```gdscript
+var chorus = AudioEffectChorus.new()
+chorus.dry = 1.0
+chorus.wet = 0.5
+
+# Configure voice 1
+chorus.voice_1_delay_ms = 15.0
+chorus.voice_1_rate_hz = 0.8
+chorus.voice_1_depth_ms = 2.0
+chorus.voice_1_level_db = 0.0
+
+# Configure voice 2
+chorus.voice_2_delay_ms = 20.0
+chorus.voice_2_rate_hz = 1.2
+chorus.voice_2_depth_ms = 3.0
+chorus.voice_2_level_db = 0.0
+
+var bus_idx = AudioServer.get_bus_index("Synth")
+AudioServer.add_bus_effect(bus_idx, chorus)
+```
+
+### AudioEffectPhaser
+
+Creates sweeping, swirling effects:
+
+```gdscript
+var phaser = AudioEffectPhaser.new()
+phaser.range_min_hz = 440.0
+phaser.range_max_hz = 1600.0
+phaser.rate_hz = 0.5
+phaser.feedback = 0.7
+phaser.depth = 1.0
+
+var bus_idx = AudioServer.get_bus_index("Synth")
+AudioServer.add_bus_effect(bus_idx, phaser)
+```
+
+## Effect Chains
+
+Effects are processed in the order they're added:
+
+```gdscript
+var bus_idx = AudioServer.get_bus_index("Vocal")
+
+# 1. EQ to shape tone
+var eq = AudioEffectEQ10.new()
+eq.set_band_gain_db(0, -3.0)  # Reduce bass
+AudioServer.add_bus_effect(bus_idx, eq)
+
+# 2. Compressor to control dynamics
+var comp = AudioEffectCompressor.new()
+comp.threshold = -15.0
+comp.ratio = 3.0
+AudioServer.add_bus_effect(bus_idx, comp)
+
+# 3. Reverb for ambience
+var reverb = AudioEffectReverb.new()
+reverb.room_size = 0.6
+reverb.wet = 0.2
+AudioServer.add_bus_effect(bus_idx, reverb)
+```
+
+<Tip>
+Effect order matters! Generally: EQ → Dynamics (Compressor) → Time-based (Delay/Reverb).
+</Tip>
+
+## Analyzing Audio
+
+### AudioEffectSpectrumAnalyzer
+
+Analyze frequency content for visualizations:
+
+```gdscript
+var spectrum = AudioEffectSpectrumAnalyzer.new()
+spectrum.buffer_length = 2.0  # Analysis window
+spectrum.fft_size = AudioEffectSpectrumAnalyzer.FFT_SIZE_2048
+
+var bus_idx = AudioServer.get_bus_index("Master")
+AudioServer.add_bus_effect(bus_idx, spectrum)
+
+# In _process():
+func _process(delta):
+    var effect = AudioServer.get_bus_effect_instance(bus_idx, 0)
+    var magnitude = effect.get_magnitude_for_frequency_range(200, 400)
+    # Use magnitude for visualization
+```
+
+### AudioEffectCapture
+
+Capture audio for recording or processing:
+
+```gdscript
+var capture = AudioEffectCapture.new()
+capture.buffer_length = 0.1
+
+var bus_idx = AudioServer.get_bus_index("Record")
+AudioServer.add_bus_effect(bus_idx, capture)
+
+# Retrieve audio data
+func get_audio_data():
+    var effect = AudioServer.get_bus_effect_instance(bus_idx, 0) as AudioEffectCapture
+    var frames = effect.get_frames_available()
+    return effect.get_buffer(frames)
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use buses wisely">
+    Create separate buses for different audio categories (Music, SFX, Voice) and apply appropriate effects to each.
+  </Accordion>
+
+  <Accordion title="Mind CPU usage">
+    Effects consume CPU. Use them judiciously, especially on mobile platforms. Disable effects when not needed.
+  </Accordion>
+
+  <Accordion title="Test on target hardware">
+    Effect performance varies across platforms. Always test on your target devices.
+  </Accordion>
+
+  <Accordion title="Use subtle settings">
+    Less is often more. Start with subtle effect settings and increase gradually.
+  </Accordion>
+
+  <Accordion title="Bypass for debugging">
+    Use `set_bus_bypass_effects()` to temporarily disable all effects on a bus for troubleshooting.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Audio Overview" icon="volume" href="/audio/overview">
+    Learn about AudioServer and bus architecture
+  </Card>
+  <Card title="Audio Streams" icon="wave-square" href="/audio/audio-streams">
+    Understand audio formats and playback
+  </Card>
+</CardGroup>

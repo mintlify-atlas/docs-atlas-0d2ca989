@@ -1,0 +1,421 @@
+---
+title: TileMaps
+description: Creating tile-based levels with TileMap, TileSet, autotiling, terrains, and physics
+---
+
+## Introduction to TileMaps
+
+TileMaps are a powerful system for creating grid-based levels efficiently. They allow you to paint levels using tiles from a TileSet.
+
+<Note>
+As of Godot 4.0+, the recommended approach is to use `TileMapLayer` nodes. The legacy `TileMap` node is deprecated but still functional.
+</Note>
+
+## TileMap Basics
+
+### Creating a TileMap
+
+1. Add a `TileMap` node to your scene
+2. Create or assign a `TileSet` resource in the Inspector
+3. Open the TileMap editor at the bottom of the screen
+4. Select tiles and paint them in the viewport
+
+### Setting Up in Code
+
+```gdscript
+extends TileMap
+
+func _ready():
+    # Load a tileset
+    tile_set = preload("res://tilesets/my_tileset.tres")
+    
+    # Set a tile at coordinates
+    set_cell(0, Vector2i(5, 5), 0, Vector2i(0, 0))
+    
+    # Clear a cell
+    erase_cell(0, Vector2i(5, 5))
+```
+
+### TileMap Layers
+
+TileMaps support multiple layers for organizing tiles:
+
+```gdscript
+func _ready():
+    # Get layer count
+    var layer_count = get_layers_count()
+    
+    # Add a new layer
+    add_layer(0)  # Add at position 0
+    
+    # Set layer properties
+    set_layer_name(0, "Ground")
+    set_layer_enabled(0, true)
+    set_layer_z_index(0, -1)
+    set_layer_modulate(0, Color.WHITE)
+```
+
+### Coordinate System
+
+```gdscript
+# Convert local position to map coordinates
+var map_pos = local_to_map(get_local_mouse_position())
+print("Map coords: ", map_pos)
+
+# Convert map coordinates to local position
+var local_pos = map_to_local(Vector2i(10, 10))
+print("Local position: ", local_pos)
+```
+
+## TileSet
+
+A TileSet is a resource containing all tile definitions.
+
+### Creating a TileSet from Texture
+
+1. Create a new TileSet resource
+2. Add an Atlas source
+3. Select your texture atlas
+4. Configure tile size
+5. Define tiles and their properties
+
+### TileSet in Code
+
+```gdscript
+# Create a new tileset
+var tileset = TileSet.new()
+
+# Add an atlas source
+var atlas_source = TileSetAtlasSource.new()
+atlas_source.texture = preload("res://tiles.png")
+atlas_source.texture_region_size = Vector2i(16, 16)
+
+# Add source to tileset
+tileset.add_source(atlas_source, 0)
+```
+
+## Working with Tiles
+
+### Setting Tiles
+
+```gdscript
+func _ready():
+    # Set a single tile
+    # Parameters: layer, coords, source_id, atlas_coords, alternative_tile
+    set_cell(0, Vector2i(0, 0), 0, Vector2i(1, 0), 0)
+
+func draw_line(from: Vector2i, to: Vector2i):
+    # Draw a line of tiles
+    var current = from
+    while current != to:
+        set_cell(0, current, 0, Vector2i(0, 0))
+        current = current.move_toward(to, 1)
+```
+
+### Reading Tiles
+
+```gdscript
+# Get tile information
+var source_id = get_cell_source_id(0, Vector2i(5, 5))
+var atlas_coords = get_cell_atlas_coords(0, Vector2i(5, 5))
+var alternative = get_cell_alternative_tile(0, Vector2i(5, 5))
+
+# Get tile data
+var tile_data = get_cell_tile_data(0, Vector2i(5, 5))
+if tile_data:
+    var custom_data = tile_data.get_custom_data("damage")
+    print("Tile damage: ", custom_data)
+```
+
+### Getting Used Cells
+
+```gdscript
+# Get all cells with tiles
+var used_cells = get_used_cells(0)
+for cell in used_cells:
+    print("Tile at: ", cell)
+
+# Get cells by specific tile
+var grass_cells = get_used_cells_by_id(0, 0, Vector2i(0, 0))
+print("Found ", grass_cells.size(), " grass tiles")
+```
+
+## Autotiling and Terrains
+
+Terrains automatically choose the correct tile based on neighboring tiles.
+
+### Setting Up Terrain Sets
+
+1. In TileSet editor, create a Terrain Set
+2. Define terrains (grass, dirt, water, etc.)
+3. Paint terrain bits on each tile
+4. Godot will automatically pick correct tiles when painting
+
+### Using Terrains in Code
+
+```gdscript
+# Paint with terrain
+var cells_to_paint = [
+    Vector2i(0, 0),
+    Vector2i(1, 0),
+    Vector2i(0, 1),
+    Vector2i(1, 1)
+]
+
+# Connect cells with terrain 0 from terrain set 0
+set_cells_terrain_connect(0, cells_to_paint, 0, 0)
+
+# Paint a terrain path
+var path = [
+    Vector2i(0, 0),
+    Vector2i(1, 0),
+    Vector2i(2, 0),
+    Vector2i(2, 1),
+    Vector2i(2, 2)
+]
+
+set_cells_terrain_path(0, path, 0, 0)
+```
+
+## Alternative Tiles
+
+Create variations of the same tile:
+
+```gdscript
+# Alternative tiles are variations (rotations, flips)
+set_cell(0, Vector2i(0, 0), 0, Vector2i(0, 0), 1)  # Alternative 1
+set_cell(0, Vector2i(1, 0), 0, Vector2i(0, 0), 2)  # Alternative 2
+```
+
+## Physics in TileMaps
+
+### Setting Up Collision
+
+1. Select a tile in the TileSet editor
+2. Switch to the Physics Layers tab
+3. Draw collision polygons for the tile
+4. Configure physics layers and masks
+
+### Physics Layer Configuration
+
+```gdscript
+func _ready():
+    # Enable/disable layer navigation
+    set_layer_navigation_enabled(0, true)
+    
+    # Set physics as animatable (for moving tilemaps)
+    collision_animatable = true
+```
+
+### Detecting Tile Collisions
+
+```gdscript
+extends CharacterBody2D
+
+func _physics_process(delta):
+    velocity += get_gravity() * delta
+    move_and_slide()
+    
+    # Check if colliding with tilemap
+    for i in get_slide_collision_count():
+        var collision = get_slide_collision(i)
+        if collision.get_collider() is TileMap:
+            var tilemap = collision.get_collider() as TileMap
+            var coords = tilemap.get_coords_for_body_rid(collision.get_collider_rid())
+            print("Hit tile at: ", coords)
+```
+
+## Custom Data Layers
+
+Store custom data per tile:
+
+### Adding Custom Data
+
+1. In TileSet editor, add a Custom Data Layer
+2. Name it (e.g., "damage", "speed_modifier")
+3. Set the type (int, float, string, etc.)
+4. Set values for each tile
+
+### Reading Custom Data
+
+```gdscript
+func get_tile_damage(pos: Vector2i) -> int:
+    var tile_data = get_cell_tile_data(0, pos)
+    if tile_data:
+        return tile_data.get_custom_data("damage")
+    return 0
+
+func _on_player_moved(new_pos: Vector2i):
+    var damage = get_tile_damage(new_pos)
+    if damage > 0:
+        player.take_damage(damage)
+```
+
+## TileMap Patterns
+
+Save and reuse tile patterns:
+
+```gdscript
+# Get a pattern from existing tiles
+var coords_array = [
+    Vector2i(0, 0),
+    Vector2i(1, 0),
+    Vector2i(0, 1),
+    Vector2i(1, 1)
+]
+var pattern = get_pattern(0, coords_array)
+
+# Place the pattern elsewhere
+set_pattern(0, Vector2i(10, 10), pattern)
+```
+
+## Navigation in TileMaps
+
+TileMaps can generate navigation regions automatically:
+
+```gdscript
+# Enable navigation for layer
+set_layer_navigation_enabled(0, true)
+
+# Get the navigation map
+var nav_map = get_layer_navigation_map(0)
+```
+
+### Setting Up Navigation
+
+1. In TileSet editor, add a Navigation Layer
+2. Draw navigation polygons for walkable tiles
+3. Enable layer navigation in TileMap
+
+## Procedural Generation
+
+```gdscript
+extends TileMap
+
+const LAYER = 0
+const SOURCE_ID = 0
+const GRASS_COORDS = Vector2i(0, 0)
+const DIRT_COORDS = Vector2i(1, 0)
+const WATER_COORDS = Vector2i(2, 0)
+
+func _ready():
+    generate_world(50, 50)
+
+func generate_world(width: int, height: int):
+    for x in range(width):
+        for y in range(height):
+            var noise_val = randf()
+            var tile_coords = GRASS_COORDS
+            
+            if noise_val < 0.3:
+                tile_coords = WATER_COORDS
+            elif noise_val < 0.6:
+                tile_coords = DIRT_COORDS
+            
+            set_cell(LAYER, Vector2i(x, y), SOURCE_ID, tile_coords)
+```
+
+## Performance Optimization
+
+### Rendering Quadrant Size
+
+```gdscript
+# Larger quadrants = fewer draw calls, but larger update areas
+rendering_quadrant_size = 16  # Default
+```
+
+### Clearing Cells Efficiently
+
+```gdscript
+# Clear entire layer
+clear_layer(0)
+
+# Clear all layers
+clear()
+
+# Remove invalid tiles
+fix_invalid_tiles()
+```
+
+## Advanced Example: Destructible Terrain
+
+```gdscript
+extends TileMap
+
+func _ready():
+    # Generate solid ground
+    for x in range(50):
+        for y in range(30):
+            set_cell(0, Vector2i(x, y), 0, Vector2i(0, 0))
+
+func explode(center: Vector2, radius: float):
+    # Destroy tiles in radius
+    var center_tile = local_to_map(center)
+    var radius_in_tiles = int(radius / 16)  # Assuming 16px tiles
+    
+    for x in range(-radius_in_tiles, radius_in_tiles + 1):
+        for y in range(-radius_in_tiles, radius_in_tiles + 1):
+            var pos = center_tile + Vector2i(x, y)
+            var distance = (map_to_local(pos) - center).length()
+            
+            if distance <= radius:
+                erase_cell(0, pos)
+    
+    # Force update
+    update_internals()
+```
+
+## Clicking on Tiles
+
+```gdscript
+extends TileMap
+
+func _input(event):
+    if event is InputEventMouseButton and event.pressed:
+        var tile_pos = local_to_map(to_local(event.position))
+        var tile_data = get_cell_tile_data(0, tile_pos)
+        
+        if tile_data:
+            print("Clicked tile at: ", tile_pos)
+            # Toggle tile
+            erase_cell(0, tile_pos)
+        else:
+            # Place tile
+            set_cell(0, tile_pos, 0, Vector2i(0, 0))
+```
+
+## Best Practices
+
+<AccordionGroup>
+
+<Accordion title="Use terrain sets for natural transitions">
+Terrain sets automatically handle tile connections, saving time and ensuring consistency.
+</Accordion>
+
+<Accordion title="Organize tiles in layers">
+Use separate layers for ground, decorations, and foreground objects.
+</Accordion>
+
+<Accordion title="Use custom data for game logic">
+Store tile properties (damage, speed modifiers) in custom data layers instead of hard-coding.
+</Accordion>
+
+<Accordion title="Cache tile lookups in hot paths">
+If checking the same tile repeatedly, cache the result to avoid repeated lookups.
+</Accordion>
+
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Physics" icon="atom" href="/2d/physics">
+Learn more about collision and physics
+</Card>
+
+<Card title="Canvas Layers" icon="layer-group" href="/2d/canvas-layers">
+Organize rendering with canvas layers
+</Card>
+
+</CardGroup>

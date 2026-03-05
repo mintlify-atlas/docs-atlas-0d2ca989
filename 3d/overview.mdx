@@ -1,0 +1,349 @@
+---
+title: '3D Overview'
+description: 'Introduction to 3D development in Godot Engine'
+---
+
+## Introduction to 3D in Godot
+
+Godot Engine provides a comprehensive 3D system built around nodes that inherit from `Node3D`, the base class for all spatial objects. Understanding the 3D coordinate system, transformations, and scene organization is essential for creating 3D games and applications.
+
+## The 3D Coordinate System
+
+Godot uses a **right-handed coordinate system** where:
+
+- **X axis**: Points to the right (red)
+- **Y axis**: Points upward (green)
+- **Z axis**: Points backward (blue)
+
+<Note>
+In Godot, the forward direction is **-Z** (`Vector3.FORWARD`), which means objects face in the negative Z direction by default.
+</Note>
+
+### Coordinate Spaces
+
+Godot distinguishes between different coordinate spaces:
+
+<CardGroup cols={2}>
+  <Card title="Local Space" icon="cube">
+    Coordinates relative to the node's own transform. Also called "object-local coordinate system."
+  </Card>
+  <Card title="Parent Space" icon="layer-group">
+    Coordinates relative to the parent node's transform (unless `top_level` is true).
+  </Card>
+  <Card title="Global Space" icon="globe">
+    Coordinates relative to the world origin, independent of parent transforms.
+  </Card>
+</CardGroup>
+
+## Node3D: The Base Class
+
+`Node3D` is the fundamental building block for all 3D nodes in Godot. Every 3D object inherits from this class.
+
+<Info>
+In Godot 3 and older versions, `Node3D` was called `Spatial`.
+</Info>
+
+### Key Properties
+
+```gdscript
+var my_node = Node3D.new()
+
+# Position (translation)
+my_node.position = Vector3(10, 5, 0)
+
+# Rotation (in radians)
+my_node.rotation = Vector3(0, PI / 2, 0)
+
+# Rotation in degrees (more intuitive)
+my_node.rotation_degrees = Vector3(0, 90, 0)
+
+# Scale
+my_node.scale = Vector3(2, 2, 2)
+```
+
+### Transform Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `position` | Vector3 | Position in parent space (doc/classes/Node3D.xml:320) |
+| `rotation` | Vector3 | Euler angles in radians (doc/classes/Node3D.xml:327) |
+| `rotation_degrees` | Vector3 | Rotation in degrees (doc/classes/Node3D.xml:335) |
+| `scale` | Vector3 | Scale in local space (doc/classes/Node3D.xml:345) |
+| `transform` | Transform3D | Complete local transformation (doc/classes/Node3D.xml:353) |
+| `global_transform` | Transform3D | Transformation in global space (doc/classes/Node3D.xml:316) |
+| `basis` | Basis | Rotation, scale, and shear matrix (doc/classes/Node3D.xml:293) |
+
+## Common Transformation Methods
+
+### Translation
+
+```gdscript
+# Move forward (negative Z direction)
+my_node.translate_object_local(Vector3(0, 0, -1))
+
+# Move in global space
+my_node.global_translate(Vector3(5, 0, 0))
+```
+
+### Rotation
+
+<Warning>
+All angle parameters in Godot methods use **radians** by default. Use `deg_to_rad()` to convert from degrees.
+</Warning>
+
+```gdscript
+# Rotate around Y axis (yaw)
+my_node.rotate_y(deg_to_rad(45))
+
+# Rotate around custom axis in local space
+my_node.rotate_object_local(Vector3.UP, deg_to_rad(90))
+
+# Rotate in global space
+my_node.global_rotate(Vector3.UP, deg_to_rad(30))
+```
+
+### Look At
+
+Make a node face a target position:
+
+```gdscript
+# Make the node look at a target
+var target_position = Vector3(10, 0, 10)
+my_node.look_at(target_position, Vector3.UP)
+
+# Look at from a specific position
+my_node.look_at_from_position(
+    Vector3(0, 5, 0),  # Start position
+    target_position,    # Target
+    Vector3.UP          # Up direction
+)
+```
+
+See `look_at()` method at doc/classes/Node3D.xml:127
+
+### Coordinate Conversion
+
+```gdscript
+# Convert local point to global
+var global_pos = my_node.to_global(Vector3(1, 0, 0))
+
+# Convert global point to local
+var local_pos = my_node.to_local(Vector3(10, 5, 0))
+```
+
+## 3D Scene Structure
+
+A typical 3D scene hierarchy follows this pattern:
+
+```
+Node3D (Root)
+├─ Camera3D
+├─ DirectionalLight3D (Sun)
+├─ WorldEnvironment
+└─ Level
+    ├─ Player (CharacterBody3D)
+    │   ├─ MeshInstance3D (Visual)
+    │   └─ CollisionShape3D
+    ├─ Floor (StaticBody3D)
+    │   ├─ MeshInstance3D
+    │   └─ CollisionShape3D
+    └─ Props
+        └─ MeshInstance3D
+```
+
+<Steps>
+  <Step title="Create Root Node">
+    Start with a `Node3D` as your scene root for spatial organization.
+  </Step>
+  <Step title="Add Camera">
+    Place a `Camera3D` to define the viewport perspective.
+  </Step>
+  <Step title="Add Lighting">
+    Use `DirectionalLight3D` for sunlight or other light types for specific effects.
+  </Step>
+  <Step title="Build Environment">
+    Add `WorldEnvironment` for sky, fog, and ambient lighting.
+  </Step>
+  <Step title="Create Objects">
+    Add meshes, physics bodies, and interactive elements.
+  </Step>
+</Steps>
+
+## Visibility Control
+
+```gdscript
+# Show/hide nodes
+my_node.show()
+my_node.hide()
+
+# Toggle visibility
+my_node.visible = !my_node.visible
+
+# Check if visible in tree (considers parent visibility)
+if my_node.is_visible_in_tree():
+    print("Node is visible")
+```
+
+See visibility methods at doc/classes/Node3D.xml:95-99, 249-253
+
+## Advanced Transform Features
+
+### Top Level Nodes
+
+```gdscript
+# Make transform independent of parent
+my_node.top_level = true
+# Now global_transform == transform
+```
+
+When `top_level` is true, the node ignores parent transformations (doc/classes/Node3D.xml:350).
+
+### Orthonormalization
+
+```gdscript
+# Reset scale to Vector3.ONE while preserving position and rotation
+my_node.orthonormalize()
+
+# Disable scale globally
+my_node.set_disable_scale(true)
+```
+
+See orthonormalization at doc/classes/Node3D.xml:150-154
+
+### Transform Notifications
+
+```gdscript
+func _ready():
+    # Enable transform change notifications
+    set_notify_transform(true)
+
+func _notification(what):
+    if what == NOTIFICATION_TRANSFORM_CHANGED:
+        print("Global transform changed!")
+    elif what == NOTIFICATION_LOCAL_TRANSFORM_CHANGED:
+        print("Local transform changed!")
+```
+
+## Getting Parent Relationships
+
+```gdscript
+# Get parent Node3D (respects top_level)
+var parent_3d = my_node.get_parent_node_3d()
+
+# Get the 3D world
+var world = my_node.get_world_3d()
+```
+
+See doc/classes/Node3D.xml:58-63, 65-70
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Radians for Rotation">
+    All rotation methods expect radians. Always use `deg_to_rad()` when working with degrees:
+    ```gdscript
+    node.rotate_y(deg_to_rad(45))  # Correct
+    node.rotate_y(45)              # Wrong - will rotate 45 radians!
+    ```
+  </Accordion>
+  
+  <Accordion title="Avoid Non-Uniform Scaling">
+    Non-uniform scaling can cause issues with physics and some nodes:
+    ```gdscript
+    # Avoid this for physics bodies
+    physics_body.scale = Vector3(1, 2, 1)
+    
+    # Instead, scale the mesh only
+    mesh_instance.scale = Vector3(1, 2, 1)
+    ```
+  </Accordion>
+  
+  <Accordion title="Use translate_object_local for Movement">
+    For local movement (like moving forward), use `translate_object_local()`:
+    ```gdscript
+    # Move forward in the direction the object is facing
+    translate_object_local(Vector3(0, 0, -speed * delta))
+    ```
+  </Accordion>
+  
+  <Accordion title="Force Transform Updates Carefully">
+    Only call `force_update_transform()` when absolutely necessary (like in physics operations), as it has performance costs:
+    ```gdscript
+    # Use sparingly
+    my_node.force_update_transform()
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Common Patterns
+
+### Moving an Object Forward
+
+```gdscript
+extends Node3D
+
+var speed = 5.0
+
+func _process(delta):
+    # Move in the direction the object is facing
+    translate_object_local(Vector3(0, 0, -speed * delta))
+```
+
+### Orbiting Around a Point
+
+```gdscript
+extends Node3D
+
+var orbit_center = Vector3.ZERO
+var orbit_speed = 1.0
+var orbit_radius = 5.0
+var angle = 0.0
+
+func _process(delta):
+    angle += orbit_speed * delta
+    position = orbit_center + Vector3(
+        cos(angle) * orbit_radius,
+        0,
+        sin(angle) * orbit_radius
+    )
+    look_at(orbit_center, Vector3.UP)
+```
+
+### Smooth Following
+
+```gdscript
+extends Node3D
+
+@export var target: Node3D
+@export var follow_speed = 5.0
+
+func _process(delta):
+    if target:
+        global_position = global_position.lerp(
+            target.global_position,
+            follow_speed * delta
+        )
+```
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Meshes and Materials" icon="cube" href="/3d/meshes-and-materials">
+    Learn about rendering 3D geometry
+  </Card>
+  <Card title="Lighting" icon="lightbulb" href="/3d/lighting">
+    Explore 3D lighting techniques
+  </Card>
+  <Card title="Physics" icon="atom" href="/3d/physics">
+    Understand 3D physics simulation
+  </Card>
+  <Card title="Camera" icon="camera" href="/3d/camera">
+    Master camera controls and perspectives
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [Introduction to 3D](https://docs.godotengine.org/en/stable/tutorials/3d/introduction_to_3d.html)
+- [Godot 3D Demos](https://github.com/godotengine/godot-demo-projects/tree/master/3d)
+- Node3D Class Reference: doc/classes/Node3D.xml

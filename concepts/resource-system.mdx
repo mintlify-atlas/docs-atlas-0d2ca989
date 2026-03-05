@@ -1,0 +1,591 @@
+---
+title: Resource System
+description: Understanding Godot's resource system for data storage and asset management
+---
+
+Resources are the foundation of Godot's data storage system. They serve as serializable containers for data and assets, from textures and sounds to custom game data and scene files.
+
+## What is a Resource?
+
+A **Resource** is the base class for all Godot-specific resource types. Resources are reference-counted objects that can be saved to disk, loaded, and shared between multiple nodes. They inherit from `RefCounted`, which means they're automatically freed when no longer referenced.
+
+<Info>
+Resources are primarily data containers. Unlike nodes, they don't have a position in the scene tree and don't receive processing callbacks.
+</Info>
+
+### Common Resource Types
+
+Godot includes many built-in resource types:
+
+- **PackedScene**: Stores a complete scene hierarchy
+- **Texture2D**: Image resources for sprites and UI
+- **AudioStream**: Sound and music files
+- **Material**: Shader and rendering properties
+- **AnimationLibrary**: Animation data
+- **Script**: GDScript, C#, and other script files
+- **Theme**: UI styling information
+
+## Loading Resources
+
+There are several ways to load resources in Godot:
+
+### Using preload()
+
+`preload()` loads resources at compile time:
+
+```gdscript
+# Loaded when the script is parsed
+const PLAYER_SCENE = preload("res://characters/player.tscn")
+const EXPLOSION_SOUND = preload("res://sounds/explosion.wav")
+const COIN_TEXTURE = preload("res://sprites/coin.png")
+
+func _ready():
+    # Resource is already loaded and ready to use
+    var player = PLAYER_SCENE.instantiate()
+    add_child(player)
+```
+
+<Tip>
+Use `preload()` for resources you know you'll need immediately. The path must be a constant string literal.
+</Tip>
+
+### Using load()
+
+`load()` loads resources at runtime:
+
+```gdscript
+func load_level(level_number: int):
+    # Path can be dynamic
+    var path = "res://levels/level_%d.tscn" % level_number
+    var scene = load(path)
+    
+    if scene:
+        var instance = scene.instantiate()
+        add_child(instance)
+    else:
+        print("Failed to load level ", level_number)
+```
+
+### Using ResourceLoader
+
+For more control over loading:
+
+```gdscript
+func load_resource_with_cache():
+    # Check if already cached
+    if ResourceLoader.has_cached("res://player.tscn"):
+        print("Resource is cached")
+    
+    # Load resource
+    var resource = ResourceLoader.load("res://player.tscn")
+    
+    # Check resource type
+    if resource is PackedScene:
+        print("Loaded a scene")
+
+func threaded_load():
+    # Start loading in background
+    ResourceLoader.load_threaded_request("res://large_scene.tscn")
+    
+    # Check load status
+    while true:
+        var status = ResourceLoader.load_threaded_get_status("res://large_scene.tscn")
+        
+        if status == ResourceLoader.THREAD_LOAD_LOADED:
+            var resource = ResourceLoader.load_threaded_get("res://large_scene.tscn")
+            print("Loading complete!")
+            break
+        elif status == ResourceLoader.THREAD_LOAD_FAILED:
+            print("Loading failed")
+            break
+        
+        await get_tree().process_frame
+```
+
+<Warning>
+The engine maintains a global cache of loaded resources. The same resource path will return the same resource instance, saving memory but potentially causing unexpected shared state.
+</Warning>
+
+## PackedScene
+
+**PackedScene** is a special resource type that stores an entire scene hierarchy:
+
+### Instantiating PackedScenes
+
+```gdscript
+var enemy_scene = preload("res://enemies/goblin.tscn")
+
+func spawn_enemy(position: Vector2):
+    # Create a new instance
+    var enemy = enemy_scene.instantiate()
+    enemy.position = position
+    add_child(enemy)
+
+func spawn_multiple_enemies():
+    # One PackedScene can create many instances
+    for i in range(10):
+        var enemy = enemy_scene.instantiate()
+        enemy.position = Vector2(i * 100, 0)
+        add_child(enemy)
+```
+
+### Creating PackedScenes
+
+You can create PackedScenes programmatically:
+
+```gdscript
+func save_scene_to_file():
+    # Create a scene
+    var root = Node2D.new()
+    var sprite = Sprite2D.new()
+    var collision = CollisionShape2D.new()
+    
+    # Build hierarchy
+    root.add_child(sprite)
+    root.add_child(collision)
+    
+    # Set ownership (crucial for saving)
+    sprite.owner = root
+    collision.owner = root
+    
+    # Pack into PackedScene
+    var packed_scene = PackedScene.new()
+    var result = packed_scene.pack(root)
+    
+    if result == OK:
+        # Save to disk
+        var error = ResourceSaver.save(packed_scene, "res://generated_scene.tscn")
+        if error == OK:
+            print("Scene saved successfully")
+    
+    # Clean up the temporary nodes
+    root.free()
+```
+
+<Note>
+Only nodes with their `owner` property set will be saved when packing a scene. This prevents temporary or runtime-generated nodes from being saved unintentionally.
+</Note>
+
+## Saving Resources
+
+Use `ResourceSaver` to save resources to disk:
+
+```gdscript
+func save_custom_resource(resource: Resource, path: String):
+    var error = ResourceSaver.save(resource, path)
+    
+    match error:
+        OK:
+            print("Resource saved successfully")
+        ERR_FILE_CANT_WRITE:
+            print("Cannot write to file")
+        ERR_FILE_UNRECOGNIZED:
+            print("File format not recognized")
+        _:
+            print("Unknown error: ", error)
+
+func save_scene():
+    var scene = PackedScene.new()
+    scene.pack(get_tree().current_scene)
+    ResourceSaver.save(scene, "user://save_game.tscn")
+```
+
+## Custom Resources
+
+You can create your own resource types for game data:
+
+```gdscript
+# weapon_stats.gd
+extends Resource
+class_name WeaponStats
+
+@export var weapon_name: String = "Sword"
+@export var damage: int = 10
+@export var attack_speed: float = 1.0
+@export var range: float = 100.0
+@export var icon: Texture2D
+@export var sound: AudioStream
+
+func get_dps() -> float:
+    return damage * attack_speed
+```
+
+Using custom resources:
+
+```gdscript
+# weapon.gd
+extends Node2D
+
+@export var stats: WeaponStats
+
+func _ready():
+    if stats:
+        print("Weapon: ", stats.weapon_name)
+        print("DPS: ", stats.get_dps())
+        
+        # Use the weapon's icon
+        if stats.icon:
+            $Sprite2D.texture = stats.icon
+
+func attack():
+    if stats and stats.sound:
+        $AudioStreamPlayer.stream = stats.sound
+        $AudioStreamPlayer.play()
+```
+
+<Accordion title="Why Use Custom Resources?">
+Custom resources provide several benefits:
+
+1. **Data Separation**: Game data is separate from game logic
+2. **Reusability**: The same resource can be used by multiple nodes
+3. **Editor Integration**: Can be edited in the Inspector
+4. **Serialization**: Automatically saved and loaded with scenes
+5. **Type Safety**: Define clear data structures with type checking
+</Accordion>
+
+### Creating Resource Files
+
+You can create resource files in the editor or via code:
+
+```gdscript
+func create_weapon_resource():
+    var weapon = WeaponStats.new()
+    weapon.weapon_name = "Fire Sword"
+    weapon.damage = 25
+    weapon.attack_speed = 1.5
+    weapon.range = 150.0
+    
+    # Save as a .tres file (text) or .res (binary)
+    ResourceSaver.save(weapon, "res://weapons/fire_sword.tres")
+
+func load_weapon_resource():
+    var weapon = load("res://weapons/fire_sword.tres") as WeaponStats
+    print("Loaded: ", weapon.weapon_name)
+```
+
+## Resource Properties
+
+### Resource Path
+
+Every resource has a path indicating where it's stored:
+
+```gdscript
+func _ready():
+    var texture = preload("res://icon.png")
+    print("Resource path: ", texture.resource_path)
+    # Output: res://icon.png
+    
+    # Resources created at runtime have no path
+    var runtime_resource = Resource.new()
+    print("Runtime path: ", runtime_resource.resource_path)
+    # Output: (empty string)
+```
+
+### Resource Name
+
+```gdscript
+func _ready():
+    var my_resource = Resource.new()
+    my_resource.resource_name = "MyCustomResource"
+    
+    # Name appears in inspector
+    print("Name: ", my_resource.resource_name)
+```
+
+### Local to Scene
+
+The `resource_local_to_scene` property makes each scene instance get its own copy:
+
+```gdscript
+# health_resource.gd
+extends Resource
+class_name HealthResource
+
+@export var max_health: int = 100
+var current_health: int = 100
+
+func _init():
+    # This resource will be unique per scene instance
+    resource_local_to_scene = true
+
+func take_damage(amount: int):
+    current_health = max(0, current_health - amount)
+```
+
+```gdscript
+# player.gd
+extends CharacterBody2D
+
+@export var health: HealthResource
+
+func _ready():
+    # Each player instance has its own health resource
+    print("Health: ", health.current_health)
+
+func take_damage(amount: int):
+    health.take_damage(amount)
+    # Only this instance's health changes
+```
+
+<Info>
+When `resource_local_to_scene` is true, each scene instance gets a duplicate of the resource. This is perfect for data that should be instance-specific.
+</Info>
+
+## Resource Duplication
+
+```gdscript
+func duplicate_resources():
+    var original = WeaponStats.new()
+    original.weapon_name = "Original Sword"
+    original.damage = 10
+    
+    # Shallow copy - nested resources are shared
+    var shallow = original.duplicate(false)
+    shallow.weapon_name = "Copy Sword"
+    
+    # Deep copy - nested resources are duplicated
+    var deep = original.duplicate(true)
+    deep.weapon_name = "Deep Copy Sword"
+```
+
+## Resource Signals
+
+Resources can emit signals when they change:
+
+```gdscript
+extends Resource
+class_name GameData
+
+var score: int = 0:
+    set(value):
+        score = value
+        emit_changed()  # Built-in signal
+
+var level: int = 1:
+    set(value):
+        if level != value:
+            level = value
+            emit_changed()
+```
+
+```gdscript
+func _ready():
+    var game_data = GameData.new()
+    
+    # Connect to resource change signal
+    game_data.changed.connect(_on_game_data_changed)
+    
+    game_data.score = 100  # Triggers signal
+    game_data.level = 2    # Triggers signal
+
+func _on_game_data_changed():
+    print("Game data changed!")
+```
+
+<Warning>
+The `changed` signal is not emitted automatically for custom resources. You must call `emit_changed()` manually in your setters.
+</Warning>
+
+## Practical Example: Inventory System
+
+Here's a complete example using custom resources:
+
+```gdscript
+# item.gd
+extends Resource
+class_name Item
+
+@export var item_name: String
+@export var description: String
+@export var icon: Texture2D
+@export var stack_size: int = 1
+@export var value: int = 0
+
+func use(target: Node) -> bool:
+    # Override in derived resources
+    return false
+```
+
+```gdscript
+# consumable_item.gd
+extends Item
+class_name ConsumableItem
+
+@export var health_restore: int = 0
+@export var mana_restore: int = 0
+
+func use(target: Node) -> bool:
+    if target.has_method("heal"):
+        target.heal(health_restore)
+    if target.has_method("restore_mana"):
+        target.restore_mana(mana_restore)
+    return true
+```
+
+```gdscript
+# inventory.gd
+extends Resource
+class_name Inventory
+
+signal item_added(item: Item, quantity: int)
+signal item_removed(item: Item, quantity: int)
+signal inventory_changed
+
+@export var max_slots: int = 20
+var items: Dictionary = {}  # item_path: quantity
+
+func add_item(item: Item, quantity: int = 1) -> bool:
+    if items.size() >= max_slots and not has_item(item):
+        return false
+    
+    var path = item.resource_path
+    if path.is_empty():
+        # Generate a unique key for runtime items
+        path = str(item.get_instance_id())
+    
+    items[path] = items.get(path, 0) + quantity
+    item_added.emit(item, quantity)
+    inventory_changed.emit()
+    emit_changed()
+    return true
+
+func remove_item(item: Item, quantity: int = 1) -> bool:
+    var path = item.resource_path
+    if path.is_empty():
+        path = str(item.get_instance_id())
+    
+    if not items.has(path):
+        return false
+    
+    items[path] -= quantity
+    if items[path] <= 0:
+        items.erase(path)
+    
+    item_removed.emit(item, quantity)
+    inventory_changed.emit()
+    emit_changed()
+    return true
+
+func has_item(item: Item) -> bool:
+    var path = item.resource_path
+    if path.is_empty():
+        path = str(item.get_instance_id())
+    return items.has(path)
+
+func get_item_count(item: Item) -> int:
+    var path = item.resource_path
+    if path.is_empty():
+        path = str(item.get_instance_id())
+    return items.get(path, 0)
+```
+
+```gdscript
+# player.gd
+extends CharacterBody2D
+
+@export var inventory: Inventory
+
+func _ready():
+    if not inventory:
+        inventory = Inventory.new()
+    
+    inventory.item_added.connect(_on_item_added)
+    inventory.inventory_changed.connect(_update_ui)
+
+func pickup_item(item: Item, quantity: int = 1):
+    if inventory.add_item(item, quantity):
+        print("Picked up ", quantity, "x ", item.item_name)
+    else:
+        print("Inventory full!")
+
+func use_item(item: Item):
+    if inventory.has_item(item):
+        if item.use(self):
+            inventory.remove_item(item, 1)
+
+func _on_item_added(item: Item, quantity: int):
+    print("Added to inventory: ", item.item_name)
+
+func _update_ui():
+    # Update inventory UI
+    pass
+```
+
+## Resource Preloading Best Practices
+
+<Steps>
+
+<Step title="Use preload() for Essential Resources">
+Preload resources that are needed immediately at startup:
+
+```gdscript
+const PLAYER = preload("res://player.tscn")
+const UI_THEME = preload("res://ui/theme.tres")
+```
+</Step>
+
+<Step title="Use load() for Optional Content">
+Load resources dynamically when they might not be needed:
+
+```gdscript
+func load_optional_content():
+    if enable_particles:
+        var particles = load("res://effects/particles.tscn")
+```
+</Step>
+
+<Step title="Consider Resource Pooling">
+For frequently instantiated scenes, maintain a pool:
+
+```gdscript
+var bullet_pool = []
+var bullet_scene = preload("res://bullet.tscn")
+
+func get_bullet():
+    if bullet_pool.is_empty():
+        return bullet_scene.instantiate()
+    return bullet_pool.pop_back()
+
+func return_bullet(bullet):
+    bullet_pool.append(bullet)
+```
+</Step>
+
+</Steps>
+
+## Best Practices
+
+<Steps>
+
+<Step title="Use Custom Resources for Game Data">
+Create custom resource types instead of using Dictionaries or hard-coded values.
+</Step>
+
+<Step title="Set Ownership When Packing Scenes">
+Always set the `owner` property on nodes you want to save in PackedScenes.
+</Step>
+
+<Step title="Leverage resource_local_to_scene">
+Use this property for resources that should be unique per scene instance.
+</Step>
+
+<Step title="Emit changed Signal">
+Call `emit_changed()` in custom resources when data changes to notify dependents.
+</Step>
+
+<Step title="Be Mindful of Resource Caching">
+Remember that loaded resources are cached. Modifications affect all users of that resource.
+</Step>
+
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Nodes and Scenes" icon="sitemap" href="/concepts/nodes-and-scenes">
+    Learn how nodes use resources
+  </Card>
+  <Card title="Scene Tree" icon="tree" href="/concepts/scene-tree">
+    Understand scene management
+  </Card>
+</CardGroup>

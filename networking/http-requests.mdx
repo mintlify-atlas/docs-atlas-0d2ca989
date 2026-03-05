@@ -1,0 +1,561 @@
+---
+title: 'HTTP Requests'
+description: 'Make HTTP/HTTPS requests and interact with REST APIs'
+---
+
+## Overview
+
+The `HTTPRequest` node provides an easy way to make HTTP and HTTPS requests to web servers and REST APIs. It supports GET, POST, PUT, DELETE, and other HTTP methods, along with file downloads and uploads.
+
+<Info>
+HTTPRequest uses HTTPClient internally and provides a simpler, node-based interface for common HTTP operations.
+</Info>
+
+## Basic HTTP Request
+
+### GET Request
+
+```gdscript
+func _ready():
+    # Create HTTP request node
+    var http_request = HTTPRequest.new()
+    add_child(http_request)
+    http_request.request_completed.connect(_on_request_completed)
+    
+    # Perform GET request
+    var error = http_request.request("https://api.example.com/data")
+    if error != OK:
+        push_error("An error occurred in the HTTP request.")
+
+func _on_request_completed(result, response_code, headers, body):
+    if result != HTTPRequest.RESULT_SUCCESS:
+        push_error("Request failed")
+        return
+    
+    if response_code != 200:
+        push_error("HTTP error: " + str(response_code))
+        return
+    
+    # Parse response
+    var json = JSON.new()
+    json.parse(body.get_string_from_utf8())
+    var response = json.get_data()
+    
+    print("Response: ", response)
+```
+
+```csharp
+public override void _Ready()
+{
+    // Create HTTP request node
+    var httpRequest = new HttpRequest();
+    AddChild(httpRequest);
+    httpRequest.RequestCompleted += OnRequestCompleted;
+    
+    // Perform GET request
+    Error error = httpRequest.Request("https://api.example.com/data");
+    if (error != Error.Ok)
+    {
+        GD.PushError("An error occurred in the HTTP request.");
+    }
+}
+
+private void OnRequestCompleted(long result, long responseCode, string[] headers, byte[] body)
+{
+    if (result != (long)HttpRequest.Result.Success)
+    {
+        GD.PushError("Request failed");
+        return;
+    }
+    
+    if (responseCode != 200)
+    {
+        GD.PushError($"HTTP error: {responseCode}");
+        return;
+    }
+    
+    // Parse response
+    var json = new Json();
+    json.Parse(body.GetStringFromUtf8());
+    var response = json.GetData();
+    
+    GD.Print("Response: ", response);
+}
+```
+
+<Tip>
+Always check both the `result` (network operation status) and `response_code` (HTTP status) before processing the response.
+</Tip>
+
+## POST Request
+
+Send data to a server:
+
+```gdscript
+func send_post_request():
+    var http_request = HTTPRequest.new()
+    add_child(http_request)
+    http_request.request_completed.connect(_on_post_completed)
+    
+    # Prepare POST data
+    var data = {
+        "username": "player123",
+        "score": 1000,
+        "level": 5
+    }
+    
+    var json = JSON.new()
+    var body = json.stringify(data)
+    
+    # Set headers
+    var headers = ["Content-Type: application/json"]
+    
+    # Send POST request
+    var error = http_request.request(
+        "https://api.example.com/scores",
+        headers,
+        HTTPClient.METHOD_POST,
+        body
+    )
+    
+    if error != OK:
+        push_error("Failed to send POST request")
+
+func _on_post_completed(result, response_code, headers, body):
+    if result == HTTPRequest.RESULT_SUCCESS and response_code == 201:
+        print("Score submitted successfully!")
+    else:
+        print("Failed to submit score: ", response_code)
+```
+
+```csharp
+private void SendPostRequest()
+{
+    var httpRequest = new HttpRequest();
+    AddChild(httpRequest);
+    httpRequest.RequestCompleted += OnPostCompleted;
+    
+    // Prepare POST data
+    var data = new Godot.Collections.Dictionary
+    {
+        { "username", "player123" },
+        { "score", 1000 },
+        { "level", 5 }
+    };
+    
+    var json = new Json();
+    string body = json.Stringify(data);
+    
+    // Set headers
+    string[] headers = { "Content-Type: application/json" };
+    
+    // Send POST request
+    Error error = httpRequest.Request(
+        "https://api.example.com/scores",
+        headers,
+        HttpClient.Method.Post,
+        body
+    );
+    
+    if (error != Error.Ok)
+    {
+        GD.PushError("Failed to send POST request");
+    }
+}
+
+private void OnPostCompleted(long result, long responseCode, string[] headers, byte[] body)
+{
+    if (result == (long)HttpRequest.Result.Success && responseCode == 201)
+    {
+        GD.Print("Score submitted successfully!");
+    }
+    else
+    {
+        GD.Print($"Failed to submit score: {responseCode}");
+    }
+}
+```
+
+## HTTP Methods
+
+| Method | Purpose | Example Use Case |
+|--------|---------|------------------|
+| `GET` | Retrieve data | Get player leaderboard |
+| `POST` | Create resource | Submit new score |
+| `PUT` | Update resource | Update player profile |
+| `DELETE` | Delete resource | Delete save file |
+| `PATCH` | Partial update | Update single field |
+| `HEAD` | Get headers only | Check file size |
+
+```gdscript
+# PUT request
+http_request.request(
+    "https://api.example.com/users/123",
+    headers,
+    HTTPClient.METHOD_PUT,
+    json_body
+)
+
+# DELETE request
+http_request.request(
+    "https://api.example.com/users/123",
+    headers,
+    HTTPClient.METHOD_DELETE
+)
+```
+
+## File Downloads
+
+Download files from a URL:
+
+```gdscript
+func download_file():
+    var http_request = HTTPRequest.new()
+    add_child(http_request)
+    http_request.request_completed.connect(_on_download_completed)
+    
+    # Set download file path
+    http_request.download_file = "user://downloaded_image.png"
+    
+    # Start download
+    var error = http_request.request("https://example.com/image.png")
+    if error != OK:
+        push_error("Failed to start download")
+
+func _on_download_completed(result, response_code, headers, body):
+    if result == HTTPRequest.RESULT_SUCCESS:
+        print("File downloaded successfully!")
+        
+        # Load the downloaded image
+        var image = Image.new()
+        image.load("user://downloaded_image.png")
+        var texture = ImageTexture.create_from_image(image)
+```
+
+### Download Progress
+
+```gdscript
+var http_request: HTTPRequest
+
+func _ready():
+    http_request = HTTPRequest.new()
+    add_child(http_request)
+    http_request.download_file = "user://large_file.zip"
+    http_request.request("https://example.com/large_file.zip")
+
+func _process(delta):
+    if http_request:
+        var downloaded = http_request.get_downloaded_bytes()
+        var total = http_request.get_body_size()
+        
+        if total > 0:
+            var progress = float(downloaded) / float(total) * 100.0
+            print("Download progress: ", progress, "%")
+```
+
+<Info>
+Files are downloaded to the specified path. Use `user://` for writable user directory.
+</Info>
+
+## Custom Headers
+
+Add authentication and custom headers:
+
+```gdscript
+# API key authentication
+var headers = [
+    "Authorization: Bearer YOUR_API_KEY",
+    "Content-Type: application/json",
+    "User-Agent: GodotGame/1.0"
+]
+
+http_request.request(
+    "https://api.example.com/protected",
+    headers,
+    HTTPClient.METHOD_GET
+)
+```
+
+### Basic Authentication
+
+```gdscript
+var username = "user"
+var password = "pass"
+var auth_string = username + ":" + password
+var auth_bytes = auth_string.to_utf8_buffer()
+var auth_base64 = Marshalls.raw_to_base64(auth_bytes)
+
+var headers = [
+    "Authorization: Basic " + auth_base64
+]
+
+http_request.request(
+    "https://api.example.com/protected",
+    headers,
+    HTTPClient.METHOD_GET
+)
+```
+
+## Response Handling
+
+### Status Codes
+
+```gdscript
+func _on_request_completed(result, response_code, headers, body):
+    match response_code:
+        200:  # OK
+            print("Success")
+        201:  # Created
+            print("Resource created")
+        204:  # No Content
+            print("Success, no content returned")
+        400:  # Bad Request
+            push_error("Invalid request")
+        401:  # Unauthorized
+            push_error("Authentication required")
+        403:  # Forbidden
+            push_error("Access denied")
+        404:  # Not Found
+            push_error("Resource not found")
+        500:  # Internal Server Error
+            push_error("Server error")
+        503:  # Service Unavailable
+            push_error("Service temporarily unavailable")
+        _:
+            push_error("Unexpected response code: " + str(response_code))
+```
+
+### Parsing JSON
+
+```gdscript
+func parse_json_response(body: PackedByteArray):
+    var json = JSON.new()
+    var error = json.parse(body.get_string_from_utf8())
+    
+    if error != OK:
+        push_error("Failed to parse JSON: " + json.get_error_message())
+        return null
+    
+    return json.get_data()
+
+func _on_request_completed(result, response_code, headers, body):
+    var data = parse_json_response(body)
+    
+    if data and data.has("players"):
+        for player in data["players"]:
+            print("Player: ", player["name"], " Score: ", player["score"])
+```
+
+## Request Configuration
+
+### Timeout
+
+```gdscript
+var http_request = HTTPRequest.new()
+http_request.timeout = 10.0  # 10 second timeout
+add_child(http_request)
+```
+
+### Redirects
+
+```gdscript
+var http_request = HTTPRequest.new()
+http_request.max_redirects = 5  # Follow up to 5 redirects
+add_child(http_request)
+```
+
+### GZIP Compression
+
+```gdscript
+var http_request = HTTPRequest.new()
+http_request.accept_gzip = true  # Accept compressed responses (default: true)
+add_child(http_request)
+```
+
+### Body Size Limit
+
+```gdscript
+var http_request = HTTPRequest.new()
+http_request.body_size_limit = 1024 * 1024 * 10  # 10 MB limit
+add_child(http_request)
+```
+
+## HTTPS/TLS
+
+For secure connections:
+
+```gdscript
+# Use custom TLS options
+var tls_options = TLSOptions.client()
+http_request.set_tls_options(tls_options)
+
+# Make HTTPS request
+http_request.request("https://secure.example.com/api")
+```
+
+<Warning>
+Always use HTTPS for sensitive data like authentication tokens and user information.
+</Warning>
+
+## REST API Example
+
+Complete REST API integration:
+
+```gdscript
+extends Node
+
+const API_URL = "https://api.example.com"
+var api_token = ""
+
+func login(username: String, password: String):
+    var http_request = HTTPRequest.new()
+    add_child(http_request)
+    http_request.request_completed.connect(_on_login_completed)
+    
+    var data = {"username": username, "password": password}
+    var body = JSON.stringify(data)
+    var headers = ["Content-Type: application/json"]
+    
+    http_request.request(
+        API_URL + "/login",
+        headers,
+        HTTPClient.METHOD_POST,
+        body
+    )
+
+func _on_login_completed(result, response_code, headers, body):
+    if response_code == 200:
+        var json = JSON.new()
+        json.parse(body.get_string_from_utf8())
+        var data = json.get_data()
+        
+        api_token = data["token"]
+        print("Login successful!")
+        
+        # Now make authenticated requests
+        get_user_profile()
+
+func get_user_profile():
+    var http_request = HTTPRequest.new()
+    add_child(http_request)
+    http_request.request_completed.connect(_on_profile_loaded)
+    
+    var headers = [
+        "Authorization: Bearer " + api_token,
+        "Content-Type: application/json"
+    ]
+    
+    http_request.request(
+        API_URL + "/user/profile",
+        headers,
+        HTTPClient.METHOD_GET
+    )
+
+func _on_profile_loaded(result, response_code, headers, body):
+    if response_code == 200:
+        var json = JSON.new()
+        json.parse(body.get_string_from_utf8())
+        var profile = json.get_data()
+        
+        print("User: ", profile["name"])
+        print("Level: ", profile["level"])
+        print("XP: ", profile["xp"])
+
+func update_score(score: int):
+    var http_request = HTTPRequest.new()
+    add_child(http_request)
+    http_request.request_completed.connect(_on_score_updated)
+    
+    var data = {"score": score}
+    var body = JSON.stringify(data)
+    var headers = [
+        "Authorization: Bearer " + api_token,
+        "Content-Type: application/json"
+    ]
+    
+    http_request.request(
+        API_URL + "/scores",
+        headers,
+        HTTPClient.METHOD_POST,
+        body
+    )
+
+func _on_score_updated(result, response_code, headers, body):
+    if response_code == 201:
+        print("Score updated successfully!")
+```
+
+## Error Handling
+
+```gdscript
+func _on_request_completed(result, response_code, headers, body):
+    match result:
+        HTTPRequest.RESULT_SUCCESS:
+            # Check HTTP status code
+            if response_code >= 200 and response_code < 300:
+                handle_success(body)
+            else:
+                handle_http_error(response_code, body)
+        
+        HTTPRequest.RESULT_CHUNKED_BODY_SIZE_MISMATCH:
+            push_error("Chunked transfer error")
+        
+        HTTPRequest.RESULT_CANT_CONNECT:
+            push_error("Cannot connect to server")
+        
+        HTTPRequest.RESULT_CANT_RESOLVE:
+            push_error("Cannot resolve hostname")
+        
+        HTTPRequest.RESULT_CONNECTION_ERROR:
+            push_error("Connection error")
+        
+        HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR:
+            push_error("TLS handshake failed")
+        
+        HTTPRequest.RESULT_NO_RESPONSE:
+            push_error("No response from server")
+        
+        HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED:
+            push_error("Response too large")
+        
+        HTTPRequest.RESULT_TIMEOUT:
+            push_error("Request timed out")
+        
+        _:
+            push_error("Unknown error: " + str(result))
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use HTTPS for sensitive data">
+    Always use HTTPS when transmitting passwords, tokens, or personal information.
+  </Accordion>
+
+  <Accordion title="Handle errors gracefully">
+    Check both network errors and HTTP status codes. Provide user feedback for failures.
+  </Accordion>
+
+  <Accordion title="Set appropriate timeouts">
+    Use shorter timeouts for quick requests, longer for file downloads. Default of 0 means no timeout.
+  </Accordion>
+
+  <Accordion title="Don't block the main thread">
+    HTTPRequest is asynchronous by default. Never use synchronous HTTP calls in production.
+  </Accordion>
+
+  <Accordion title="Rate limit your requests">
+    Respect API rate limits. Implement exponential backoff for retries.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Networking Overview" icon="network-wired" href="/networking/overview">
+    Learn about multiplayer networking
+  </Card>
+  <Card title="Low-Level Networking" icon="code" href="/networking/low-level-networking">
+    Understand ENet and WebSocket
+  </Card>
+</CardGroup>

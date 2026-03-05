@@ -1,0 +1,95 @@
+---
+title: "Viewport"
+---
+
+# Viewport
+
+**Inherits:** Node < Object
+
+## Description
+
+Abstract base class for viewports. Encapsulates drawing and interaction with a game world. A Viewport creates a different view into the screen, or a sub-view inside another viewport.
+
+## Properties
+
+<ResponseField name="transparent_bg" type="bool" default="false">
+  If true, the viewport should render its background as transparent.
+</ResponseField>
+
+<ResponseField name="msaa_2d" type="MSAA" default="MSAA_DISABLED">
+  The multisample antialiasing mode for 2D/Canvas rendering.
+</ResponseField>
+
+<ResponseField name="msaa_3d" type="MSAA" default="MSAA_DISABLED">
+  The multisample antialiasing mode for 3D rendering.
+</ResponseField>
+
+## Methods
+
+### get_camera_2d
+
+```gdscript
+Camera2D get_camera_2d()
+```
+
+Returns the currently active 2D camera.
+
+### get_camera_3d
+
+```gdscript
+Camera3D get_camera_3d()
+```
+
+Returns the currently active 3D camera.
+
+### get_mouse_position
+
+```gdscript
+Vector2 get_mouse_position()
+```
+
+Returns the mouse's position in this Viewport.
+
+### get_texture
+
+```gdscript
+ViewportTexture get_texture()
+```
+
+Returns the viewport's texture.
+
+### set_input_as_handled
+
+```gdscript
+void set_input_as_handled()
+```
+
+Stops the input from propagating further up the SceneTree.
+
+## Signals
+
+### size_changed()
+
+Emitted when the size of the viewport is changed.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+var viewport = get_viewport()
+var mouse_pos = viewport.get_mouse_position()
+print("Mouse at: ", mouse_pos)
+
+# Get viewport texture
+var texture = viewport.get_texture()
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+var viewport = GetViewport();
+var mousePos = viewport.GetMousePosition();
+GD.Print("Mouse at: ", mousePos);
+```
+  </Tab>
+</Tabs>

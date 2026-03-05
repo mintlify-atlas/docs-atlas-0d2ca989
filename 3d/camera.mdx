@@ -1,0 +1,649 @@
+---
+title: 'Camera3D'
+description: 'Mastering 3D cameras in Godot Engine'
+---
+
+## Introduction to Camera3D
+
+The `Camera3D` node defines the viewpoint from which the 3D scene is rendered. Understanding camera projections, positioning, and movement is essential for creating engaging 3D experiences.
+
+<Info>
+Only one camera can be active per viewport. Cameras register in the nearest `Viewport` node when ascending the tree.
+</Info>
+
+See doc/classes/Camera3D.xml:7
+
+## Basic Camera Setup
+
+```gdscript
+var camera = Camera3D.new()
+add_child(camera)
+
+# Position the camera
+camera.position = Vector3(0, 5, 10)
+
+# Make it look at a target
+camera.look_at(Vector3.ZERO, Vector3.UP)
+
+# Make it the active camera
+camera.make_current()
+```
+
+See doc/classes/Camera3D.xml:72-75
+
+## Projection Types
+
+Godot supports three camera projection modes:
+
+<Tabs>
+  <Tab title="Perspective">
+    The default projection where distant objects appear smaller (realistic 3D).
+    
+    ```gdscript
+    camera.projection = Camera3D.PROJECTION_PERSPECTIVE
+    camera.fov = 75.0  # Field of view in degrees
+    camera.near = 0.05
+    camera.far = 4000.0
+    ```
+    
+    See doc/classes/Camera3D.xml:207-209, 186-192, 204-205, 183-184
+  </Tab>
+  
+  <Tab title="Orthogonal">
+    No perspective distortion - objects stay the same size regardless of distance.
+    
+    ```gdscript
+    camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+    camera.size = 10.0  # View size in world units
+    camera.near = 0.05
+    camera.far = 4000.0
+    ```
+    
+    Useful for 2D-like 3D games (isometric, side-scrollers).
+    
+    See doc/classes/Camera3D.xml:125-132, 210-211
+  </Tab>
+  
+  <Tab title="Frustum">
+    Custom asymmetric frustum for advanced effects.
+    
+    ```gdscript
+    camera.projection = Camera3D.PROJECTION_FRUSTUM
+    camera.frustum_offset = Vector2(2.0, 1.0)
+    ```
+    
+    See doc/classes/Camera3D.xml:115-123, 194-196
+  </Tab>
+</Tabs>
+
+## Field of View (FOV)
+
+Controls how wide the camera can see in perspective mode:
+
+```gdscript
+# Vertical FOV (default: 75 degrees)
+camera.fov = 90.0  # Wider view
+camera.fov = 60.0  # Narrower view
+
+# Keep aspect determines if FOV is vertical or horizontal
+camera.keep_aspect = Camera3D.KEEP_HEIGHT  # FOV is vertical (default)
+# or
+camera.keep_aspect = Camera3D.KEEP_WIDTH   # FOV is horizontal
+```
+
+See doc/classes/Camera3D.xml:186-192, 201-202
+
+<Note>
+The default 75° vertical FOV equals approximately:
+- 91° horizontal in 4:3
+- 102° horizontal in 16:10  
+- 108° horizontal in 16:9
+- 122° horizontal in 21:9
+</Note>
+
+## Near and Far Planes
+
+Define the camera's visible distance range:
+
+```gdscript
+# Near plane (closest visible distance)
+camera.near = 0.05  # Default
+camera.near = 0.1   # Reduce Z-fighting, less close-up detail
+
+# Far plane (farthest visible distance)
+camera.far = 4000.0  # Default
+camera.far = 1000.0  # Reduce for better depth precision
+```
+
+See doc/classes/Camera3D.xml:204-205, 183-184
+
+<Warning>
+Very small `near` values (below 0.05) can cause Z-fighting artifacts. Very large `far` values reduce depth buffer precision.
+</Warning>
+
+## Making a Camera Active
+
+```gdscript
+# Set as current camera
+camera.current = true
+# or
+camera.make_current()
+
+# Check if camera is active
+if camera.is_current():
+    print("This camera is rendering")
+
+# Deactivate this camera
+camera.clear_current()
+```
+
+See doc/classes/Camera3D.xml:172-174, 72-75, 13-18
+
+## Camera Positioning Methods
+
+### Using set_perspective
+
+```gdscript
+# Set perspective mode with custom parameters
+camera.set_perspective(70.0, 0.1, 500.0)
+# Parameters: fov, near, far
+```
+
+See doc/classes/Camera3D.xml:135-142
+
+### Using set_orthogonal
+
+```gdscript
+# Set orthogonal mode with custom parameters  
+camera.set_orthogonal(20.0, 0.1, 500.0)
+# Parameters: size, near, far
+```
+
+See doc/classes/Camera3D.xml:125-132
+
+### Using set_frustum
+
+```gdscript
+# Custom frustum for special effects
+camera.set_frustum(10.0, Vector2(1, 0), 0.1, 100.0)
+# Parameters: size, offset, near, far
+```
+
+See doc/classes/Camera3D.xml:115-123
+
+## Camera Offset
+
+Adjust the camera viewport without moving the camera:
+
+```gdscript
+# Horizontal offset
+camera.h_offset = 2.0
+
+# Vertical offset  
+camera.v_offset = 1.0
+```
+
+See doc/classes/Camera3D.xml:198-199, 213-214
+
+## Frustum and Culling
+
+### Get Frustum Planes
+
+```gdscript
+# Get the six frustum planes
+var planes = camera.get_frustum()
+# Returns: [near, far, left, top, right, bottom]
+
+for plane in planes:
+    print("Plane normal: ", plane.normal)
+```
+
+See doc/classes/Camera3D.xml:45-48
+
+### Cull Mask
+
+Control which visual layers the camera renders:
+
+```gdscript
+# Render all layers (default)
+camera.cull_mask = 0b11111111111111111111  # All 20 layers
+
+# Only render layer 1
+camera.cull_mask = 0b00000001
+
+# Render layers 1, 2, and 3
+camera.cull_mask = 0b00000111
+
+# Helper methods
+camera.set_cull_mask_value(1, true)   # Enable layer 1
+camera.set_cull_mask_value(2, false)  # Disable layer 2
+
+if camera.get_cull_mask_value(3):
+    print("Layer 3 is visible")
+```
+
+See doc/classes/Camera3D.xml:166-170, 107-113, 38-42
+
+## Position Queries
+
+### Check if Position is Behind Camera
+
+```gdscript
+var world_point = Vector3(10, 0, 5)
+
+if camera.is_position_behind(world_point):
+    print("Point is behind camera")
+```
+
+See doc/classes/Camera3D.xml:57-62
+
+### Check if Position is in Frustum
+
+```gdscript
+var world_point = Vector3(10, 0, 5)
+
+if camera.is_position_in_frustum(world_point):
+    print("Point is visible to camera")
+```
+
+See doc/classes/Camera3D.xml:65-69
+
+## Screen-World Conversions
+
+### Project 3D to 2D (World to Screen)
+
+```gdscript
+# Convert world position to screen coordinates
+var world_pos = Vector3(5, 2, 0)
+var screen_pos = camera.unproject_position(world_pos)
+print("Screen position: ", screen_pos)  # Vector2
+
+# Use with UI elements
+func _process(delta):
+    var target_3d_pos = target.global_position
+    if not camera.is_position_behind(target_3d_pos):
+        label.visible = true
+        label.position = camera.unproject_position(target_3d_pos)
+    else:
+        label.visible = false
+```
+
+See doc/classes/Camera3D.xml:144-156
+
+### Unproject 2D to 3D (Screen to World)
+
+```gdscript
+# Get 3D world position from screen coordinates
+var screen_pos = get_viewport().get_mouse_position()
+var world_pos = camera.project_position(screen_pos, 10.0)
+print("World position at depth 10: ", world_pos)
+```
+
+See doc/classes/Camera3D.xml:85-91
+
+### Ray Casting from Screen
+
+```gdscript
+func _input(event):
+    if event is InputEventMouseButton and event.pressed:
+        var mouse_pos = event.position
+        
+        # Get ray origin and direction
+        var ray_origin = camera.project_ray_origin(mouse_pos)
+        var ray_direction = camera.project_ray_normal(mouse_pos)
+        
+        # Perform raycast
+        var space_state = get_world_3d().direct_space_state
+        var query = PhysicsRayQueryParameters3D.create(
+            ray_origin,
+            ray_origin + ray_direction * 1000
+        )
+        
+        var result = space_state.intersect_ray(query)
+        if result:
+            print("Clicked on: ", result.collider)
+```
+
+See doc/classes/Camera3D.xml:100-105, 93-98
+
+## Camera Attributes
+
+Customize exposure, DOF, and other effects:
+
+```gdscript
+# Create camera attributes
+var attributes = CameraAttributesPractical.new()
+
+# Auto exposure
+attributes.auto_exposure_enabled = true
+attributes.auto_exposure_speed = 0.5
+
+# Depth of field
+attributes.dof_blur_far_enabled = true
+attributes.dof_blur_far_distance = 20.0
+
+# Apply to camera
+camera.attributes = attributes
+```
+
+See doc/classes/Camera3D.xml:160-161
+
+## Environment
+
+Set custom environment for this camera:
+
+```gdscript
+var env = Environment.new()
+env.background_mode = Environment.BG_COLOR
+env.background_color = Color.SKY_BLUE
+
+camera.environment = env
+```
+
+See doc/classes/Camera3D.xml:180-181
+
+## Compositor
+
+Apply post-processing effects:
+
+```gdscript
+var compositor = Compositor.new()
+camera.compositor = compositor
+```
+
+See doc/classes/Camera3D.xml:163-164
+
+## Doppler Tracking
+
+Simulate doppler effect for audio:
+
+```gdscript
+# Enable doppler effect in _process
+camera.doppler_tracking = Camera3D.DOPPLER_TRACKING_IDLE_STEP
+
+# Or in _physics_process
+camera.doppler_tracking = Camera3D.DOPPLER_TRACKING_PHYSICS_STEP
+
+# Disable
+camera.doppler_tracking = Camera3D.DOPPLER_TRACKING_DISABLED
+```
+
+See doc/classes/Camera3D.xml:176-178
+
+## Camera Following
+
+Smooth camera following pattern:
+
+```gdscript
+extends Camera3D
+
+@export var target: Node3D
+@export var follow_speed := 5.0
+@export var offset := Vector3(0, 5, 10)
+
+func _process(delta):
+    if not target:
+        return
+    
+    # Calculate desired position
+    var desired_pos = target.global_position + offset
+    
+    # Smoothly interpolate
+    global_position = global_position.lerp(desired_pos, follow_speed * delta)
+    
+    # Look at target
+    look_at(target.global_position, Vector3.UP)
+```
+
+## Third-Person Camera
+
+Orbiting camera with mouse control:
+
+```gdscript
+extends Camera3D
+
+@export var target: Node3D
+@export var distance := 10.0
+@export var min_distance := 2.0
+@export var max_distance := 20.0
+@export var mouse_sensitivity := 0.3
+@export var scroll_sensitivity := 1.0
+
+var rotation_x := 0.0
+var rotation_y := 0.0
+
+func _ready():
+    Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+func _input(event):
+    # Mouse look
+    if event is InputEventMouseMotion:
+        rotation_y -= event.relative.x * mouse_sensitivity * 0.01
+        rotation_x -= event.relative.y * mouse_sensitivity * 0.01
+        rotation_x = clamp(rotation_x, -PI/2, PI/2)
+    
+    # Zoom with scroll
+    if event is InputEventMouseButton:
+        if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+            distance = max(min_distance, distance - scroll_sensitivity)
+        elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+            distance = min(max_distance, distance + scroll_sensitivity)
+
+func _process(delta):
+    if not target:
+        return
+    
+    # Calculate camera position
+    var offset = Vector3.ZERO
+    offset.x = cos(rotation_y) * cos(rotation_x)
+    offset.y = sin(rotation_x)
+    offset.z = sin(rotation_y) * cos(rotation_x)
+    offset = offset.normalized() * distance
+    
+    global_position = target.global_position + offset
+    look_at(target.global_position, Vector3.UP)
+```
+
+## First-Person Camera
+
+Mouse-look FPS camera:
+
+```gdscript
+extends Camera3D
+
+@export var mouse_sensitivity := 0.3
+
+var rotation_x := 0.0
+var rotation_y := 0.0
+
+func _ready():
+    Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+func _input(event):
+    if event is InputEventMouseMotion:
+        # Horizontal rotation (yaw)
+        rotation_y -= event.relative.x * mouse_sensitivity * 0.01
+        
+        # Vertical rotation (pitch)
+        rotation_x -= event.relative.y * mouse_sensitivity * 0.01
+        rotation_x = clamp(rotation_x, -PI/2, PI/2)
+        
+        # Apply rotation
+        rotation.y = rotation_y
+        rotation.x = rotation_x
+```
+
+## Split-Screen with Multiple Cameras
+
+Create split-screen multiplayer:
+
+```gdscript
+# Player 1 camera
+var camera1 = Camera3D.new()
+var viewport1 = SubViewport.new()
+viewport1.size = Vector2(960, 540)  # Half of 1920x1080
+viewport1.add_child(camera1)
+camera1.current = true
+
+# Player 2 camera  
+var camera2 = Camera3D.new()
+var viewport2 = SubViewport.new()
+viewport2.size = Vector2(960, 540)
+viewport2.add_child(camera2)
+camera2.current = true
+
+# Display both viewports side by side
+var texture_rect1 = TextureRect.new()
+texture_rect1.texture = viewport1.get_texture()
+texture_rect1.position = Vector2(0, 0)
+
+var texture_rect2 = TextureRect.new()
+texture_rect2.texture = viewport2.get_texture()
+texture_rect2.position = Vector2(960, 0)
+```
+
+## Camera Shake Effect
+
+```gdscript
+extends Camera3D
+
+var trauma := 0.0
+var trauma_power := 2.0
+var decay_rate := 1.0
+var max_offset := Vector3(2, 2, 2)
+var max_rotation := Vector3(5, 5, 5)
+
+var noise := FastNoiseLite.new()
+var noise_speed := 50.0
+var time := 0.0
+
+func _ready():
+    noise.seed = randi()
+    noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+
+func add_trauma(amount: float):
+    trauma = min(trauma + amount, 1.0)
+
+func _process(delta):
+    time += delta
+    
+    # Decay trauma over time
+    trauma = max(trauma - decay_rate * delta, 0.0)
+    
+    if trauma > 0:
+        var shake = pow(trauma, trauma_power)
+        
+        # Offset
+        h_offset = max_offset.x * shake * get_noise_value(0)
+        v_offset = max_offset.y * shake * get_noise_value(1)
+        
+        # Rotation
+        rotation_degrees.x = max_rotation.x * shake * get_noise_value(2)
+        rotation_degrees.y = max_rotation.y * shake * get_noise_value(3)
+        rotation_degrees.z = max_rotation.z * shake * get_noise_value(4)
+    else:
+        h_offset = 0
+        v_offset = 0
+        rotation_degrees = Vector3.ZERO
+
+func get_noise_value(offset: int) -> float:
+    return noise.get_noise_1d(time * noise_speed + offset)
+
+# Usage: camera.add_trauma(0.5)
+```
+
+## Debugging Cameras
+
+```gdscript
+# Get camera transform
+var cam_transform = camera.get_camera_transform()
+print("Camera position: ", cam_transform.origin)
+print("Camera forward: ", -cam_transform.basis.z)
+
+# Get projection matrix
+var projection = camera.get_camera_projection()
+print("Projection: ", projection)
+
+# Get camera RID
+var camera_rid = camera.get_camera_rid()
+print("Camera RID: ", camera_rid)
+```
+
+See doc/classes/Camera3D.xml:32-35, 20-23, 26-29
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Adjust Near/Far Carefully">
+    Balance between Z-fighting and visible range:
+    ```gdscript
+    # For close-up scenes
+    camera.near = 0.1
+    camera.far = 500.0
+    
+    # For large outdoor scenes
+    camera.near = 0.5
+    camera.far = 2000.0
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Appropriate FOV">
+    Different FOV for different game types:
+    ```gdscript
+    # FPS games: 90-110 degrees
+    camera.fov = 100.0
+    
+    # Third-person: 70-80 degrees
+    camera.fov = 75.0
+    
+    # Cinematic: 40-60 degrees
+    camera.fov = 50.0
+    ```
+  </Accordion>
+  
+  <Accordion title="Smooth Camera Movement">
+    Always interpolate camera movement:
+    ```gdscript
+    # Use lerp for smooth following
+    global_position = global_position.lerp(target_pos, speed * delta)
+    ```
+  </Accordion>
+  
+  <Accordion title="Check Position Visibility">
+    Before positioning UI over 3D:
+    ```gdscript
+    if not camera.is_position_behind(world_pos):
+        ui_element.position = camera.unproject_position(world_pos)
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Cull Masks for Performance">
+    Don't render unnecessary layers:
+    ```gdscript
+    # UI camera only sees UI layer
+    ui_camera.cull_mask = 0b10000000000000000000
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="3D Overview" icon="cube" href="/3d/overview">
+    3D coordinate systems and Node3D
+  </Card>
+  <Card title="Viewport" icon="window-maximize" href="/api/viewport">
+    Understanding viewports
+  </Card>
+  <Card title="Environment" icon="cloud-sun" href="/rendering/environment">
+    Environments and post-processing
+  </Card>
+  <Card title="Input Handling" icon="gamepad" href="/api/input">
+    Mouse and keyboard input
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [Third Person Shooter Demo](https://godotengine.org/asset-library/asset/2710)
+- Camera3D Reference: doc/classes/Camera3D.xml

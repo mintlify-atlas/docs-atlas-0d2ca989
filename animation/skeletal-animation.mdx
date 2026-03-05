@@ -1,0 +1,616 @@
+---
+title: Skeletal Animation
+description: 3D character animation with Skeleton3D, bones, skinning, and inverse kinematics
+---
+
+Skeletal animation is the standard technique for animating 3D characters and articulated objects. It uses a hierarchy of bones to deform a 3D mesh, allowing for realistic character movement and animation.
+
+## Understanding Skeleton3D
+
+The `Skeleton3D` node manages a hierarchy of bones used for 3D skeletal animation. Each bone has a transform relative to its parent bone, and the skeleton deforms attached meshes based on bone poses.
+
+### Key Concepts
+
+- **Bone**: A single transform in the skeleton hierarchy
+- **Rest Pose**: The default/initial pose of each bone
+- **Pose**: The current animated transform of each bone
+- **Skinning**: The process of deforming a mesh based on bone transforms
+- **Skin**: A resource that maps mesh vertices to bones
+
+## Setting Up a Skeleton
+
+Skeletons are typically imported from 3D modeling software, but you can also create and manipulate them at runtime.
+
+### Accessing Bones
+
+<CodeGroup>
+```gdscript GDScript
+# Get bone count
+var bone_count = $Skeleton3D.get_bone_count()
+print("Total bones: ", bone_count)
+
+# Find bone by name
+var head_bone = $Skeleton3D.find_bone("Head")
+if head_bone != -1:
+    print("Found head bone at index: ", head_bone)
+
+# Get bone name
+var bone_name = $Skeleton3D.get_bone_name(0)
+print("First bone: ", bone_name)
+
+# Get bone parent
+var parent_idx = $Skeleton3D.get_bone_parent(head_bone)
+if parent_idx != -1:
+    print("Parent bone: ", $Skeleton3D.get_bone_name(parent_idx))
+```
+
+```csharp C#
+var skeleton = GetNode<Skeleton3D>("Skeleton3D");
+
+// Get bone count
+int boneCount = skeleton.GetBoneCount();
+GD.Print($"Total bones: {boneCount}");
+
+// Find bone by name
+int headBone = skeleton.FindBone("Head");
+if (headBone != -1)
+{
+    GD.Print($"Found head bone at index: {headBone}");
+}
+
+// Get bone name
+string boneName = skeleton.GetBoneName(0);
+GD.Print($"First bone: {boneName}");
+
+// Get parent
+int parentIdx = skeleton.GetBoneParent(headBone);
+if (parentIdx != -1)
+{
+    GD.Print($"Parent: {skeleton.GetBoneName(parentIdx)}");
+}
+```
+</CodeGroup>
+
+### Bone Hierarchy
+
+<CodeGroup>
+```gdscript GDScript
+# Get all children of a bone
+var spine_bone = $Skeleton3D.find_bone("Spine")
+var children = $Skeleton3D.get_bone_children(spine_bone)
+for child_idx in children:
+    print("Child bone: ", $Skeleton3D.get_bone_name(child_idx))
+
+# Get root bones (bones without parents)
+var root_bones = $Skeleton3D.get_parentless_bones()
+for root_idx in root_bones:
+    print("Root bone: ", $Skeleton3D.get_bone_name(root_idx))
+```
+
+```csharp C#
+var skeleton = GetNode<Skeleton3D>("Skeleton3D");
+
+// Get children
+int spineBone = skeleton.FindBone("Spine");
+int[] children = skeleton.GetBoneChildren(spineBone);
+foreach (int childIdx in children)
+{
+    GD.Print($"Child: {skeleton.GetBoneName(childIdx)}");
+}
+
+// Get root bones
+int[] rootBones = skeleton.GetParentlessBones();
+foreach (int rootIdx in rootBones)
+{
+    GD.Print($"Root: {skeleton.GetBoneName(rootIdx)}");
+}
+```
+</CodeGroup>
+
+## Bone Poses
+
+Bones have two key transforms: **rest** (the default pose) and **pose** (the current animated state).
+
+### Rest Pose
+
+The rest pose defines the initial bone configuration:
+
+<CodeGroup>
+```gdscript GDScript
+# Get rest transform
+var bone_idx = $Skeleton3D.find_bone("UpperArm")
+var rest = $Skeleton3D.get_bone_rest(bone_idx)
+print("Rest transform: ", rest)
+
+# Get global rest (relative to skeleton)
+var global_rest = $Skeleton3D.get_bone_global_rest(bone_idx)
+
+# Set rest transform
+var new_rest = Transform3D()
+new_rest.origin = Vector3(0, 1, 0)
+$Skeleton3D.set_bone_rest(bone_idx, new_rest)
+
+# Reset all bones to rest pose
+$Skeleton3D.reset_bone_poses()
+```
+
+```csharp C#
+var skeleton = GetNode<Skeleton3D>("Skeleton3D");
+int boneIdx = skeleton.FindBone("UpperArm");
+
+// Get rest
+Transform3D rest = skeleton.GetBoneRest(boneIdx);
+GD.Print($"Rest: {rest}");
+
+// Get global rest
+Transform3D globalRest = skeleton.GetBoneGlobalRest(boneIdx);
+
+// Set rest
+var newRest = new Transform3D();
+newRest.Origin = new Vector3(0, 1, 0);
+skeleton.SetBoneRest(boneIdx, newRest);
+
+// Reset to rest
+skeleton.ResetBonePoses();
+```
+</CodeGroup>
+
+### Current Pose
+
+The pose is the animated transform, typically set by animations:
+
+<CodeGroup>
+```gdscript GDScript
+var bone_idx = $Skeleton3D.find_bone("Head")
+
+# Get local pose (relative to parent bone)
+var pose = $Skeleton3D.get_bone_pose(bone_idx)
+print("Current pose: ", pose)
+
+# Get global pose (relative to skeleton)
+var global_pose = $Skeleton3D.get_bone_global_pose(bone_idx)
+
+# Set local pose
+var new_pose = Transform3D()
+new_pose.origin = Vector3(0, 0.1, 0)
+$Skeleton3D.set_bone_pose(bone_idx, new_pose)
+
+# Set global pose
+$Skeleton3D.set_bone_global_pose(bone_idx, global_pose)
+```
+
+```csharp C#
+var skeleton = GetNode<Skeleton3D>("Skeleton3D");
+int boneIdx = skeleton.FindBone("Head");
+
+// Get pose
+Transform3D pose = skeleton.GetBonePose(boneIdx);
+Transform3D globalPose = skeleton.GetBoneGlobalPose(boneIdx);
+
+// Set pose
+var newPose = new Transform3D();
+newPose.Origin = new Vector3(0, 0.1f, 0);
+skeleton.SetBonePose(boneIdx, newPose);
+
+// Set global pose
+skeleton.SetBoneGlobalPose(boneIdx, globalPose);
+```
+</CodeGroup>
+
+### Pose Components
+
+Access individual position, rotation, and scale components:
+
+<CodeGroup>
+```gdscript GDScript
+var bone_idx = $Skeleton3D.find_bone("RightHand")
+
+# Get components
+var position = $Skeleton3D.get_bone_pose_position(bone_idx)
+var rotation = $Skeleton3D.get_bone_pose_rotation(bone_idx)  # Quaternion
+var scale = $Skeleton3D.get_bone_pose_scale(bone_idx)
+
+# Set components
+$Skeleton3D.set_bone_pose_position(bone_idx, Vector3(0, 1, 0))
+$Skeleton3D.set_bone_pose_rotation(bone_idx, Quaternion(Vector3.UP, PI / 4))
+$Skeleton3D.set_bone_pose_scale(bone_idx, Vector3(1.2, 1.2, 1.2))
+```
+
+```csharp C#
+var skeleton = GetNode<Skeleton3D>("Skeleton3D");
+int boneIdx = skeleton.FindBone("RightHand");
+
+// Get components
+Vector3 position = skeleton.GetBonePosePosition(boneIdx);
+Quaternion rotation = skeleton.GetBonePoseRotation(boneIdx);
+Vector3 scale = skeleton.GetBonePoseScale(boneIdx);
+
+// Set components
+skeleton.SetBonePosePosition(boneIdx, new Vector3(0, 1, 0));
+skeleton.SetBonePoseRotation(boneIdx, new Quaternion(Vector3.Up, Mathf.Pi / 4));
+skeleton.SetBonePoseScale(boneIdx, new Vector3(1.2f, 1.2f, 1.2f));
+```
+</CodeGroup>
+
+## Skinning
+
+Skinning is the process of deforming a mesh based on bone transforms. The `Skin` resource defines how mesh vertices are influenced by bones.
+
+### Creating and Registering Skins
+
+<CodeGroup>
+```gdscript GDScript
+# Create a skin from current rest transforms
+var skin = $Skeleton3D.create_skin_from_rest_transforms()
+
+# Register skin with skeleton
+var skin_ref = $Skeleton3D.register_skin(skin)
+
+# Apply skin to MeshInstance3D
+$MeshInstance3D.skin = skin
+```
+
+```csharp C#
+var skeleton = GetNode<Skeleton3D>("Skeleton3D");
+
+// Create skin
+Skin skin = skeleton.CreateSkinFromRestTransforms();
+
+// Register
+SkinReference skinRef = skeleton.RegisterSkin(skin);
+
+// Apply to mesh
+var mesh = GetNode<MeshInstance3D>("MeshInstance3D");
+mesh.Skin = skin;
+```
+</CodeGroup>
+
+## Bone Attachments
+
+Attach objects (weapons, accessories) to specific bones using `BoneAttachment3D`:
+
+```gdscript
+# Create a sword attached to the hand
+var bone_attachment = BoneAttachment3D.new()
+bone_attachment.bone_name = "RightHand"
+$Skeleton3D.add_child(bone_attachment)
+
+# Add sword model as child of attachment
+var sword = preload("res://sword.tscn").instantiate()
+bone_attachment.add_child(sword)
+```
+
+The BoneAttachment3D automatically follows the bone's transform.
+
+## Inverse Kinematics (IK)
+
+IK allows you to position bones by specifying an end goal (like placing a hand on an object) rather than rotating each joint manually.
+
+### Using SkeletonIK3D (Deprecated)
+
+<Note>
+While `SkeletonIK3D` is available, Godot 4+ recommends using `SkeletonModifier3D` with custom IK implementations or third-party solutions.
+</Note>
+
+### Custom IK Implementation Example
+
+<CodeGroup>
+```gdscript GDScript
+# Simple two-bone IK (e.g., for an arm)
+func solve_two_bone_ik(skeleton: Skeleton3D, root_bone: String, 
+                       mid_bone: String, tip_bone: String, target_pos: Vector3):
+    var root_idx = skeleton.find_bone(root_bone)
+    var mid_idx = skeleton.find_bone(mid_bone)
+    var tip_idx = skeleton.find_bone(tip_bone)
+    
+    # Get bone lengths
+    var upper_length = skeleton.get_bone_rest(mid_idx).origin.length()
+    var lower_length = skeleton.get_bone_rest(tip_idx).origin.length()
+    
+    # Get root position in global space
+    var root_global = skeleton.get_bone_global_pose(root_idx)
+    var root_pos = root_global.origin
+    
+    # Calculate target direction and distance
+    var target_dir = (target_pos - root_pos).normalized()
+    var target_dist = root_pos.distance_to(target_pos)
+    
+    # Clamp distance to reachable range
+    var max_reach = upper_length + lower_length
+    target_dist = min(target_dist, max_reach * 0.99)
+    
+    # Law of cosines for angles
+    var upper_angle = acos(clamp(
+        (target_dist * target_dist + upper_length * upper_length - lower_length * lower_length) / 
+        (2 * target_dist * upper_length), -1, 1))
+    
+    var mid_angle = acos(clamp(
+        (upper_length * upper_length + lower_length * lower_length - target_dist * target_dist) / 
+        (2 * upper_length * lower_length), -1, 1))
+    
+    # Apply rotations (simplified - real implementation needs proper axis calculation)
+    # This is a basic example - production code needs more robust math
+```
+
+```csharp C#
+// Two-bone IK solver
+public void SolveTwoBoneIK(Skeleton3D skeleton, string rootBone, 
+                          string midBone, string tipBone, Vector3 targetPos)
+{
+    int rootIdx = skeleton.FindBone(rootBone);
+    int midIdx = skeleton.FindBone(midBone);
+    int tipIdx = skeleton.FindBone(tipBone);
+    
+    // Get bone lengths
+    float upperLength = skeleton.GetBoneRest(midIdx).Origin.Length();
+    float lowerLength = skeleton.GetBoneRest(tipIdx).Origin.Length();
+    
+    // IK solving logic...
+    // (Similar to GDScript version)
+}
+```
+</CodeGroup>
+
+<Tip>
+For production IK, consider using third-party addons like "Godot IK" or implementing FABRIK (Forward And Backward Reaching Inverse Kinematics) for multi-bone chains.
+</Tip>
+
+## Skeleton Modifiers
+
+Godot 4 uses `SkeletonModifier3D` nodes for procedural bone manipulation:
+
+```gdscript
+# Example: Custom modifier to make character look at target
+extends SkeletonModifier3D
+
+var target_position: Vector3
+var head_bone: String = "Head"
+
+func _process_modification():
+    var skeleton = get_skeleton()
+    var head_idx = skeleton.find_bone(head_bone)
+    
+    if head_idx == -1:
+        return
+    
+    # Get head global position
+    var head_global = skeleton.get_bone_global_pose(head_idx)
+    var look_dir = (target_position - head_global.origin).normalized()
+    
+    # Calculate rotation to look at target
+    var look_transform = head_global.looking_at(target_position, Vector3.UP)
+    
+    # Apply rotation (with limits)
+    skeleton.set_bone_global_pose(head_idx, look_transform)
+```
+
+## Importing Skeletal Animations
+
+When importing 3D models with skeletal animations:
+
+<Steps>
+  <Step title="Export from 3D Software">
+    Export your model with armature/skeleton in formats like GLTF, FBX, or Collada.
+  </Step>
+  <Step title="Import to Godot">
+    Drag the file into your Godot project. The import dialog appears.
+  </Step>
+  <Step title="Configure Import Settings">
+    - Enable "Import Animations"
+    - Set bone name conventions
+    - Configure retargeting if needed
+  </Step>
+  <Step title="Verify Skeleton">
+    Open the imported scene and check the Skeleton3D node to ensure bones are correct.
+  </Step>
+</Steps>
+
+### Bone Name Conventions
+
+Godot recognizes common bone naming conventions:
+
+- Mixamo: `mixamorig:Hips`, `mixamorig:Spine`, etc.
+- Humanoid: `Hips`, `Spine`, `Head`, `LeftUpperArm`, etc.
+
+You can remap bone names in the import settings.
+
+## Animation Retargeting
+
+Retarget animations from one skeleton to another:
+
+```gdscript
+# Retarget animation from source to target skeleton
+func retarget_animation(source_skeleton: Skeleton3D, target_skeleton: Skeleton3D, 
+                        animation: Animation):
+    var bone_map = {}  # Map source bone names to target bone names
+    
+    # Build bone mapping
+    for i in range(source_skeleton.get_bone_count()):
+        var source_name = source_skeleton.get_bone_name(i)
+        var target_idx = target_skeleton.find_bone(source_name)
+        if target_idx != -1:
+            bone_map[i] = target_idx
+    
+    # Retarget animation tracks...
+```
+
+## Performance Optimization
+
+### Motion Scale
+
+Adjust the scale of position animations:
+
+```gdscript
+# Scale all position animations (useful for different character sizes)
+$Skeleton3D.motion_scale = 1.5  # 150% of original motion
+```
+
+### Show Rest Only
+
+Disable animation processing for debugging:
+
+```gdscript
+# Display rest pose only (no animation processing)
+$Skeleton3D.show_rest_only = true
+```
+
+### Bone Enabling
+
+<CodeGroup>
+```gdscript GDScript
+# Disable bones you don't need to animate
+var finger_bones = ["LeftPinky", "LeftRing", "LeftMiddle"]
+for bone_name in finger_bones:
+    var bone_idx = $Skeleton3D.find_bone(bone_name)
+    if bone_idx != -1:
+        $Skeleton3D.set_bone_enabled(bone_idx, false)
+
+# Check if bone is enabled
+var is_enabled = $Skeleton3D.is_bone_enabled(bone_idx)
+```
+
+```csharp C#
+var skeleton = GetNode<Skeleton3D>("Skeleton3D");
+string[] fingerBones = { "LeftPinky", "LeftRing", "LeftMiddle" };
+
+foreach (string boneName in fingerBones)
+{
+    int boneIdx = skeleton.FindBone(boneName);
+    if (boneIdx != -1)
+    {
+        skeleton.SetBoneEnabled(boneIdx, false);
+    }
+}
+```
+</CodeGroup>
+
+## Signals
+
+Skeleton3D provides signals for monitoring changes:
+
+<CodeGroup>
+```gdscript GDScript
+func _ready():
+    $Skeleton3D.pose_updated.connect(_on_pose_updated)
+    $Skeleton3D.skeleton_updated.connect(_on_skeleton_updated)
+    $Skeleton3D.bone_list_changed.connect(_on_bone_list_changed)
+
+func _on_pose_updated():
+    print("Pose updated")
+
+func _on_skeleton_updated():
+    print("Skeleton final pose calculated")
+
+func _on_bone_list_changed():
+    print("Bone hierarchy changed")
+```
+
+```csharp C#
+public override void _Ready()
+{
+    var skeleton = GetNode<Skeleton3D>("Skeleton3D");
+    skeleton.PoseUpdated += OnPoseUpdated;
+    skeleton.SkeletonUpdated += OnSkeletonUpdated;
+    skeleton.BoneListChanged += OnBoneListChanged;
+}
+
+private void OnPoseUpdated()
+{
+    GD.Print("Pose updated");
+}
+```
+</CodeGroup>
+
+## Complete Example: Procedural Animation
+
+<CodeGroup>
+```gdscript GDScript
+extends Node3D
+
+var skeleton: Skeleton3D
+var time: float = 0.0
+
+func _ready():
+    skeleton = $Skeleton3D
+
+func _process(delta):
+    time += delta
+    
+    # Procedural head bobbing
+    var head_idx = skeleton.find_bone("Head")
+    if head_idx != -1:
+        var bob_offset = Vector3(0, sin(time * 5.0) * 0.02, 0)
+        var rest_pose = skeleton.get_bone_rest(head_idx)
+        var new_pose = rest_pose.translated(bob_offset)
+        skeleton.set_bone_pose(head_idx, new_pose)
+    
+    # Rotate spine based on mouse position
+    var spine_idx = skeleton.find_bone("Spine")
+    if spine_idx != -1:
+        var mouse_pos = get_viewport().get_mouse_position()
+        var viewport_size = get_viewport().get_visible_rect().size
+        var normalized = (mouse_pos - viewport_size / 2) / viewport_size
+        
+        var rotation = Quaternion(Vector3.UP, normalized.x * 0.5) * \
+                       Quaternion(Vector3.RIGHT, -normalized.y * 0.3)
+        
+        var current_pose = skeleton.get_bone_pose(spine_idx)
+        current_pose.basis = Basis(rotation)
+        skeleton.set_bone_pose(spine_idx, current_pose)
+```
+
+```csharp C#
+public partial class ProceduralAnimation : Node3D
+{
+    private Skeleton3D _skeleton;
+    private float _time;
+    
+    public override void _Ready()
+    {
+        _skeleton = GetNode<Skeleton3D>("Skeleton3D");
+    }
+    
+    public override void _Process(double delta)
+    {
+        _time += (float)delta;
+        
+        // Head bobbing
+        int headIdx = _skeleton.FindBone("Head");
+        if (headIdx != -1)
+        {
+            var bobOffset = new Vector3(0, Mathf.Sin(_time * 5.0f) * 0.02f, 0);
+            var restPose = _skeleton.GetBoneRest(headIdx);
+            var newPose = restPose.Translated(bobOffset);
+            _skeleton.SetBonePose(headIdx, newPose);
+        }
+        
+        // Spine rotation based on mouse
+        int spineIdx = _skeleton.FindBone("Spine");
+        if (spineIdx != -1)
+        {
+            var mousePos = GetViewport().GetMousePosition();
+            var viewportSize = GetViewport().GetVisibleRect().Size;
+            var normalized = (mousePos - viewportSize / 2) / viewportSize;
+            
+            var rotation = new Quaternion(Vector3.Up, normalized.X * 0.5f) *
+                          new Quaternion(Vector3.Right, -normalized.Y * 0.3f);
+            
+            var currentPose = _skeleton.GetBonePose(spineIdx);
+            currentPose.Basis = new Basis(rotation);
+            _skeleton.SetBonePose(spineIdx, currentPose);
+        }
+    }
+}
+```
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="AnimationTree" icon="diagram-project" href="/animation/animationtree">
+    Use AnimationTree for complex skeletal animation blending
+  </Card>
+  <Card title="Animation Overview" icon="book" href="/animation/overview">
+    Review fundamental animation concepts
+  </Card>
+</CardGroup>

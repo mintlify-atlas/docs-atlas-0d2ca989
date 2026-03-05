@@ -1,0 +1,382 @@
+---
+title: 'Rendering overview'
+description: 'Understand Godot rendering architecture, renderer types, and RenderingServer'
+keywords: ['rendering', 'renderingserver', 'forward plus', 'mobile', 'compatibility']
+---
+
+## Overview
+
+Godot Engine features a powerful and flexible rendering system that supports multiple rendering backends and techniques. The rendering architecture is built around the RenderingServer, which provides low-level access to all visual operations.
+
+## Rendering architecture
+
+Godot uses a server-based architecture for rendering:
+
+```gdscript
+# Access the RenderingServer directly
+var viewport_rid = get_viewport().get_viewport_rid()
+RenderingServer.viewport_set_clear_mode(viewport_rid, RenderingServer.VIEWPORT_CLEAR_ALWAYS)
+```
+
+### RenderingServer
+
+The RenderingServer is the backend for all visual rendering. The entire scene system is built on top of it:
+
+- Completely opaque implementation
+- All rendering objects accessed via RIDs (Resource IDs)
+- Can bypass the scene system for maximum performance
+- Thread-safe operations via `call_on_render_thread()`
+
+```gdscript
+# Create rendering resources directly
+var mesh_rid = RenderingServer.mesh_create()
+var material_rid = RenderingServer.material_create()
+var instance_rid = RenderingServer.instance_create()
+
+RenderingServer.instance_set_base(instance_rid, mesh_rid)
+RenderingServer.instance_set_scenario(instance_rid, get_world_3d().scenario)
+```
+
+<Info>
+Using RenderingServer directly can improve performance when the scene system becomes a bottleneck, but won't help if the GPU is already fully utilized.
+</Info>
+
+## Renderer types
+
+Godot 4 offers three rendering backends, each optimized for different use cases:
+
+### Forward+ renderer
+
+The default high-end renderer with advanced features:
+
+**Features:**
+- Clustered forward rendering
+- Unlimited lights and decals per scene
+- Advanced post-processing effects
+- Screen-space reflections (SSR)
+- Signed distance field global illumination (SDFGI)
+- VoxelGI for real-time global illumination
+
+**Best for:**
+- Desktop and console games
+- High-end mobile devices
+- Projects requiring advanced lighting
+
+```gdscript
+# Forward+ is the default renderer
+# Configure in Project Settings > Rendering > Renderer > Rendering Method
+```
+
+### Mobile renderer
+
+Optimized for mobile devices while maintaining good visual quality:
+
+**Features:**
+- Forward rendering with optimizations
+- Limited lights per object
+- Mobile-optimized post-processing
+- Better battery life
+- Lower memory usage
+
+**Best for:**
+- Mobile games (iOS, Android)
+- Lower-end devices
+- Battery-conscious applications
+
+**Limitations:**
+- Maximum 8 lights affecting each object
+- No SDFGI
+- Simplified reflections
+
+### Compatibility renderer
+
+OpenGL/WebGL-based renderer for maximum compatibility:
+
+**Features:**
+- OpenGL 3.3 / WebGL 2.0 support
+- Runs on older hardware
+- Web export support
+- Simplified rendering pipeline
+
+**Best for:**
+- Web exports
+- Older computers
+- Maximum compatibility requirements
+- 2D projects
+
+**Limitations:**
+- No advanced lighting features
+- Limited to basic post-processing
+- Lower performance ceiling
+
+<Warning>
+Choose your renderer carefully. Switching renderers requires restarting the editor and may require material adjustments.
+</Warning>
+
+## Rendering pipeline
+
+Understanding the rendering pipeline helps optimize your game:
+
+### 3D rendering flow
+
+<Steps>
+  <Step title="Scene culling">
+    Determine which objects are visible in the camera frustum using octree or other spatial structures.
+  </Step>
+  
+  <Step title="Shadow mapping">
+    Render shadow maps for directional, omni, and spot lights.
+  </Step>
+  
+  <Step title="Opaque geometry">
+    Render all opaque meshes with materials and lighting.
+  </Step>
+  
+  <Step title="Sky rendering">
+    Render the sky or background environment.
+  </Step>
+  
+  <Step title="Transparent geometry">
+    Render transparent objects in sorted order (back to front).
+  </Step>
+  
+  <Step title="Post-processing">
+    Apply effects like glow, DOF, tonemapping, and adjustments.
+  </Step>
+</Steps>
+
+### 2D rendering flow
+
+2D rendering uses a canvas-based system:
+
+```gdscript
+# Access canvas items
+var canvas = get_canvas_item()
+RenderingServer.canvas_item_set_z_index(canvas, 10)
+RenderingServer.canvas_item_set_modulate(canvas, Color.RED)
+```
+
+## Viewports and scenarios
+
+### Viewports
+
+Viewports are rendering targets that can display 3D or 2D content:
+
+```gdscript
+# Create a custom viewport
+var viewport = SubViewport.new()
+viewport.size = Vector2i(1024, 768)
+viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+add_child(viewport)
+
+# Use viewport as texture
+var texture = viewport.get_texture()
+var sprite = Sprite2D.new()
+sprite.texture = texture
+```
+
+### Scenarios (3D)
+
+Scenarios are 3D world containers:
+
+```gdscript
+# Get the 3D scenario from a Node3D
+var scenario = get_world_3d().scenario
+
+# Create custom scenario
+var custom_scenario = RenderingServer.scenario_create()
+```
+
+### Canvas (2D)
+
+Canvas is the 2D equivalent of scenarios:
+
+```gdscript
+# Get the 2D canvas
+var canvas = get_canvas()
+
+# Create custom canvas
+var custom_canvas = RenderingServer.canvas_create()
+```
+
+## Materials and shaders
+
+Materials define how surfaces are rendered:
+
+```gdscript
+# StandardMaterial3D (PBR)
+var material = StandardMaterial3D.new()
+material.albedo_color = Color.RED
+material.metallic = 0.8
+material.roughness = 0.2
+
+# ShaderMaterial (custom)
+var shader_material = ShaderMaterial.new()
+shader_material.shader = preload("res://shaders/custom.gdshader")
+shader_material.set_shader_parameter("color", Color.BLUE)
+```
+
+## Lights and shadows
+
+### Light types
+
+```gdscript
+# Directional light (sun)
+var dir_light = DirectionalLight3D.new()
+dir_light.light_energy = 1.0
+dir_light.shadow_enabled = true
+
+# Omni light (point light)
+var omni_light = OmniLight3D.new()
+omni_light.omni_range = 10.0
+omni_light.omni_attenuation = 1.0
+
+# Spot light
+var spot_light = SpotLight3D.new()
+spot_light.spot_range = 10.0
+spot_light.spot_angle = 45.0
+```
+
+### Shadow configuration
+
+```gdscript
+dir_light.shadow_enabled = true
+dir_light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+dir_light.directional_shadow_split_1 = 0.1
+dir_light.directional_shadow_split_2 = 0.2
+dir_light.directional_shadow_split_3 = 0.5
+```
+
+## Rendering optimization
+
+### Occlusion culling
+
+```gdscript
+# Enable occlusion culling
+var occluder = OccluderInstance3D.new()
+occluder.occluder = preload("res://occluders/building.occ")
+add_child(occluder)
+```
+
+### Level of detail (LOD)
+
+```gdscript
+var mesh_instance = MeshInstance3D.new()
+mesh_instance.mesh = high_poly_mesh
+
+# Add LOD levels
+var lod_bias = 1.0
+mesh_instance.lod_bias = lod_bias
+```
+
+### Visibility ranges
+
+```gdscript
+var mesh_instance = MeshInstance3D.new()
+mesh_instance.visibility_range_begin = 0.0
+mesh_instance.visibility_range_end = 100.0
+mesh_instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+```
+
+## Rendering layers
+
+Control which objects are rendered by which cameras:
+
+```gdscript
+# Set object's rendering layers
+mesh_instance.layers = 0b0001  # Layer 1
+
+# Set camera's culling mask
+camera.cull_mask = 0b0011  # See layers 1 and 2
+```
+
+## Performance monitoring
+
+```gdscript
+func _process(delta):
+    var info = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME)
+    print("Objects rendered: ", info)
+    
+    var fps = Engine.get_frames_per_second()
+    print("FPS: ", fps)
+```
+
+## Common rendering settings
+
+<AccordionGroup>
+  <Accordion title="Anti-aliasing">
+    Configure in **Project Settings > Rendering > Anti Aliasing**:
+    - MSAA (2x, 4x, 8x)
+    - FXAA
+    - TAA (Temporal Anti-Aliasing)
+  </Accordion>
+  
+  <Accordion title="Screen-space effects">
+    Available in **Project Settings > Rendering > Environment**:
+    - Screen-space ambient occlusion (SSAO)
+    - Screen-space indirect lighting (SSIL)
+    - Screen-space reflections (SSR)
+  </Accordion>
+  
+  <Accordion title="Global illumination">
+    Options for indirect lighting:
+    - SDFGI (Forward+ only)
+    - VoxelGI probes
+    - LightmapGI (baked lighting)
+  </Accordion>
+  
+  <Accordion title="Quality settings">
+    Adjust in **Project Settings > Rendering > Quality**:
+    - Shadow quality
+    - Texture filtering
+    - Mesh level of detail
+  </Accordion>
+</AccordionGroup>
+
+## Headless mode
+
+Run Godot without rendering:
+
+```bash
+godot --headless --script my_script.gd
+```
+
+<Info>
+In headless mode, most RenderingServer functions return dummy values. Useful for dedicated servers.
+</Info>
+
+## Best practices
+
+<CardGroup cols={2}>
+  <Card title="Choose the right renderer" icon="display">
+    Match renderer to your target platform and visual requirements.
+  </Card>
+  
+  <Card title="Use rendering layers" icon="layer-group">
+    Separate objects into layers for selective rendering and optimization.
+  </Card>
+  
+  <Card title="Optimize materials" icon="palette">
+    Reuse materials and minimize shader complexity.
+  </Card>
+  
+  <Card title="Profile regularly" icon="chart-line">
+    Use the built-in profiler to identify rendering bottlenecks.
+  </Card>
+</CardGroup>
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Shaders" icon="code" href="/rendering/shaders">
+    Write custom shaders
+  </Card>
+  
+  <Card title="Environment" icon="sun" href="/rendering/environment">
+    Configure world environment
+  </Card>
+  
+  <Card title="Particles" icon="sparkles" href="/rendering/particles">
+    Create particle effects
+  </Card>
+</CardGroup>

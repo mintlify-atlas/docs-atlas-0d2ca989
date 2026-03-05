@@ -1,0 +1,92 @@
+---
+title: "InputMap"
+---
+
+# InputMap
+
+**Inherits:** Object
+
+## Description
+
+A singleton that manages all InputEventActions. Manages all InputEventAction which can be created/modified from the project settings menu or in code.
+
+## Methods
+
+### add_action
+
+```gdscript
+void add_action(action: StringName, deadzone: float = 0.2)
+```
+
+Adds an empty action to the InputMap with a configurable deadzone.
+
+<ParamField path="action" type="StringName">
+  The name of the action to add
+</ParamField>
+
+<ParamField path="deadzone" type="float">
+  The deadzone value (default: 0.2)
+</ParamField>
+
+### action_add_event
+
+```gdscript
+void action_add_event(action: StringName, event: InputEvent)
+```
+
+Adds an InputEvent to an action. This InputEvent will trigger the action.
+
+### action_erase_event
+
+```gdscript
+void action_erase_event(action: StringName, event: InputEvent)
+```
+
+Removes an InputEvent from an action.
+
+### has_action
+
+```gdscript
+bool has_action(action: StringName)
+```
+
+Returns true if the InputMap has a registered action with the given name.
+
+### get_actions
+
+```gdscript
+StringName[] get_actions()
+```
+
+Returns an array of all actions in the InputMap.
+
+## Example Usage
+
+<Tabs>
+  <Tab title="GDScript">
+```gdscript
+# Add a new action
+InputMap.add_action("jump")
+
+# Add a key event to the action
+var key_event = InputEventKey.new()
+key_event.keycode = KEY_SPACE
+InputMap.action_add_event("jump", key_event)
+
+# Check if action exists
+if InputMap.has_action("jump"):
+    print("Jump action exists")
+```
+  </Tab>
+  <Tab title="C#">
+```csharp
+// Add a new action
+InputMap.AddAction("jump");
+
+// Add a key event to the action
+var keyEvent = new InputEventKey();
+keyEvent.Keycode = Key.Space;
+InputMap.ActionAddEvent("jump", keyEvent);
+```
+  </Tab>
+</Tabs>

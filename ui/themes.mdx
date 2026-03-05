@@ -1,0 +1,277 @@
+---
+title: 'Themes and Styling'
+description: 'Customize the appearance of UI elements with Theme resources and StyleBox'
+---
+
+## Overview
+
+Themes in Godot provide a powerful system for styling UI elements. A `Theme` resource stores colors, fonts, icons, constants, and StyleBoxes that can be applied to Control nodes, allowing consistent visual design across your entire application.
+
+<Info>
+Theme resources can be shared across multiple controls and even exported as separate files for reuse across projects.
+</Info>
+
+## Theme System
+
+### Applying Themes
+
+Themes can be applied at three levels:
+
+1. **Project-wide** - Set in `ProjectSettings.gui/theme/custom`
+2. **Branch-level** - Assign to a control's `theme` property
+3. **Local overrides** - Use `add_theme_*_override()` methods
+
+```gdscript
+# Apply a theme to a control
+var button = Button.new()
+var theme = load("res://my_theme.tres")
+button.theme = theme
+add_child(button)
+```
+
+```csharp
+// Apply a theme to a control
+var button = new Button();
+var theme = ResourceLoader.Load<Theme>("res://my_theme.tres");
+button.Theme = theme;
+AddChild(button);
+```
+
+### Theme Inheritance
+
+Themes propagate from parent to child controls automatically:
+
+```gdscript
+# Set theme on parent - all children inherit it
+var panel = PanelContainer.new()
+panel.theme = my_theme
+add_child(panel)
+
+var button = Button.new()
+panel.add_child(button)  # Automatically uses my_theme
+```
+
+<Tip>
+Local overrides always take precedence over theme settings, allowing fine-tuned customization.
+</Tip>
+
+## Local Theme Overrides
+
+Override specific theme properties for individual controls:
+
+### Color Overrides
+
+```gdscript
+var label = Label.new()
+label.add_theme_color_override("font_color", Color(1, 0.5, 0))
+add_child(label)
+
+# Reset to theme default
+label.remove_theme_color_override("font_color")
+```
+
+```csharp
+var label = new Label();
+label.AddThemeColorOverride("font_color", new Color(1, 0.5f, 0));
+AddChild(label);
+
+// Reset to theme default
+label.RemoveThemeColorOverride("font_color");
+```
+
+### Font Overrides
+
+```gdscript
+var button = Button.new()
+var custom_font = load("res://fonts/my_font.ttf")
+button.add_theme_font_override("font", custom_font)
+button.add_theme_font_size_override("font_size", 24)
+```
+
+```csharp
+var button = new Button();
+var customFont = ResourceLoader.Load<Font>("res://fonts/my_font.ttf");
+button.AddThemeFontOverride("font", customFont);
+button.AddThemeFontSizeOverride("font_size", 24);
+```
+
+### Constant Overrides
+
+```gdscript
+var grid = GridContainer.new()
+grid.add_theme_constant_override("h_separation", 20)
+grid.add_theme_constant_override("v_separation", 15)
+```
+
+## StyleBox
+
+`StyleBox` is an abstract base class for drawing stylized boxes for UI elements like buttons, panels, and backgrounds.
+
+### StyleBoxFlat
+
+Create solid color backgrounds with borders, rounded corners, and shadows:
+
+```gdscript
+var style = StyleBoxFlat.new()
+style.bg_color = Color(0.2, 0.3, 0.4)
+style.border_width_all = 3
+style.border_color = Color(0, 1, 0.5)
+style.corner_radius_all = 10
+
+var button = Button.new()
+button.add_theme_stylebox_override("normal", style)
+```
+
+```csharp
+var style = new StyleBoxFlat();
+style.BgColor = new Color(0.2f, 0.3f, 0.4f);
+style.BorderWidthAll = 3;
+style.BorderColor = new Color(0, 1, 0.5f);
+style.CornerRadiusAll = 10;
+
+var button = new Button();
+button.AddThemeStyleboxOverride("normal", style);
+```
+
+**Key Properties:**
+- `bg_color` - Background color
+- `border_width_*` - Border width for each side
+- `border_color` - Border color
+- `corner_radius_*` - Corner radius for rounded corners
+- `shadow_*` - Shadow properties
+- `content_margin_*` - Internal padding
+
+### StyleBoxTexture
+
+Use textures for UI backgrounds with nine-patch scaling:
+
+```gdscript
+var style = StyleBoxTexture.new()
+style.texture = load("res://ui/button_normal.png")
+style.texture_margin_left = 10
+style.texture_margin_right = 10
+style.texture_margin_top = 10
+style.texture_margin_bottom = 10
+```
+
+### Common StyleBox States
+
+Many controls have multiple visual states:
+
+| State | Description |
+|-------|-------------|
+| `normal` | Default appearance |
+| `hover` | When mouse is over the control |
+| `pressed` | When control is being clicked |
+| `disabled` | When control is disabled |
+| `focus` | When control has keyboard focus |
+
+```gdscript
+var button = Button.new()
+
+# Create different styles for each state
+var normal = StyleBoxFlat.new()
+normal.bg_color = Color(0.3, 0.3, 0.3)
+
+var hover = StyleBoxFlat.new()
+hover.bg_color = Color(0.4, 0.4, 0.4)
+
+var pressed = StyleBoxFlat.new()
+pressed.bg_color = Color(0.2, 0.2, 0.2)
+
+button.add_theme_stylebox_override("normal", normal)
+button.add_theme_stylebox_override("hover", hover)
+button.add_theme_stylebox_override("pressed", pressed)
+```
+
+## Creating Theme Resources
+
+Create themes programmatically:
+
+```gdscript
+var theme = Theme.new()
+
+# Set default font
+var font = load("res://fonts/main_font.ttf")
+theme.default_font = font
+theme.default_font_size = 16
+
+# Set colors for all buttons
+theme.set_color("font_color", "Button", Color.WHITE)
+theme.set_color("font_hover_color", "Button", Color(0.95, 0.95, 1.0))
+
+# Set StyleBox for buttons
+var button_normal = StyleBoxFlat.new()
+button_normal.bg_color = Color(0.25, 0.5, 0.75)
+theme.set_stylebox("normal", "Button", button_normal)
+
+# Save theme to file
+ResourceSaver.save(theme, "res://my_theme.tres")
+```
+
+```csharp
+var theme = new Theme();
+
+// Set default font
+var font = ResourceLoader.Load<Font>("res://fonts/main_font.ttf");
+theme.DefaultFont = font;
+theme.DefaultFontSize = 16;
+
+// Set colors for all buttons
+theme.SetColor("font_color", "Button", Colors.White);
+theme.SetColor("font_hover_color", "Button", new Color(0.95f, 0.95f, 1.0f));
+
+// Set StyleBox for buttons
+var buttonNormal = new StyleBoxFlat();
+buttonNormal.BgColor = new Color(0.25f, 0.5f, 0.75f);
+theme.SetStylebox("normal", "Button", buttonNormal);
+
+// Save theme to file
+ResourceSaver.Save(theme, "res://my_theme.tres");
+```
+
+## Theme Type Variations
+
+Create variations of existing themes for specialized controls:
+
+```gdscript
+var theme = Theme.new()
+
+# Create a danger button variation
+theme.set_type_variation("DangerButton", "Button")
+
+var danger_style = StyleBoxFlat.new()
+danger_style.bg_color = Color(0.8, 0.2, 0.2)
+theme.set_stylebox("normal", "DangerButton", danger_style)
+
+# Apply variation to a button
+var button = Button.new()
+button.theme_type_variation = "DangerButton"
+```
+
+## Content Margins
+
+StyleBoxes define content margins that control internal padding:
+
+```gdscript
+var style = StyleBoxFlat.new()
+style.content_margin_left = 20
+style.content_margin_right = 20
+style.content_margin_top = 10
+style.content_margin_bottom = 10
+```
+
+<Warning>
+Positive content margin values reduce the available space for content, while negative values are ignored.
+</Warning>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Control Nodes" icon="square" href="/ui/control-nodes">
+    Learn about UI elements that can be themed
+  </Card>
+  <Card title="Containers" icon="grid" href="/ui/containers">
+    Apply themes to container layouts
+  </Card>
+</CardGroup>

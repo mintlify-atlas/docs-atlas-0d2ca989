@@ -1,0 +1,551 @@
+---
+title: "Installation"
+description: "Download and install Godot Engine on Windows, macOS, Linux, or compile from source"
+---
+
+## Getting Godot Engine
+
+Godot Engine is available as pre-built binaries for all major platforms, or you can compile it from source for custom builds and engine development.
+
+<Info>
+Godot 4.7 is the current version. This guide covers installation for the latest stable release.
+</Info>
+
+## Download Pre-Built Binaries
+
+The fastest way to get started is to download the official pre-built binaries.
+
+<Tabs>
+  <Tab title="Windows">
+    ### Windows Installation
+
+    **System Requirements:**
+    - Windows 10 or later (64-bit)
+    - OpenGL 3.3 / Vulkan 1.1 compatible GPU
+    - 4 GB RAM minimum (8 GB recommended)
+
+    **Installation Steps:**
+
+    <Steps>
+      <Step title="Download">
+        1. Visit [godotengine.org/download](https://godotengine.org/download)
+        2. Download the **Windows** version:
+           - **Standard**: Godot Engine (most users)
+           - **.NET**: Godot Engine with C# support
+        3. Download as a `.zip` file
+      </Step>
+
+      <Step title="Extract">
+        1. Right-click the downloaded `.zip` file
+        2. Select **Extract All...**
+        3. Choose a destination folder (e.g., `C:\Godot`)
+        4. Click **Extract**
+      </Step>
+
+      <Step title="Run Godot">
+        1. Navigate to the extracted folder
+        2. Double-click `Godot_v4.7-stable_win64.exe` (or similar)
+        3. The Godot Project Manager will open
+      </Step>
+    </Steps>
+
+    <Tip>
+    **Optional:** Create a desktop shortcut for easy access by right-clicking the `.exe` file and selecting **Send to > Desktop (create shortcut)**.
+    </Tip>
+
+    ### C# Support on Windows
+
+    If you downloaded the **.NET version** for C# support:
+
+    1. Install [.NET SDK 8.0](https://dotnet.microsoft.com/download) or later
+    2. Verify installation: Open Command Prompt and run `dotnet --version`
+    3. Launch Godot - C# support will be automatically detected
+
+    <Warning>
+    The .NET version requires the .NET SDK installed on your system. Make sure to download .NET SDK, not just the runtime.
+    </Warning>
+  </Tab>
+
+  <Tab title="macOS">
+    ### macOS Installation
+
+    **System Requirements:**
+    - macOS 10.13 (High Sierra) or later
+    - Metal-compatible GPU (for best performance)
+    - 4 GB RAM minimum (8 GB recommended)
+
+    **Installation Steps:**
+
+    <Steps>
+      <Step title="Download">
+        1. Visit [godotengine.org/download](https://godotengine.org/download)
+        2. Download the **macOS** version:
+           - Choose **Universal** build (Apple Silicon + Intel)
+           - Standard or .NET (for C# support)
+        3. Download as a `.zip` file
+      </Step>
+
+      <Step title="Install">
+        1. Open the downloaded `.zip` file (macOS extracts automatically)
+        2. Drag **Godot.app** to your **Applications** folder
+        3. Eject the disk image if mounted
+      </Step>
+
+      <Step title="First Launch">
+        1. Open **Finder** and go to **Applications**
+        2. Right-click **Godot.app** and select **Open**
+        3. Click **Open** in the security dialog (first launch only)
+        4. The Godot Project Manager will open
+      </Step>
+    </Steps>
+
+    <Note>
+    macOS may block the app on first launch. Use **Right-click > Open** instead of double-clicking to bypass Gatekeeper.
+    </Note>
+
+    ### C# Support on macOS
+
+    For C# scripting:
+
+    1. Install [.NET SDK 8.0](https://dotnet.microsoft.com/download) or later
+    2. Verify: Open Terminal and run `dotnet --version`
+    3. Launch the .NET version of Godot
+  </Tab>
+
+  <Tab title="Linux">
+    ### Linux Installation
+
+    **System Requirements:**
+    - Ubuntu 20.04, Fedora 36, Arch, or other recent distribution
+    - X11 or Wayland display server
+    - Vulkan or OpenGL 3.3 compatible GPU
+    - 4 GB RAM minimum (8 GB recommended)
+    - Dependencies: `pkg-config`, `libx11`, `libxrandr`, etc.
+
+    **Installation Steps:**
+
+    <Steps>
+      <Step title="Download">
+        1. Visit [godotengine.org/download](https://godotengine.org/download)
+        2. Download the **Linux** version:
+           - Choose your architecture (usually x86_64)
+           - Standard or .NET (for C# support)
+        3. Download as a `.zip` file
+      </Step>
+
+      <Step title="Extract">
+        ```bash
+        # Extract the archive
+        unzip Godot_v4.7-stable_linux.x86_64.zip
+
+        # Optional: Move to /opt
+        sudo mv Godot_v4.7-stable_linux.x86_64 /opt/godot
+
+        # Optional: Create symlink for easy access
+        sudo ln -s /opt/godot/Godot_v4.7-stable_linux.x86_64 /usr/local/bin/godot
+        ```
+      </Step>
+
+      <Step title="Run Godot">
+        ```bash
+        # If you created the symlink:
+        godot
+
+        # Otherwise, run directly:
+        ./Godot_v4.7-stable_linux.x86_64
+        ```
+      </Step>
+    </Steps>
+
+    ### Install Dependencies (if needed)
+
+    Most modern distributions include required libraries. If you encounter issues:
+
+    **Ubuntu/Debian:**
+    ```bash
+    sudo apt update
+    sudo apt install libxcursor1 libxinerama1 libxi6 libxrandr2 libgl1
+    ```
+
+    **Fedora:**
+    ```bash
+    sudo dnf install libXcursor libXinerama libXi libXrandr mesa-libGL
+    ```
+
+    **Arch Linux:**
+    ```bash
+    sudo pacman -S libxcursor libxinerama libxi libxrandr mesa
+    ```
+
+    ### C# Support on Linux
+
+    For C# scripting:
+
+    1. Install .NET SDK 8.0+:
+       ```bash
+       # Ubuntu/Debian
+       sudo apt install dotnet-sdk-8.0
+
+       # Fedora
+       sudo dnf install dotnet-sdk-8.0
+
+       # Arch
+       sudo pacman -S dotnet-sdk
+       ```
+    2. Verify: `dotnet --version`
+    3. Run the .NET version of Godot
+  </Tab>
+</Tabs>
+
+## Compile from Source
+
+Compiling Godot from source allows you to:
+- Customize engine features
+- Contribute to engine development
+- Build for specific platforms or architectures
+- Access the latest development features
+
+<Warning>
+Compiling from source requires programming knowledge and can take 30-60 minutes depending on your system.
+</Warning>
+
+### Prerequisites
+
+<Tabs>
+  <Tab title="Linux Build">
+    **Required tools:**
+
+    ```bash
+    # Ubuntu/Debian
+    sudo apt install build-essential scons pkg-config libx11-dev \
+      libxcursor-dev libxinerama-dev libgl1-mesa-dev libglu1-dev \
+      libasound2-dev libpulse-dev libudev-dev libxi-dev libxrandr-dev
+
+    # Fedora
+    sudo dnf install gcc-c++ scons pkgconfig libX11-devel libXcursor-devel \
+      libXrandr-devel libXinerama-dev libXi-devel mesa-libGL-devel \
+      alsa-lib-devel pulseaudio-libs-devel
+
+    # Arch
+    sudo pacman -S base-devel scons pkgconf libxcursor libxinerama \
+      libxi libxrandr mesa glu alsa-lib pulseaudio
+    ```
+
+    **Python 3.9+ required** (usually pre-installed)
+    **SCons 4.0+** (build system)
+  </Tab>
+
+  <Tab title="Windows Build">
+    **Required tools:**
+
+    1. **Visual Studio 2022** (Community edition is free):
+       - Install "Desktop development with C++" workload
+       - Or use MinGW-w64 with GCC
+
+    2. **Python 3.9+**:
+       - Download from [python.org](https://www.python.org/downloads/)
+       - Check "Add Python to PATH" during installation
+
+    3. **SCons**:
+       ```cmd
+       pip install scons
+       ```
+
+    4. **Git** (optional, for cloning):
+       - Download from [git-scm.com](https://git-scm.com/)
+  </Tab>
+
+  <Tab title="macOS Build">
+    **Required tools:**
+
+    1. **Xcode Command Line Tools**:
+       ```bash
+       xcode-select --install
+       ```
+
+    2. **Python 3.9+** (usually pre-installed on macOS):
+       ```bash
+       python3 --version
+       ```
+
+    3. **SCons**:
+       ```bash
+       pip3 install scons
+       ```
+
+    4. **Homebrew** (optional, for dependencies):
+       ```bash
+       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+       ```
+  </Tab>
+</Tabs>
+
+### Build Instructions
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/godotengine/godot.git
+    cd godot
+    git checkout 4.7-stable  # Or latest stable branch
+    ```
+
+    <Info>
+    The Godot repository is about 1 GB. Clone depth can be limited with `--depth 1` for faster downloads.
+    </Info>
+  </Step>
+
+  <Step title="Compile the Engine">
+    Godot uses **SCons** as its build system. The main build file is `SConstruct` in the root directory.
+
+    **Basic compilation:**
+
+    <Tabs>
+      <Tab title="Linux">
+        ```bash
+        # Editor build (most common)
+        scons platform=linuxbsd target=editor arch=x86_64 -j$(nproc)
+
+        # Export template (for releasing games)
+        scons platform=linuxbsd target=template_release arch=x86_64 -j$(nproc)
+        ```
+
+        **Build options:**
+        - `platform=linuxbsd`: Target platform
+        - `target=editor`: Build editor (or `template_release`, `template_debug`)
+        - `arch=x86_64`: Architecture (or `x86_32`, `arm64`, `rv64`)
+        - `-j$(nproc)`: Use all CPU cores for faster compilation
+
+        <Tip>
+        Use `use_llvm=yes` to compile with Clang instead of GCC:
+        ```bash
+        scons platform=linuxbsd target=editor use_llvm=yes -j$(nproc)
+        ```
+        </Tip>
+      </Tab>
+
+      <Tab title="Windows">
+        ```cmd
+        REM Editor build with Visual Studio
+        scons platform=windows target=editor arch=x86_64 -j%NUMBER_OF_PROCESSORS%
+
+        REM Export template
+        scons platform=windows target=template_release arch=x86_64 -j%NUMBER_OF_PROCESSORS%
+        ```
+
+        **For MinGW:**
+        ```bash
+        scons platform=windows target=editor use_mingw=yes -j$(nproc)
+        ```
+      </Tab>
+
+      <Tab title="macOS">
+        ```bash
+        # Universal binary (Apple Silicon + Intel)
+        scons platform=macos target=editor arch=universal -j$(sysctl -n hw.ncpu)
+
+        # Apple Silicon only
+        scons platform=macos target=editor arch=arm64 -j$(sysctl -n hw.ncpu)
+
+        # Intel only
+        scons platform=macos target=editor arch=x86_64 -j$(sysctl -n hw.ncpu)
+        ```
+      </Tab>
+    </Tabs>
+
+    <Note>
+    First-time compilation takes 30-60 minutes. Subsequent builds are much faster due to incremental compilation.
+    </Note>
+  </Step>
+
+  <Step title="Locate the Binary">
+    After compilation completes, the binary will be in the `bin/` directory:
+
+    - **Linux**: `bin/godot.linuxbsd.editor.x86_64`
+    - **Windows**: `bin/godot.windows.editor.x86_64.exe`
+    - **macOS**: `bin/godot.macos.editor.universal`
+
+    Run the editor:
+    ```bash
+    ./bin/godot.linuxbsd.editor.x86_64
+    ```
+  </Step>
+
+  <Step title="Optional: Build with C# Support">
+    To compile with Mono/.NET support:
+
+    1. Install .NET SDK 8.0+
+    2. Add `module_mono_enabled=yes` to build command:
+       ```bash
+       scons platform=linuxbsd target=editor module_mono_enabled=yes -j$(nproc)
+       ```
+    3. Generate C# glue code:
+       ```bash
+       ./bin/godot.linuxbsd.editor.x86_64.mono --generate-mono-glue modules/mono/glue
+       ```
+    4. Rebuild:
+       ```bash
+       scons platform=linuxbsd target=editor module_mono_enabled=yes -j$(nproc)
+       ```
+  </Step>
+</Steps>
+
+### Common Build Options
+
+The SCons build system supports many options defined in `SConstruct`:
+
+```bash
+# Development build with debug symbols
+scons target=editor dev_build=yes -j$(nproc)
+
+# Optimize for size instead of speed
+scons target=template_release optimize=size -j$(nproc)
+
+# Disable specific modules
+scons module_webrtc_enabled=no module_websocket_enabled=no -j$(nproc)
+
+# Use static linking (better portability on Linux)
+scons platform=linuxbsd use_static_cpp=yes -j$(nproc)
+
+# Build with sanitizers (for debugging)
+scons use_asan=yes use_ubsan=yes -j$(nproc)
+```
+
+<Accordion title="Available Build Targets">
+  - `target=editor`: Editor build (default)
+  - `target=template_debug`: Debug export template
+  - `target=template_release`: Release export template
+</Accordion>
+
+<Accordion title="Platform Options">
+  - `platform=linuxbsd`: Linux/BSD systems
+  - `platform=windows`: Windows
+  - `platform=macos`: macOS
+  - `platform=android`: Android
+  - `platform=ios`: iOS
+  - `platform=web`: Web (HTML5/WebAssembly)
+</Accordion>
+
+<Accordion title="Architecture Options">
+  From `SConstruct` and platform detection:
+  - `arch=x86_64`: 64-bit x86 (most common)
+  - `arch=x86_32`: 32-bit x86
+  - `arch=arm64`: 64-bit ARM (Apple Silicon, modern Android)
+  - `arch=arm32`: 32-bit ARM
+  - `arch=rv64`: RISC-V 64-bit
+  - `arch=ppc64`: PowerPC 64-bit
+  - `arch=loongarch64`: LoongArch 64-bit
+  - `arch=universal`: Universal binary (macOS only - combines multiple architectures)
+</Accordion>
+
+## Verify Installation
+
+After installation, verify Godot is working:
+
+<Steps>
+  <Step title="Launch Godot">
+    Open the Godot application. You should see the **Project Manager**.
+  </Step>
+
+  <Step title="Check Version">
+    The version number should appear at the top of the Project Manager:
+    - **Godot Engine v4.7.stable** (or similar)
+  </Step>
+
+  <Step title="Test Project Creation">
+    1. Click **New Project**
+    2. Enter a name
+    3. Click **Create & Edit**
+    4. The editor should open successfully
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Tutorial" icon="rocket" href="/quickstart">
+    Create your first game with our step-by-step guide.
+  </Card>
+
+  <Card title="Editor Interface" icon="window" href="/editor/interface">
+    Learn the Godot editor interface and tools.
+  </Card>
+
+  <Card title="GDScript Basics" icon="code" href="/scripting/gdscript">
+    Start writing game code with GDScript.
+  </Card>
+
+  <Card title="Export Templates" icon="box" href="/deployment/exporting">
+    Learn how to export your games to different platforms.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Accordion title="Godot won't start on Linux">
+  **Missing libraries:** Install required dependencies for your distribution (see Linux installation section above).
+
+  **Graphics driver issues:** Ensure your GPU drivers support Vulkan or OpenGL 3.3+:
+  ```bash
+  # Check Vulkan support
+  vulkaninfo | grep deviceName
+
+  # Check OpenGL version
+  glxinfo | grep "OpenGL version"
+  ```
+
+  **Permission issues:** Make the binary executable:
+  ```bash
+  chmod +x Godot_v4.7-stable_linux.x86_64
+  ```
+</Accordion>
+
+<Accordion title="macOS security blocks Godot">
+  macOS Gatekeeper may block unsigned applications:
+
+  1. Right-click **Godot.app** in Finder
+  2. Select **Open** (not double-click)
+  3. Click **Open** in the security dialog
+
+  Alternatively, allow in **System Preferences**:
+  1. Go to **System Preferences > Security & Privacy**
+  2. Click **Open Anyway** for Godot
+</Accordion>
+
+<Accordion title="C# support not detected">
+  Ensure .NET SDK is properly installed:
+
+  ```bash
+  # Check installation
+  dotnet --version
+
+  # Should output: 8.0.x or higher
+  ```
+
+  If not found, download and install the [.NET SDK](https://dotnet.microsoft.com/download).
+
+  Restart Godot after installing .NET SDK.
+</Accordion>
+
+<Accordion title="Compilation errors">
+  **SCons not found:**
+  ```bash
+  pip install scons
+  # Or: pip3 install scons
+  ```
+
+  **Python version too old:**
+  ```bash
+  python --version  # Must be 3.9 or higher
+  ```
+
+  **Missing build tools:**
+  - Linux: Install `build-essential` or equivalent
+  - Windows: Install Visual Studio with C++ workload
+  - macOS: Run `xcode-select --install`
+
+  **Out of memory:** Reduce parallel jobs:
+  ```bash
+  scons -j2  # Use only 2 cores instead of all
+  ```
+</Accordion>

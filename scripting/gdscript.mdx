@@ -1,0 +1,485 @@
+---
+title: 'GDScript'
+description: "Learn GDScript, Godot's built-in scripting language for game development"
+keywords: ['gdscript', 'scripting', 'programming', 'godot', 'syntax']
+icon: 'code'
+---
+
+## Overview
+
+GDScript is Godot's built-in, high-level scripting language designed specifically for game development. It features a Python-like syntax that's easy to learn while being tightly integrated with the Godot Engine.
+
+<Info>
+GDScript is gradually typed, meaning type hints are optional but recommended for better performance and safety.
+</Info>
+
+## Language Features
+
+### Python-like Syntax
+
+GDScript uses indentation-based syntax similar to Python, making it readable and accessible:
+
+```gdscript player.gd
+extends CharacterBody2D
+
+const SPEED = 300.0
+const JUMP_VELOCITY = -400.0
+
+func _physics_process(delta: float) -> void:
+	# Add the gravity
+	if not is_on_floor():
+		velocity += get_gravity() * delta
+	
+	# Handle jump
+	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
+		velocity.y = JUMP_VELOCITY
+	
+	move_and_slide()
+```
+
+### Type System
+
+GDScript supports both dynamic and static typing:
+
+<Tabs>
+  <Tab title="Dynamic typing">
+```gdscript
+var health = 100  # Type inferred as int
+var name = "Player"  # Type inferred as String
+var position = Vector2(0, 0)  # Type inferred as Vector2
+```
+  </Tab>
+  <Tab title="Static typing">
+```gdscript
+var health: int = 100
+var name: String = "Player"
+var position: Vector2 = Vector2(0, 0)
+
+# Function with typed parameters and return type
+func calculate_damage(base_damage: float, multiplier: float) -> float:
+	return base_damage * multiplier
+```
+  </Tab>
+</Tabs>
+
+<Tip>
+Static typing improves performance, enables better IDE autocomplete, and catches errors at compile time.
+</Tip>
+
+## Variables and Constants
+
+### Variable Declaration
+
+```gdscript
+# Untyped variables
+var score = 0
+var player_name = "Hero"
+
+# Typed variables
+var health: int = 100
+var speed: float = 5.5
+var items: Array[String] = ["sword", "shield"]
+
+# Type inference with :=
+var position := Vector2(10, 20)  # Inferred as Vector2
+```
+
+### Constants
+
+Constants are defined with `const` and must be assigned at declaration:
+
+```gdscript
+const MAX_HEALTH = 100
+const GRAVITY = 9.8
+const PLAYER_NAME = "DefaultPlayer"
+```
+
+## Functions
+
+### Function Definition
+
+```gdscript
+# Basic function
+func greet():
+	print("Hello!")
+
+# Function with parameters
+func add(a: int, b: int) -> int:
+	return a + b
+
+# Function with default parameters
+func spawn_enemy(type: String = "goblin", level: int = 1) -> void:
+	print("Spawning ", type, " at level ", level)
+
+# Variadic function
+func sum_all(values: Array) -> float:
+	var total = 0.0
+	for value in values:
+		total += value
+	return total
+```
+
+### Built-in Lifecycle Methods
+
+Every Node has special methods that are called during its lifecycle:
+
+```gdscript node_lifecycle.gd
+extends Node
+
+# Called when the node enters the scene tree for the first time
+func _ready() -> void:
+	print("Node is ready")
+
+# Called every frame
+func _process(delta: float) -> void:
+	pass  # Update logic here
+
+# Called every physics frame (60 FPS by default)
+func _physics_process(delta: float) -> void:
+	pass  # Physics calculations here
+
+# Called when input events occur
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		print("Key pressed")
+```
+
+## Classes and Inheritance
+
+### Class Definition
+
+Every `.gd` file implicitly defines a class. Use `extends` to inherit from a base class:
+
+```gdscript
+extends Node2D
+
+class_name Player  # Optional: gives the class a global name
+
+var health: int = 100
+var speed: float = 200.0
+
+func take_damage(amount: int) -> void:
+	health -= amount
+	if health <= 0:
+		die()
+
+func die() -> void:
+	queue_free()
+```
+
+### Inner Classes
+
+Define classes within other classes:
+
+```gdscript
+extends Node
+
+class Weapon:
+	var damage: int
+	var name: String
+	
+	func _init(weapon_name: String, weapon_damage: int):
+		name = weapon_name
+		damage = weapon_damage
+
+func _ready():
+	var sword = Weapon.new("Excalibur", 50)
+	print(sword.name, " deals ", sword.damage, " damage")
+```
+
+### Inheritance Chain
+
+```gdscript enemy.gd
+extends CharacterBody2D
+
+class_name Enemy
+
+var health: int = 50
+
+func take_damage(amount: int) -> void:
+	health -= amount
+```
+
+```gdscript boss.gd
+extends Enemy
+
+class_name Boss
+
+var armor: int = 10
+
+func take_damage(amount: int) -> void:
+	var reduced_damage = max(0, amount - armor)
+	super(reduced_damage)  # Call parent's take_damage
+```
+
+## Signals
+
+Signals are Godot's implementation of the observer pattern:
+
+```gdscript
+extends Node
+
+# Define signals
+signal health_changed(new_health: int)
+signal player_died
+signal item_collected(item_name: String, quantity: int)
+
+var health: int = 100:
+	set(value):
+		health = value
+		health_changed.emit(health)
+		if health <= 0:
+			player_died.emit()
+
+func _ready():
+	# Connect signal to a method
+	health_changed.connect(_on_health_changed)
+	player_died.connect(_on_player_died)
+
+func _on_health_changed(new_health: int) -> void:
+	print("Health is now: ", new_health)
+
+func _on_player_died() -> void:
+	print("Game Over")
+```
+
+### Connecting Signals
+
+<CodeGroup>
+
+```gdscript In code
+# Connect in _ready()
+func _ready():
+	$Button.pressed.connect(_on_button_pressed)
+
+func _on_button_pressed():
+	print("Button was pressed")
+```
+
+```gdscript Lambda connections
+func _ready():
+	$Button.pressed.connect(func(): print("Button pressed"))
+```
+
+</CodeGroup>
+
+## Annotations
+
+Annotations (formerly called "tool mode" and "export") modify how scripts and variables behave:
+
+### @export
+
+Expose variables to the Inspector:
+
+```gdscript
+extends Node2D
+
+@export var speed: float = 100.0
+@export var max_health: int = 100
+@export var player_name: String = "Hero"
+
+# Export with ranges
+@export_range(0, 100) var volume: int = 50
+@export_range(0.0, 1.0, 0.1) var opacity: float = 1.0
+
+# Export node paths
+@export var target: Node2D
+@export var target_path: NodePath
+
+# Export files and directories
+@export_file var config_file: String
+@export_dir var data_directory: String
+
+# Export enums
+@export_enum("Warrior", "Mage", "Rogue") var character_class: String
+@export_flags("Fire", "Water", "Earth", "Air") var elements: int
+```
+
+### @onready
+
+Initialize variables when the node enters the scene tree:
+
+```gdscript
+extends Node2D
+
+@onready var sprite: Sprite2D = $Sprite2D
+@onready var animation: AnimationPlayer = $AnimationPlayer
+@onready var health_bar: ProgressBar = get_node("UI/HealthBar")
+
+func _ready():
+	# Variables are already initialized
+	sprite.visible = true
+	animation.play("idle")
+```
+
+### @tool
+
+Run the script in the editor:
+
+```gdscript
+@tool
+extends EditorScript
+
+func _run():
+	print("This runs in the editor!")
+```
+
+### Other Annotations
+
+```gdscript
+# Warning control
+@warning_ignore("unused_parameter")
+func example(param: int) -> void:
+	pass
+
+# Static variables and functions
+class_name Utilities
+
+static var global_counter: int = 0
+
+static func add(a: int, b: int) -> int:
+	return a + b
+```
+
+## Built-in Functions
+
+GDScript provides many utility functions:
+
+### Common Built-ins
+
+```gdscript
+# Type checking
+var x = 42
+print(typeof(x))  # Prints 2 (TYPE_INT)
+print(x is int)   # Prints true
+
+# String conversion
+var num = 42
+var text = str(num)  # "42"
+var formatted = "Score: %d" % num
+
+# Range iteration
+for i in range(5):
+	print(i)  # 0, 1, 2, 3, 4
+
+for i in range(2, 5):
+	print(i)  # 2, 3, 4
+
+# Length
+var array = [1, 2, 3]
+print(len(array))  # 3
+
+var text = "Hello"
+print(len(text))  # 5
+
+# Load and preload resources
+var scene = load("res://scenes/enemy.tscn")
+var texture = preload("res://images/player.png")  # Loaded at parse time
+```
+
+### Assertions and Debugging
+
+```gdscript
+func divide(a: float, b: float) -> float:
+	assert(b != 0, "Cannot divide by zero")
+	return a / b
+
+func debug_info():
+	print("Debug message")
+	print_debug("Message with stack trace")
+	print_stack()  # Print full call stack
+	var stack = get_stack()  # Get stack as array
+```
+
+## Key Differences from Python
+
+While GDScript is similar to Python, there are important differences:
+
+<AccordionGroup>
+  <Accordion title="Type hints are different">
+    Python: `def func(x: int) -> int:`
+    
+    GDScript: `func func_name(x: int) -> int:`
+  </Accordion>
+  
+  <Accordion title="No self parameter">
+    GDScript methods don't require an explicit `self` parameter:
+    
+    ```gdscript
+    func my_method(param: int):
+        print(param)  # No self needed
+    ```
+  </Accordion>
+  
+  <Accordion title="Different string formatting">
+    GDScript uses `%` for formatting:
+    
+    ```gdscript
+    var name = "Player"
+    var level = 10
+    print("%s is level %d" % [name, level])
+    ```
+  </Accordion>
+  
+  <Accordion title="Arrays and dictionaries">
+    ```gdscript
+    # Arrays
+    var array = [1, 2, 3]
+    var typed_array: Array[int] = [1, 2, 3]
+    
+    # Dictionaries
+    var dict = {"key": "value", "count": 42}
+    var typed_dict: Dictionary = {}
+    ```
+  </Accordion>
+  
+  <Accordion title="No list comprehensions">
+    GDScript doesn't support Python's list comprehensions. Use loops instead:
+    
+    ```gdscript
+    var squares = []
+    for i in range(10):
+        squares.append(i * i)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use static typing" icon="shield-check">
+    Enable type hints for better performance and error detection.
+  </Card>
+  
+  <Card title="Prefer signals over polling" icon="signal">
+    Use signals for event-driven architecture instead of checking states every frame.
+  </Card>
+  
+  <Card title="Use @onready for node references" icon="clock">
+    Initialize node references with @onready instead of in _ready().
+  </Card>
+  
+  <Card title="Keep scripts focused" icon="bullseye">
+    Each script should have a single, clear responsibility.
+  </Card>
+</CardGroup>
+
+<Warning>
+Avoid heavy computations in `_process()` and `_physics_process()`. These run every frame and can impact performance.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="C# Scripting" icon="hashtag" href="/scripting/csharp">
+    Learn about C# support in Godot
+  </Card>
+  
+  <Card title="GDExtension" icon="plug" href="/scripting/gdextension">
+    Create native extensions with C++
+  </Card>
+  
+  <Card title="Visual Scripting" icon="diagram-project" href="/scripting/visual-scripting">
+    Explore node-based programming
+  </Card>
+</CardGroup>

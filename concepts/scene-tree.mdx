@@ -1,0 +1,540 @@
+---
+title: Scene Tree
+description: Managing game state and node hierarchies with the SceneTree
+---
+
+The **SceneTree** is one of Godot's most important classes. It manages the hierarchy of nodes in your game, controls the game loop, handles scene switching, and provides powerful tools for organizing and querying nodes through groups.
+
+## What is the SceneTree?
+
+The SceneTree manages the active tree of nodes in your game. It's automatically created when Godot starts and serves as the default MainLoop implementation, making it responsible for:
+
+- Managing the node hierarchy
+- Processing node callbacks (`_process`, `_physics_process`)
+- Handling scene loading and switching  
+- Managing node groups
+- Controlling game pause state
+- Providing access to the root node
+
+<Info>
+Every node in your game can access the SceneTree using `get_tree()`, but only if the node is currently in the tree.
+</Info>
+
+## Accessing the SceneTree
+
+```gdscript
+func _ready():
+    # Get the scene tree from any node
+    var tree = get_tree()
+    
+    # Check if node is in the tree
+    if is_inside_tree():
+        print("Node is in the scene tree")
+    
+    # Access the root node (main Window)
+    var root = get_tree().root
+    print("Root node: ", root.name)
+```
+
+<Warning>
+Calling `get_tree()` on a node that isn't in the scene tree will generate an error and return null. Always check with `is_inside_tree()` first if you're unsure.
+</Warning>
+
+## The Root Node
+
+The root node is the topmost node in the scene tree, always of type Window:
+
+```gdscript
+func _ready():
+    var root = get_tree().root
+    
+    # The root contains your main scene and autoload nodes
+    print("Root has ", root.get_child_count(), " children")
+    
+    # Access the current scene
+    var current = get_tree().current_scene
+    print("Current scene: ", current.name)
+```
+
+## Scene Management
+
+The SceneTree provides several methods for loading, changing, and reloading scenes.
+
+### Changing Scenes
+
+<Steps>
+
+<Step title="Change Scene from File Path">
+The most common way to switch scenes:
+
+```gdscript
+func _on_start_button_pressed():
+    # Load and change to a new scene
+    var error = get_tree().change_scene_to_file("res://levels/level_1.tscn")
+    if error != OK:
+        print("Failed to load scene")
+```
+</Step>
+
+<Step title="Change Scene from PackedScene">
+Use a preloaded scene for faster switching:
+
+```gdscript
+var next_level = preload("res://levels/level_2.tscn")
+
+func advance_level():
+    get_tree().change_scene_to_packed(next_level)
+```
+</Step>
+
+<Step title="Change Scene to Node Instance">
+Switch to an already instantiated scene:
+
+```gdscript
+func load_custom_scene():
+    # Create a scene programmatically
+    var new_scene = Node2D.new()
+    new_scene.name = "CustomScene"
+    
+    # Add some children
+    var sprite = Sprite2D.new()
+    new_scene.add_child(sprite)
+    
+    # Switch to this scene
+    get_tree().change_scene_to_node(new_scene)
+```
+</Step>
+
+</Steps>
+
+<Note>
+When changing scenes, the current scene is removed from the tree immediately, then freed at the end of the frame. The new scene is added after the current frame completes.
+</Note>
+
+### Scene Change Order
+
+Understanding the order of operations during scene changes is crucial:
+
+```gdscript
+func change_to_next_level():
+    print("1. About to change scene")
+    print("Current scene: ", get_tree().current_scene)
+    
+    get_tree().change_scene_to_file("res://level_2.tscn")
+    
+    print("2. After change call")
+    print("Current scene: ", get_tree().current_scene)  # null!
+    
+    # Wait for the scene to actually change
+    await get_tree().scene_changed
+    
+    print("3. Scene changed")
+    print("Current scene: ", get_tree().current_scene)  # New scene!
+```
+
+### Reloading the Current Scene
+
+```gdscript
+func restart_level():
+    # Reload the current scene
+    get_tree().reload_current_scene()
+
+func game_over():
+    # Wait before reloading
+    await get_tree().create_timer(3.0).timeout
+    get_tree().reload_current_scene()
+```
+
+### Unloading a Scene
+
+```gdscript
+func return_to_menu():
+    # Remove current scene without loading a new one
+    get_tree().unload_current_scene()
+    
+    # Now manually load what you want
+    var menu = preload("res://menu.tscn").instantiate()
+    get_tree().root.add_child(menu)
+    get_tree().current_scene = menu
+```
+
+## Pausing the Game
+
+The SceneTree controls whether the game is paused:
+
+```gdscript
+func _ready():
+    # Pause the game
+    get_tree().paused = true
+    
+    # Unpause the game
+    get_tree().paused = false
+
+func toggle_pause():
+    get_tree().paused = !get_tree().paused
+```
+
+When the game is paused:
+- Physics processing stops
+- `_process()` and `_physics_process()` may not be called (depends on `process_mode`)
+- Collision detection pauses
+
+### Process Modes
+
+Nodes can control how they behave when the game is paused:
+
+```gdscript
+func _ready():
+    # This node processes only when NOT paused (default)
+    process_mode = Node.PROCESS_MODE_PAUSABLE
+    
+    # This node processes only WHEN paused (e.g., pause menu)
+    process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+    
+    # This node ALWAYS processes
+    process_mode = Node.PROCESS_MODE_ALWAYS
+    
+    # This node NEVER processes
+    process_mode = Node.PROCESS_MODE_DISABLED
+```
+
+<Tip>
+Set your pause menu's `process_mode` to `PROCESS_MODE_WHEN_PAUSED` so it can respond to input while the game is paused.
+</Tip>
+
+## Node Groups
+
+Groups allow you to organize nodes by category and operate on multiple nodes at once.
+
+### Adding Nodes to Groups
+
+```gdscript
+func _ready():
+    # Add this node to a group
+    add_to_group("enemies")
+    add_to_group("damageable")
+    
+    # Add to persistent group (saved with scene)
+    add_to_group("save_data", true)
+
+func _exit_tree():
+    # Remove from group (usually not needed - automatic on free)
+    remove_from_group("enemies")
+```
+
+<Note>
+Nodes are automatically removed from all groups when freed. You rarely need to manually remove nodes from groups.
+</Note>
+
+### Querying Groups
+
+```gdscript
+func _ready():
+    var tree = get_tree()
+    
+    # Check if group exists
+    if tree.has_group("enemies"):
+        print("Enemies exist in the scene")
+    
+    # Get all nodes in a group
+    var enemies = tree.get_nodes_in_group("enemies")
+    print("There are ", enemies.size(), " enemies")
+    
+    # Get first node in group
+    var first_enemy = tree.get_first_node_in_group("enemies")
+    if first_enemy:
+        print("First enemy: ", first_enemy.name)
+    
+    # Count nodes in group
+    var enemy_count = tree.get_node_count_in_group("enemies")
+```
+
+### Calling Methods on Groups
+
+One of the most powerful features is calling methods on all nodes in a group:
+
+```gdscript
+# Call a method on all nodes in a group
+func defeat_all_enemies():
+    get_tree().call_group("enemies", "take_damage", 9999)
+
+# Set a property on all nodes in a group  
+func freeze_all_enemies():
+    get_tree().set_group("enemies", "frozen", true)
+
+# Send notification to all nodes in a group
+func alert_all_enemies():
+    get_tree().notify_group("enemies", NOTIFICATION_ALERT)
+```
+
+<Warning>
+By default, `call_group()` acts immediately on all nodes, which may cause performance issues with large groups. Use `call_group_flags()` with `GROUP_CALL_DEFERRED` for better performance.
+</Warning>
+
+### Group Call Flags
+
+```gdscript
+func _ready():
+    var tree = get_tree()
+    
+    # Call at end of frame (deferred)
+    tree.call_group_flags(
+        SceneTree.GROUP_CALL_DEFERRED,
+        "enemies",
+        "take_damage",
+        10
+    )
+    
+    # Call in reverse order (children before parents)
+    tree.call_group_flags(
+        SceneTree.GROUP_CALL_REVERSE,
+        "ui_elements",
+        "update_display"
+    )
+    
+    # Call only once, even if called multiple times in same frame
+    tree.call_group_flags(
+        SceneTree.GROUP_CALL_DEFERRED | SceneTree.GROUP_CALL_UNIQUE,
+        "particles",
+        "emit"
+    )
+```
+
+## Node Paths
+
+Node paths are used to reference nodes within the scene tree:
+
+```gdscript
+func _ready():
+    # Get node by path
+    var player = get_node("/root/Main/Player")
+    
+    # Relative paths
+    var weapon = get_node("Player/Weapon")
+    var sibling = get_node("../OtherNode")
+    
+    # Using NodePath type
+    var path: NodePath = ^"/root/Main/Player"
+    var node = get_node(path)
+    
+    # Get path to a node
+    var my_path = get_path()
+    print("This node's path: ", my_path)
+    
+    # Get relative path between nodes
+    var relative = get_path_to(player)
+    print("Relative path to player: ", relative)
+```
+
+<Info>
+Absolute paths start with `/root/` and work from the root node. Relative paths work from the current node.
+</Info>
+
+## Scene Tree Timers
+
+The SceneTree can create one-shot timers:
+
+```gdscript
+func delayed_action():
+    # Create a timer
+    var timer = get_tree().create_timer(3.0)
+    
+    # Wait for it to complete
+    await timer.timeout
+    
+    print("3 seconds have passed")
+
+func respawn_player():
+    print("Player died")
+    
+    # Wait 5 seconds that ignore time scale
+    await get_tree().create_timer(5.0, true, false, true).timeout
+    
+    print("Respawning...")
+    player.respawn()
+```
+
+### Timer Parameters
+
+```gdscript
+func create_custom_timer():
+    get_tree().create_timer(
+        2.0,          # time in seconds
+        true,         # process_always (works when paused)
+        false,        # process_in_physics
+        true          # ignore_time_scale
+    )
+```
+
+## Quitting the Game
+
+```gdscript
+func quit_game():
+    # Quit with default exit code (0)
+    get_tree().quit()
+
+func quit_with_error():
+    # Quit with error code
+    get_tree().quit(1)
+
+func _input(event):
+    if event.is_action_pressed("ui_cancel"):
+        # Show confirmation dialog
+        if OS.get_name() == "Web":
+            print("Can't quit web builds")
+        else:
+            get_tree().quit()
+```
+
+<Note>
+On iOS, apps should not programmatically quit. The quit function is ignored on that platform.
+</Note>
+
+## Practical Example: Game Manager
+
+Here's a complete game manager that uses SceneTree features:
+
+```gdscript
+# game_manager.gd (autoload singleton)
+extends Node
+
+signal game_paused
+signal game_unpaused
+signal level_changed(level_name: String)
+
+var current_level = 1
+var score = 0
+
+func _ready():
+    # Don't pause this manager
+    process_mode = Node.PROCESS_MODE_ALWAYS
+    
+    # Connect to tree signals
+    get_tree().node_added.connect(_on_node_added)
+
+func _input(event):
+    if event.is_action_pressed("pause"):
+        toggle_pause()
+
+func toggle_pause():
+    var is_paused = get_tree().paused
+    get_tree().paused = !is_paused
+    
+    if get_tree().paused:
+        game_paused.emit()
+    else:
+        game_unpaused.emit()
+
+func load_level(level_number: int):
+    current_level = level_number
+    var path = "res://levels/level_%d.tscn" % level_number
+    
+    var error = get_tree().change_scene_to_file(path)
+    if error == OK:
+        await get_tree().scene_changed
+        level_changed.emit("Level " + str(level_number))
+    else:
+        print("Failed to load level ", level_number)
+
+func next_level():
+    load_level(current_level + 1)
+
+func restart_level():
+    get_tree().reload_current_scene()
+
+func defeat_all_enemies():
+    # Use deferred call for safety
+    get_tree().call_group_flags(
+        SceneTree.GROUP_CALL_DEFERRED,
+        "enemies",
+        "queue_free"
+    )
+
+func get_enemy_count() -> int:
+    return get_tree().get_node_count_in_group("enemies")
+
+func add_score(points: int):
+    score += points
+    # Notify all UI elements to update
+    get_tree().call_group("score_displays", "update_score", score)
+
+func _on_node_added(node: Node):
+    # Automatically add certain nodes to groups
+    if node is Enemy:
+        node.add_to_group("enemies")
+    elif node is Collectible:
+        node.add_to_group("collectibles")
+```
+
+## Scene Tree Signals
+
+The SceneTree emits useful signals:
+
+```gdscript
+func _ready():
+    var tree = get_tree()
+    
+    # When any node enters the tree
+    tree.node_added.connect(_on_node_added)
+    
+    # When any node leaves the tree
+    tree.node_removed.connect(_on_node_removed)
+    
+    # When a node is renamed
+    tree.node_renamed.connect(_on_node_renamed)
+    
+    # When scene changes
+    tree.scene_changed.connect(_on_scene_changed)
+    
+    # When tree hierarchy changes
+    tree.tree_changed.connect(_on_tree_changed)
+    
+    # Before process frame
+    tree.process_frame.connect(_on_process_frame)
+    
+    # Before physics frame
+    tree.physics_frame.connect(_on_physics_frame)
+
+func _on_node_added(node: Node):
+    print("Node added: ", node.name)
+
+func _on_scene_changed():
+    print("Scene changed to: ", get_tree().current_scene.name)
+```
+
+## Best Practices
+
+<Steps>
+
+<Step title="Use Groups for Categories">
+Organize nodes into logical groups (enemies, UI, collectibles) for easy batch operations.
+</Step>
+
+<Step title="Prefer Deferred Group Calls">
+Use `GROUP_CALL_DEFERRED` when calling methods on groups to avoid issues with nodes being freed during iteration.
+</Step>
+
+<Step title="Set Process Modes Appropriately">
+Make sure UI and pause menus use `PROCESS_MODE_WHEN_PAUSED` so they work while the game is paused.
+</Step>
+
+<Step title="Await scene_changed">
+When changing scenes, await the `scene_changed` signal if you need to access the new scene immediately.
+</Step>
+
+<Step title="Use Autoload for Game Management">
+Create autoload singletons that use SceneTree features to manage game state globally.
+</Step>
+
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Nodes and Scenes" icon="sitemap" href="/concepts/nodes-and-scenes">
+    Learn about the building blocks managed by SceneTree
+  </Card>
+  <Card title="Resource System" icon="database" href="/concepts/resource-system">
+    Understand how Resources work with scenes
+  </Card>
+</CardGroup>

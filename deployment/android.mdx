@@ -1,0 +1,465 @@
+---
+title: 'Android export'
+description: 'Deploy Godot games to Android devices with proper configuration, signing, and Google Play publishing'
+keywords: ['android', 'apk', 'aab', 'google play', 'permissions', 'signing']
+---
+
+## Overview
+
+Godot supports exporting to Android devices and publishing to Google Play Store. The export process requires Android SDK and Java JDK for building APK or AAB packages.
+
+## Prerequisites
+
+### Install Android SDK
+
+<Steps>
+  <Step title="Download Android Studio">
+    Install Android Studio from https://developer.android.com/studio
+  </Step>
+  
+  <Step title="Install SDK tools">
+    Use SDK Manager to install:
+    - Android SDK Platform Tools
+    - Android SDK Build Tools
+    - Android SDK Platform (API 33 or higher recommended)
+  </Step>
+  
+  <Step title="Configure Godot">
+    Go to **Editor > Editor Settings > Export > Android**
+    Set paths:
+    - **Android SDK Path**: Path to Android SDK
+    - **Debug Keystore**: Path to debug keystore
+  </Step>
+</Steps>
+
+### Install Java JDK
+
+```bash
+# Linux
+sudo apt install openjdk-17-jdk
+
+# macOS (using Homebrew)
+brew install openjdk@17
+
+# Windows
+# Download from https://adoptium.net/
+```
+
+<Info>
+Godot requires Java JDK 11 or newer. JDK 17 is recommended for best compatibility.
+</Info>
+
+## Creating Android export preset
+
+1. Go to **Project > Export**
+2. Click **Add...** and select **Android**
+3. Configure preset settings
+
+### Basic settings
+
+```gdscript
+# Essential Android export settings
+# These are configured in the export preset
+
+# Package name (reverse domain notation)
+# Example: com.yourcompany.yourgame
+Package Name: "com.example.mygame"
+
+# Version code (increment for each release)
+Version Code: 1
+
+# Version name (displayed to users)
+Version Name: "1.0.0"
+
+# Minimum SDK version
+Min SDK: 21  # Android 5.0 Lollipop
+
+# Target SDK version
+Target SDK: 33  # Android 13
+```
+
+## Export formats
+
+### APK (Android Package)
+
+Standard Android package format:
+
+```bash
+# Export APK
+godot --headless --export-release "Android" "builds/game.apk"
+```
+
+<Tip>
+APK is suitable for direct installation and testing. Use AAB for Google Play Store releases.
+</Tip>
+
+### AAB (Android App Bundle)
+
+Google Play's publishing format:
+
+1. In export preset, enable **Use App Bundle (AAB)**
+2. Export the project
+3. Upload AAB to Google Play Console
+
+```bash
+# Export AAB
+godot --headless --export-release "Android" "builds/game.aab"
+```
+
+<Info>
+AAB allows Google Play to generate optimized APKs for different device configurations, reducing download size.
+</Info>
+
+## App signing
+
+### Debug keystore
+
+Automatically generated for development:
+
+```bash
+# Default debug keystore location
+# Linux/macOS: ~/.android/debug.keystore
+# Windows: %USERPROFILE%\.android\debug.keystore
+```
+
+### Release keystore
+
+Create a keystore for production releases:
+
+```bash
+# Generate release keystore
+keytool -genkey -v -keystore release.keystore -alias mygame \
+  -keyalg RSA -keysize 2048 -validity 10000
+
+# Enter password and information when prompted
+```
+
+Configure in export preset:
+
+```gdscript
+# Release signing configuration
+Keystore:
+  Release: "path/to/release.keystore"
+  Release User: "mygame"
+  Release Password: "your_keystore_password"
+```
+
+<Warning>
+Keep your release keystore and password secure and backed up. Losing it means you cannot update your app on Google Play.
+</Warning>
+
+## Permissions
+
+Android requires declaring permissions in the manifest:
+
+### Common permissions
+
+```gdscript
+# Configure in export preset under "Permissions"
+
+# Network access
+ACCESS_NETWORK_STATE: true
+INTERNET: true
+
+# Storage
+READ_EXTERNAL_STORAGE: true
+WRITE_EXTERNAL_STORAGE: true
+
+# Location
+ACCESS_FINE_LOCATION: false
+ACCESS_COARSE_LOCATION: false
+
+# Vibration
+VIBRATE: true
+
+# Camera/Microphone
+CAMERA: false
+RECORD_AUDIO: false
+```
+
+### Runtime permissions
+
+Android 6.0+ requires runtime permission requests:
+
+```gdscript
+func request_permission(permission: String):
+    if OS.get_name() == "Android":
+        var permission_name = "android.permission." + permission
+        if not OS.has_permission(permission_name):
+            OS.request_permission(permission_name)
+
+func check_permission(permission: String) -> bool:
+    if OS.get_name() == "Android":
+        var permission_name = "android.permission." + permission
+        return OS.has_permission(permission_name)
+    return true
+
+# Usage
+func _ready():
+    if not check_permission("CAMERA"):
+        request_permission("CAMERA")
+```
+
+## Android plugins
+
+Extend functionality with Android plugins:
+
+### Installing plugins
+
+1. Download `.gdap` or `.aar` plugin files
+2. Place in `res://android/plugins/`
+3. Enable in export preset under **Plugins**
+
+### Custom Android plugin
+
+```kotlin
+// MyPlugin.kt
+package com.example.mygame
+
+import org.godotengine.godot.Godot
+import org.godotengine.godot.plugin.GodotPlugin
+
+class MyPlugin(godot: Godot) : GodotPlugin(godot) {
+    
+    override fun getPluginName() = "MyPlugin"
+    
+    @UsedByGodot
+    fun showToast(message: String) {
+        runOnUiThread {
+            Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+```
+
+Use in GDScript:
+
+```gdscript
+var my_plugin
+
+func _ready():
+    if Engine.has_singleton("MyPlugin"):
+        my_plugin = Engine.get_singleton("MyPlugin")
+        my_plugin.showToast("Hello from Android!")
+```
+
+## Screen orientation
+
+Configure screen orientation:
+
+```gdscript
+# In export preset
+Screen Orientation: 1  # 0=Landscape, 1=Portrait, 2=Sensor
+
+# Or change at runtime
+DisplayServer.window_set_orientation(DisplayServer.SCREEN_LANDSCAPE)
+```
+
+## Android features
+
+### Expansion files (OBB)
+
+For games larger than 100MB:
+
+1. Enable **Use Expansion (OBB)** in export preset
+2. Main APK/AAB will be small
+3. Large assets go in expansion file
+4. Google Play handles expansion file delivery
+
+### App icon
+
+```gdscript
+# Set in export preset
+Launcher Icons:
+  Main 192x192: "res://icon_192.png"
+  Adaptive Foreground 432x432: "res://adaptive_foreground.png"
+  Adaptive Background 432x432: "res://adaptive_background.png"
+```
+
+### Splash screen
+
+```gdscript
+# Configure splash screen
+Splash Screen:
+  Show Image: true
+  Image: "res://splash.png"
+  Bg Color: Color(0, 0, 0, 1)
+```
+
+## Google Play services
+
+Integrate Google Play services:
+
+```gdscript
+# Enable in export preset
+Google Play Services:
+  Enable: true
+  
+# Example: Google Play Games Services
+func sign_in_google_play():
+    if Engine.has_singleton("GooglePlayGameServices"):
+        var gpgs = Engine.get_singleton("GooglePlayGameServices")
+        gpgs.sign_in()
+```
+
+## Publishing to Google Play
+
+### Preparing for release
+
+<Steps>
+  <Step title="Build release AAB">
+    Export signed AAB with release keystore
+  </Step>
+  
+  <Step title="Test thoroughly">
+    Test on multiple devices and Android versions
+  </Step>
+  
+  <Step title="Prepare store listing">
+    - App title and description
+    - Screenshots (phone, tablet, TV)
+    - Feature graphic (1024x500)
+    - App icon (512x512)
+  </Step>
+  
+  <Step title="Set up Google Play Console">
+    Create developer account ($25 one-time fee)
+  </Step>
+</Steps>
+
+### Upload to Play Console
+
+1. Go to Google Play Console
+2. Create new app
+3. Upload AAB to **Production**, **Beta**, or **Internal testing**
+4. Complete store listing
+5. Submit for review
+
+### Update versioning
+
+```gdscript
+# Increment for each update
+Version Code: 2  # Must be higher than previous
+Version Name: "1.0.1"  # Displayed to users
+```
+
+## Testing on device
+
+### USB debugging
+
+<Steps>
+  <Step title="Enable developer options">
+    On device: Settings > About Phone > Tap Build Number 7 times
+  </Step>
+  
+  <Step title="Enable USB debugging">
+    Settings > Developer Options > USB Debugging
+  </Step>
+  
+  <Step title="Connect device">
+    Connect via USB and authorize computer
+  </Step>
+  
+  <Step title="One-click deploy">
+    In Godot, enable **Runnable** in Android export preset and click deploy button
+  </Step>
+</Steps>
+
+### Wireless debugging
+
+```bash
+# Enable wireless debugging
+adb tcpip 5555
+adb connect DEVICE_IP:5555
+
+# Deploy to device
+adb install -r game.apk
+```
+
+## Performance optimization
+
+<CardGroup cols={2}>
+  <Card title="Use Mobile renderer" icon="mobile">
+    Select Mobile renderer in Project Settings for better performance on Android.
+  </Card>
+  
+  <Card title="Optimize textures" icon="image">
+    Use ETC2/ASTC compression for Android textures.
+  </Card>
+  
+  <Card title="Reduce draw calls" icon="layer-group">
+    Batch meshes and minimize material changes.
+  </Card>
+  
+  <Card title="Test on low-end devices" icon="mobile-screen">
+    Ensure your game runs well on older Android devices.
+  </Card>
+</CardGroup>
+
+## Common issues
+
+### Build errors
+
+<AccordionGroup>
+  <Accordion title="SDK not found">
+    Verify Android SDK path in Editor Settings. Ensure SDK tools are installed.
+  </Accordion>
+  
+  <Accordion title="Build tools version">
+    Install the required Build Tools version from SDK Manager.
+  </Accordion>
+  
+  <Accordion title="Java version">
+    Ensure Java JDK 11 or newer is installed and in PATH.
+  </Accordion>
+  
+  <Accordion title="Gradle errors">
+    Clear Gradle cache and rebuild: `./gradlew clean build`
+  </Accordion>
+</AccordionGroup>
+
+### Runtime issues
+
+```gdscript
+# Check if running on Android
+if OS.get_name() == "Android":
+    # Android-specific code
+    print("Android version: ", OS.get_version())
+    print("Device model: ", OS.get_model_name())
+```
+
+## Android-specific code
+
+```gdscript
+func _ready():
+    if OS.get_name() == "Android":
+        # Prevent screen from sleeping
+        OS.screen_keep_on = true
+        
+        # Get safe area (for notches)
+        var safe_area = DisplayServer.get_display_safe_area()
+        
+        # Handle back button
+        get_tree().set_quit_on_go_back(false)
+
+func _notification(what):
+    if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+        # Handle Android back button
+        show_quit_dialog()
+```
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="iOS" icon="apple" href="/deployment/ios">
+    Export for iOS devices
+  </Card>
+  
+  <Card title="Web" icon="globe" href="/deployment/web">
+    Export for web browsers
+  </Card>
+  
+  <Card title="Desktop" icon="desktop" href="/deployment/desktop">
+    Export for desktop platforms
+  </Card>
+</CardGroup>

@@ -1,0 +1,306 @@
+---
+title: 'Audio Streams'
+description: 'Audio formats and stream types in Godot'
+---
+
+## Overview
+
+Godot supports multiple audio formats through the `AudioStream` system. Each format has different characteristics suited for specific use cases, from compressed music files to uncompressed sound effects.
+
+<Info>
+AudioStream is the base class for all audio streams. Specific formats like WAV, OGG, and MP3 are implemented as specialized classes.
+</Info>
+
+## Supported Audio Formats
+
+### AudioStreamWAV
+
+Uncompressed PCM audio, best for short sound effects:
+
+**Advantages:**
+- No decompression overhead (instant playback)
+- Perfect for sound effects
+- Supports loop points
+- Can be generated at runtime
+
+**Disadvantages:**
+- Large file size
+- Not suitable for music or long audio
+
+```gdscript
+var wav_stream = load("res://sounds/explosion.wav")
+var player = AudioStreamPlayer.new()
+player.stream = wav_stream
+add_child(player)
+player.play()
+```
+
+**Key Properties:**
+- `format` - Audio format (8-bit, 16-bit, IMA ADPCM)
+- `loop_mode` - Disabled, Forward, Ping-Pong, Backwards
+- `loop_begin` - Loop start point in samples
+- `loop_end` - Loop end point in samples
+- `mix_rate` - Sample rate in Hz
+- `stereo` - Mono or stereo
+
+### AudioStreamOggVorbis
+
+Compressed audio format, ideal for music:
+
+**Advantages:**
+- Excellent compression ratio
+- Good quality
+- Supports looping
+- Widely supported
+
+**Disadvantages:**
+- CPU cost for decompression
+- Lossy compression
+
+```gdscript
+var ogg_stream = load("res://music/background.ogg")
+var player = AudioStreamPlayer.new()
+player.stream = ogg_stream
+player.bus = "Music"
+add_child(player)
+player.play()
+```
+
+<Tip>
+OGG Vorbis is the recommended format for music and long audio files due to its balance of quality and file size.
+</Tip>
+
+### AudioStreamMP3
+
+MP3 audio support:
+
+**Advantages:**
+- Universal format
+- Good compression
+- Works well for voice and music
+
+**Disadvantages:**
+- Slightly worse quality than OGG at same bitrate
+- Higher CPU usage for decoding
+- Licensing considerations (less relevant now)
+
+```gdscript
+var mp3_stream = load("res://voice/dialogue.mp3")
+var player = AudioStreamPlayer.new()
+player.stream = mp3_stream
+add_child(player)
+player.play()
+```
+
+## Format Comparison
+
+| Format | Best For | File Size | CPU Usage | Quality |
+|--------|----------|-----------|-----------|----------|
+| WAV | Sound effects | Large | Minimal | Perfect |
+| OGG Vorbis | Music, ambient | Small | Moderate | Excellent |
+| MP3 | Voice, music | Small | Moderate | Good |
+
+## Looping Audio
+
+### Basic Looping
+
+Most audio formats support loop mode:
+
+```gdscript
+var stream = load("res://music/background.ogg") as AudioStreamOggVorbis
+stream.loop = true
+
+var player = AudioStreamPlayer.new()
+player.stream = stream
+add_child(player)
+player.play()
+```
+
+### Loop Points (WAV)
+
+For WAV files, you can set precise loop points:
+
+```gdscript
+var wav_stream = AudioStreamWAV.new()
+# Load PCM data...
+wav_stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+wav_stream.loop_begin = 44100  # 1 second at 44.1kHz
+wav_stream.loop_end = 132300   # 3 seconds at 44.1kHz
+```
+
+## AudioStream Properties
+
+### Getting Stream Information
+
+```gdscript
+var stream = load("res://sounds/music.ogg")
+
+# Get stream length in seconds
+var length = stream.get_length()
+print("Stream length: ", length, " seconds")
+
+# Get BPM (if defined)
+var bpm = stream._get_bpm()
+if bpm > 0:
+    print("BPM: ", bpm)
+
+# Get beat count
+var beat_count = stream._get_beat_count()
+if beat_count > 0:
+    print("Beats: ", beat_count)
+```
+
+### Metadata and Tags
+
+Access audio file metadata:
+
+```gdscript
+var stream = load("res://music/song.ogg")
+var tags = stream._get_tags()
+
+if tags.has("title"):
+    print("Title: ", tags["title"])
+if tags.has("artist"):
+    print("Artist: ", tags["artist"])
+if tags.has("album"):
+    print("Album: ", tags["album"])
+```
+
+## AudioStreamGenerator
+
+Generate audio procedurally at runtime:
+
+```gdscript
+var generator = AudioStreamGenerator.new()
+generator.mix_rate = 44100.0
+generator.buffer_length = 0.1
+
+var player = AudioStreamPlayer.new()
+player.stream = generator
+add_child(player)
+player.play()
+
+var playback = player.get_stream_playback() as AudioStreamGeneratorPlayback
+
+# Generate a simple sine wave
+func _process(delta):
+    var increment = 440.0 / generator.mix_rate  # 440 Hz A note
+    var phase = 0.0
+    
+    var frames_available = playback.get_frames_available()
+    for i in range(frames_available):
+        var sample = sin(phase * TAU)
+        playback.push_frame(Vector2(sample, sample))  # Stereo
+        phase = fmod(phase + increment, 1.0)
+```
+
+<Info>
+AudioStreamGenerator is useful for synthesizers, dynamic sound effects, or audio visualization.
+</Info>
+
+## AudioStreamRandomizer
+
+Randomly play variations of sounds:
+
+```gdscript
+var randomizer = AudioStreamRandomizer.new()
+
+# Add multiple variations
+randomizer.add_stream(0, load("res://sounds/step1.wav"))
+randomizer.add_stream(1, load("res://sounds/step2.wav"))
+randomizer.add_stream(2, load("res://sounds/step3.wav"))
+
+# Set random pitch variation
+randomizer.random_pitch = 1.2  # ±20% pitch variation
+
+var player = AudioStreamPlayer.new()
+player.stream = randomizer
+add_child(player)
+
+# Each play() will use a random stream
+player.play()
+```
+
+## AudioStreamPlayback
+
+The `AudioStreamPlayback` represents an active playback instance:
+
+```gdscript
+var player = AudioStreamPlayer.new()
+player.stream = load("res://music/song.ogg")
+add_child(player)
+player.play()
+
+# Get playback instance
+var playback = player.get_stream_playback()
+
+# Seek to specific position
+if playback:
+    player.seek(30.0)  # Jump to 30 seconds
+
+# Get current position
+var position = player.get_playback_position()
+print("Current position: ", position, " seconds")
+```
+
+## Importing Audio Files
+
+### Import Settings
+
+When importing audio files in Godot, you can configure:
+
+**For WAV files:**
+- `force/8_bit` - Reduce to 8-bit audio
+- `force/mono` - Convert to mono
+- `force/max_rate` - Limit sample rate
+- `edit/trim` - Remove silence
+- `edit/normalize` - Normalize volume
+- `edit/loop_mode` - Set loop behavior
+- `edit/loop_begin` - Loop start point
+- `edit/loop_end` - Loop end point
+
+**For OGG/MP3 files:**
+- `loop` - Enable looping
+- `loop_offset` - Loop start offset in seconds
+
+<Tip>
+For mobile platforms, consider converting stereo to mono and reducing sample rates to save memory and improve performance.
+</Tip>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Choose the right format">
+    Use WAV for short sound effects (< 1 second), OGG Vorbis for music and ambient sounds, and consider MP3 for voice dialogue.
+  </Accordion>
+
+  <Accordion title="Optimize file sizes">
+    Use appropriate bitrates: 128-192 kbps for music, 96-128 kbps for ambient, 64-96 kbps for voice.
+  </Accordion>
+
+  <Accordion title="Prepare loop points">
+    Set proper loop points in your audio editor before importing to ensure seamless loops.
+  </Accordion>
+
+  <Accordion title="Use mono for non-positional audio">
+    Convert to mono when stereo isn't necessary to reduce file size and memory usage.
+  </Accordion>
+
+  <Accordion title="Normalize audio levels">
+    Ensure consistent volume across all audio files to avoid manual volume adjustments.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Audio Overview" icon="volume" href="/audio/overview">
+    Learn about AudioServer and basic playback
+  </Card>
+  <Card title="Audio Effects" icon="sliders" href="/audio/audio-effects">
+    Apply effects to audio buses
+  </Card>
+  <Card title="Interactive Music" icon="music" href="/audio/interactive-music">
+    Create dynamic music systems
+  </Card>
+</CardGroup>
